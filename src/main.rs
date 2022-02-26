@@ -5,7 +5,6 @@ use player::{Player, player_movement_system};
 pub mod player;
 pub mod constants;
 
-
 fn main() {
     App::new()
         .insert_resource(Msaa { samples: 4 })
