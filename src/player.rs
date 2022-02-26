@@ -8,7 +8,7 @@ pub struct Player {
     pub speed: f32,
 }
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct CameraComp {
     pub yaw: f32,
     pub roll: f32,
@@ -92,14 +92,37 @@ pub fn player_movement_system(
 pub fn player_camera_system(
     mut mouse_motion_event: EventReader<MouseMotion>,
 
-    mut query: Query<(&mut CameraComp, &mut Transform)>,
+    mut c_query: Query<(&mut CameraComp, &mut Transform)>,
+    mut p_query: Query<(&Player, &mut Transform), Without<CameraComp>>
 ) {
-    let (mut camera, mut c_transform) = query.single_mut();
+    let (mut camera, mut c_transform) = c_query.single_mut();
+    let (_, mut p_transform) = p_query.single_mut();
 
-    let c_rotation = &mut c_transform.rotation; 
+    let c_rotation = c_transform.rotation; 
+
+    let mut c_translation = *(&mut c_transform.translation.clone());
 
     for event in mouse_motion_event.iter() {
-        camera.yaw  += event.delta.x;
-        camera.roll += event.delta.y;
+        camera.yaw  += event.delta.x / 5.0;
+        camera.roll += event.delta.y / 5.0;
+
+        let yaw = camera.yaw.to_radians();
+        let roll = camera.roll.to_radians();
+
+        let p_translation = *(&p_transform.translation.clone());
+
+        c_translation.x = p_translation.x + (yaw.cos() * roll.sin() * 5.0);
+        c_translation.y = p_translation.y + (yaw.sin() * roll.sin() * 5.0);
+        c_translation.z = p_translation.z + (roll.cos() * 5.0);
+
+        
+
+        c_transform.look_at(p_translation, Vec3::Y);
     }
+
+    c_transform.translation = c_translation;
 }
+
+// rotx [1,        0, 0,        0, cos(ang), sin(ang), 0,         -sin(ang), cos(ang)];
+// roty [cos(ang), 0, sin(ang), 0, 1,        0,        -sin(ang), 0,         cos(ang)];
+//       cos(y),   0, 0,        0, cos(x),   0,        0,         0,         cos(x)*cos(y)
