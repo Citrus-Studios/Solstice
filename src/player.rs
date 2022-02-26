@@ -89,7 +89,7 @@ pub fn player_movement_system(
 pub fn player_camera_system(
     mut mouse_motion_event: EventReader<MouseMotion>,
 
-    mut query: Query<(&Camera, &mut Transform)>,
+    mut query: Query<(&CameraComp, &mut Transform)>,
 ) {
     let (camera, mut c_transform) = query.single_mut();
 
