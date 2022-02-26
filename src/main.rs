@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use player::Player;
+use player::{Player, player_movement_system};
 
 pub mod player;
 
@@ -8,6 +8,7 @@ fn main() {
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
         .add_startup_system(setup)
+        .add_system(player_movement_system)
         .run();
 }
 
