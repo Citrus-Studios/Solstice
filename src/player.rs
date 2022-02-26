@@ -94,11 +94,12 @@ pub fn player_camera_system(
 
     mut query: Query<(&CameraComp, &mut Transform)>,
 ) {
-    let (camera, mut c_transform) = query.single_mut();
+    let (mut camera, mut c_transform) = query.single_mut();
 
     let c_rotation = &mut c_transform.rotation; 
 
     for event in mouse_motion_event.iter() {
-        
+        *camera.yaw  += event.delta.x;
+        *camera.roll += event.delta.y;
     }
 }
