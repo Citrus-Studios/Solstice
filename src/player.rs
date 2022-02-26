@@ -31,7 +31,7 @@ pub fn player_movement_system(
             gamepad_axes.get(GamepadAxis(gamepad, axis)).unwrap()
         };
 
-        if button_pressed(GamepadButtonType::DPadUp) || axes_moved(GamepadAxisType::LeftStickY) > 200.0{
+        if button_pressed(GamepadButtonType::DPadUp) || axes_moved(GamepadAxisType::LeftStickY) > 0.05 {
             x_mov += 1.0;
         }
         if button_pressed(GamepadButtonType::DPadDown) || axes_moved(GamepadAxisType::LeftStickY) < -0.05 {
