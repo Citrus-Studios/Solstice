@@ -92,14 +92,14 @@ pub fn player_movement_system(
 pub fn player_camera_system(
     mut mouse_motion_event: EventReader<MouseMotion>,
 
-    mut query: Query<(&CameraComp, &mut Transform)>,
+    mut query: Query<(&mut CameraComp, &mut Transform)>,
 ) {
     let (mut camera, mut c_transform) = query.single_mut();
 
     let c_rotation = &mut c_transform.rotation; 
 
     for event in mouse_motion_event.iter() {
-        *camera.yaw  += event.delta.x;
-        *camera.roll += event.delta.y;
+        camera.yaw  += event.delta.x;
+        camera.roll += event.delta.y;
     }
 }
