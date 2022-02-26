@@ -58,7 +58,7 @@ fn setup(
     })
     .insert(Player {
         name: "None".to_string(),
-        speed: 50
+        speed: 50.0
     })
     .with_children(|child| {
         // camera
