@@ -8,6 +8,12 @@ pub struct Player {
     pub speed: f32,
 }
 
+#[derive(Component)]
+pub struct CameraComp {
+    pub yaw: f32,
+    pub roll: f32,
+}
+
 
 pub fn player_movement_system(
     keyboard_input: Res<Input<KeyCode>>,
@@ -72,6 +78,8 @@ pub fn player_movement_system(
     } else if z_mov < -1.0 {
         z_mov = -1.0
     }
+
+
 
     let p_translation = &mut p_transform.translation;
     p_translation.x += x_mov * player.speed * DELTA_TIME;

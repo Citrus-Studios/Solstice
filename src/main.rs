@@ -1,6 +1,6 @@
 use bevy::{prelude::*, core::FixedTimestep};
 use constants::DELTA_TIME;
-use player::{Player, player_movement_system};
+use player::{Player, player_movement_system, CameraComp};
 
 pub mod player;
 pub mod constants;
@@ -64,6 +64,10 @@ fn setup(
         child.spawn_bundle(PerspectiveCameraBundle {
             transform: Transform::from_xyz(-3.0, 4.5, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
             ..Default::default()
+        })
+        .insert(CameraComp {
+            yaw: 0.0,
+            roll: 0.0,
         });
     });
 }
