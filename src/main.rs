@@ -1,6 +1,6 @@
 use bevy::{prelude::*, core::FixedTimestep};
 use constants::DELTA_TIME;
-use player::{Player, player_movement_system, CameraComp};
+use player::{Player, player_movement_system, CameraComp, player_camera_system};
 
 pub mod player;
 pub mod constants;
@@ -14,6 +14,7 @@ fn main() {
             SystemSet::new()
                 .with_run_criteria(FixedTimestep::step(DELTA_TIME as f64))
                 .with_system(player_movement_system)
+                .with_system(player_camera_system)
         )
         .run();
 }
@@ -26,7 +27,7 @@ fn setup(
 ) {
     // plane
     commands.spawn_bundle(PbrBundle {
-        mesh: meshes.add(Mesh::from(shape::Plane { size: 5.0 })),
+        mesh: meshes.add(Mesh::from(shape::Plane { size: 50.0 })),
         material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
         ..Default::default()
     });
