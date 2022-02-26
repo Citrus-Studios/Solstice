@@ -26,10 +26,10 @@ pub fn player_movement_system(
         x_mov -= 1.0;
     }
     if keyboard_input.pressed(KeyCode::A) {
-        z_mov += 1.0;
+        z_mov -= 1.0;
     }
     if keyboard_input.pressed(KeyCode::D) {
-        z_mov -= 1.0;
+        z_mov += 1.0;
     }
 
     let p_translation = &mut p_transform.translation;
