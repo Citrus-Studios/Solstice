@@ -32,7 +32,7 @@ pub fn player_movement_system(
         z_mov -= 1.0;
     }
 
-    let mut p_translation = p_transform.translation;
+    let mut p_translation = &mut p_transform.translation;
     p_translation.x += x_mov * player.speed * DELTA_TIME;
     p_translation.z += z_mov * player.speed * DELTA_TIME;
 }
