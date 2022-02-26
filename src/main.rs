@@ -1,14 +1,21 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, core::FixedTimestep};
+use constants::DELTA_TIME;
 use player::{Player, player_movement_system};
 
 pub mod player;
+pub mod constants;
+
 
 fn main() {
     App::new()
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
         .add_startup_system(setup)
-        .add_system(player_movement_system)
+        .add_system_set(
+            SystemSet::new()
+                .with_run_criteria(FixedTimestep::step(DELTA_TIME as f64))
+                .with_system(player_movement_system)
+        )
         .run();
 }
 
