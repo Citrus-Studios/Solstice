@@ -85,6 +85,8 @@ pub fn player_camera_system(
 ) {
     let (camera, mut c_transform) = query.single_mut();
 
+    let c_rotation = &mut c_transform.rotation; 
+
     for event in mouse_motion_event.iter() {
         
     }
