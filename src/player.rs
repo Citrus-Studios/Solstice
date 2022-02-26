@@ -1,6 +1,6 @@
 use bevy::{prelude::*, input::mouse::MouseMotion};
 
-use crate::constants::DELTA_TIME;
+use crate::constants::{DELTA_TIME, SQRT_OF_2};
 
 #[derive(Component)]
 pub struct Player {
@@ -27,8 +27,8 @@ pub fn player_movement_system(
     // Get the player and their transform
     let (player, mut p_transform) = query.single_mut();
 
-    let mut x_mov = 0.0;
-    let mut z_mov = 0.0;
+    let mut x_mov = 0f32;
+    let mut z_mov = 0f32;
 
     // Get gamepad inputs
     for gamepad in gamepads.iter().cloned() {
@@ -79,7 +79,10 @@ pub fn player_movement_system(
         z_mov = -1.0
     }
 
-
+    if x_mov.abs() + z_mov.abs() == 2.0 {
+        x_mov = SQRT_OF_2 * x_mov;
+        z_mov = SQRT_OF_2 * z_mov;
+    }
 
     let p_translation = &mut p_transform.translation;
     p_translation.x += x_mov * player.speed * DELTA_TIME;
