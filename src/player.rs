@@ -18,11 +18,13 @@ pub fn player_movement_system(
 
     mut query: Query<(&Player, &mut Transform)>
 ) {
+    // Get the player and their transform
     let (player, mut p_transform) = query.single_mut();
 
     let mut x_mov = 0.0;
     let mut z_mov = 0.0;
 
+    // Get gamepad inputs
     for gamepad in gamepads.iter().cloned() {
         let button_pressed = |button| {
             gamepad_input.pressed(GamepadButton(gamepad, button))
@@ -44,6 +46,7 @@ pub fn player_movement_system(
             z_mov += 1.0;
         }
     }
+    // Get keyboard inputs
     if keyboard_input.pressed(KeyCode::W) {
         x_mov += 1.0;
     }
@@ -55,6 +58,19 @@ pub fn player_movement_system(
     }
     if keyboard_input.pressed(KeyCode::D) {
         z_mov += 1.0;
+    }
+
+    // Clamp x and z to -1.0 and 1.0
+    if x_mov > 1.0 {
+        x_mov = 1.0
+    } else if x_mov < -1.0 {
+        x_mov = -1.0
+    } 
+
+    if z_mov > 1.0 {
+        z_mov = 1.0
+    } else if z_mov < -1.0 {
+        z_mov = -1.0
     }
 
     let p_translation = &mut p_transform.translation;
