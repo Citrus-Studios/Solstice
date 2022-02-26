@@ -1,4 +1,4 @@
-use bevy::{prelude::{Component, Transform, Query, Res, KeyCode}, input::Input};
+use bevy::prelude::*;
 
 use crate::constants::DELTA_TIME;
 
@@ -11,6 +11,11 @@ pub struct Player {
 
 pub fn player_movement_system(
     keyboard_input: Res<Input<KeyCode>>,
+
+    gamepads: Res<Gamepads>,
+    gamepad_input: Res<Input<GamepadButton>>,
+    gamepad_axes: Res<Axis<GamepadAxis>>,
+
     mut query: Query<(&Player, &mut Transform)>
 ) {
     let (player, mut p_transform) = query.single_mut();
@@ -18,7 +23,27 @@ pub fn player_movement_system(
     let mut x_mov = 0.0;
     let mut z_mov = 0.0;
 
+    for gamepad in gamepads.iter().cloned() {
+        let button_pressed = |button| {
+            gamepad_input.pressed(GamepadButton(gamepad, button))
+        };
+        let axes_moved = |axis| {
+            gamepad_axes.get(GamepadAxis(gamepad, axis)).unwrap()
+        };
 
+        if button_pressed(GamepadButtonType::DPadUp) || axes_moved(GamepadAxisType::LeftStickY) > 0.05 {
+            x_mov += 1.0;
+        }
+        if button_pressed(GamepadButtonType::DPadDown) || axes_moved(GamepadAxisType::LeftStickY) < 0.05 {
+            x_mov -= 1.0;
+        }
+        if button_pressed(GamepadButtonType::DPadLeft) || axes_moved(GamepadAxisType::LeftStickX) > 0.05 {
+            z_mov -= 1.0;
+        }
+        if button_pressed(GamepadButtonType::DPadRight) || axes_moved(GamepadAxisType::LeftStickX) < 0.05 {
+            z_mov += 1.0;
+        }
+    }
     if keyboard_input.pressed(KeyCode::W) {
         x_mov += 1.0;
     }
