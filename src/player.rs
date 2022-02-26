@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, input::mouse::MouseMotion};
 
 use crate::constants::DELTA_TIME;
 
@@ -76,4 +76,16 @@ pub fn player_movement_system(
     let p_translation = &mut p_transform.translation;
     p_translation.x += x_mov * player.speed * DELTA_TIME;
     p_translation.z += z_mov * player.speed * DELTA_TIME;
+}
+
+pub fn player_camera_system(
+    mut mouse_motion_event: EventReader<MouseMotion>,
+
+    mut query: Query<(&Camera, &mut Transform)>,
+) {
+    let (camera, mut c_transform) = query.single_mut();
+
+    for event in mouse_motion_event.iter() {
+        
+    }
 }
