@@ -113,11 +113,17 @@ pub fn player_camera_system(
 
         let p_translation = *(&p_transform.translation.clone());
 
-        c_translation.x = p_translation.x + (yaw.cos() * roll.sin() * 5.0);
-        c_translation.y = p_translation.y + (yaw.sin() * roll.sin() * 5.0);
-        c_translation.z = p_translation.z + (roll.cos() * 5.0);
+        c_translation.x = p_translation.x + (roll.cos() * yaw.cos() * 5.0);
+        c_translation.y = p_translation.y + (roll.sin() * 5.0);
+        c_translation.z = p_translation.z + (roll.cos() * yaw.sin() * 5.0);
 
         c_transform.translation = c_translation;
         c_transform.look_at(p_translation, Vec3::Y);
     }}
 }
+
+// Height (y) of the circle is sin(roll)
+// Radius     of the circle is cos(roll)
+// Point on the circle is x = cos(roll) * cos(yaw)
+//                        y = sin(roll)
+//                        z = cos(roll) * sin(yaw)
