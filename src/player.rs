@@ -122,7 +122,3 @@ pub fn player_camera_system(
 
     c_transform.translation = c_translation;
 }
-
-// rotx [1,        0, 0,        0, cos(ang), sin(ang), 0,         -sin(ang), cos(ang)];
-// roty [cos(ang), 0, sin(ang), 0, 1,        0,        -sin(ang), 0,         cos(ang)];
-//       cos(y),   0, 0,        0, cos(x),   0,        0,         0,         cos(x)*cos(y)
