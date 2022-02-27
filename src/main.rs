@@ -69,6 +69,7 @@ fn setup(
         .insert(CameraComp {
             yaw: 0.0,
             roll: 0.0,
+            zoom: 5.0,
         });
     });
 }
