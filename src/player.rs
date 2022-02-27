@@ -91,6 +91,7 @@ pub fn player_movement_system(
 
 pub fn player_camera_system(
     mut mouse_motion_event: EventReader<MouseMotion>,
+    mouse_input: Res<Input<MouseButton>>,
 
     mut c_query: Query<(&mut CameraComp, &mut Transform)>,
     mut p_query: Query<(&Player, &mut Transform), Without<CameraComp>>
@@ -102,12 +103,13 @@ pub fn player_camera_system(
 
     let mut c_translation = *(&mut c_transform.translation.clone());
 
+    if mouse_input.pressed(MouseButton::Right) {
     for event in mouse_motion_event.iter() {
         camera.yaw  += event.delta.x / 5.0;
         camera.roll += event.delta.y / 5.0;
 
-        let yaw = camera.yaw.to_radians();
-        let roll = camera.roll.to_radians();
+        let roll = camera.yaw.to_radians();
+        let yaw = camera.roll.to_radians();
 
         let p_translation = *(&p_transform.translation.clone());
 
@@ -115,10 +117,7 @@ pub fn player_camera_system(
         c_translation.y = p_translation.y + (yaw.sin() * roll.sin() * 5.0);
         c_translation.z = p_translation.z + (roll.cos() * 5.0);
 
-        
-
+        c_transform.translation = c_translation;
         c_transform.look_at(p_translation, Vec3::Y);
-    }
-
-    c_transform.translation = c_translation;
+    }}
 }
