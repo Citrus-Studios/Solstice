@@ -119,7 +119,8 @@ pub fn player_camera_system(
     let last_camera_zoom = camera.zoom;
 
     for event in mouse_scroll_event.iter() {
-        camera.zoom += event.y / 10.0;
+        camera.zoom -= event.y / 5.0;
+        camera.zoom = camera.zoom.max(0.1).min(10.0);
     }
 
     let rmb_pressed = mouse_input.pressed(MouseButton::Right);
