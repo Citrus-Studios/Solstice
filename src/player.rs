@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use bevy::{prelude::*, input::mouse::{MouseMotion, MouseWheel}};
 
 use crate::constants::{DELTA_TIME, SQRT_OF_2};
@@ -35,6 +37,11 @@ pub fn player_movement_system(
 
     let yaw = camera.yaw.to_radians();
 
+    let cos_yaw = yaw.cos();
+    let sin_yaw = yaw.sin();
+
+    let half_pi = (PI / 2.0);
+
     // Get gamepad inputs
     for gamepad in gamepads.iter().cloned() {
         let button_pressed = |button| {
@@ -46,7 +53,6 @@ pub fn player_movement_system(
 
         if button_pressed(GamepadButtonType::DPadUp) || axes_moved(GamepadAxisType::LeftStickY) > 0.05 {
             x_mov += 1.0;
-            z_mov += 0.0;
         }
         if button_pressed(GamepadButtonType::DPadDown) || axes_moved(GamepadAxisType::LeftStickY) < -0.05 {
             x_mov -= 1.0;
@@ -60,16 +66,20 @@ pub fn player_movement_system(
     }
     // Get keyboard inputs
     if keyboard_input.pressed(KeyCode::W) {
-        x_mov += 1.0;
+        x_mov -= cos_yaw;
+        z_mov -= sin_yaw;
     }
     if keyboard_input.pressed(KeyCode::S) {
-        x_mov -= 1.0;
+        x_mov += cos_yaw;
+        z_mov += sin_yaw;
     }
     if keyboard_input.pressed(KeyCode::A) {
-        z_mov -= 1.0;
+        x_mov -= (yaw - half_pi).cos();
+        z_mov -= (yaw - half_pi).sin();
     }
     if keyboard_input.pressed(KeyCode::D) {
-        z_mov += 1.0;
+        x_mov -= (yaw + half_pi).cos();
+        z_mov -= (yaw + half_pi).sin();
     }
 
     // Clamp x and z to -1.0 and 1.0
