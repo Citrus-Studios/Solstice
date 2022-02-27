@@ -22,13 +22,17 @@ pub fn player_movement_system(
     gamepad_input: Res<Input<GamepadButton>>,
     gamepad_axes: Res<Axis<GamepadAxis>>,
 
-    mut query: Query<(&Player, &mut Transform)>
+    mut c_query: Query<(&mut CameraComp, &mut Transform)>,
+    mut p_query: Query<(&Player, &mut Transform), Without<CameraComp>>
 ) {
     // Get the player and their transform
-    let (player, mut p_transform) = query.single_mut();
+    let (player, mut p_transform) = p_query.single_mut();
+    let (camera, _) = c_query.single_mut();
 
     let mut x_mov = 0f32;
     let mut z_mov = 0f32;
+
+    let yaw = camera.yaw.to_radians();
 
     // Get gamepad inputs
     for gamepad in gamepads.iter().cloned() {
@@ -41,6 +45,7 @@ pub fn player_movement_system(
 
         if button_pressed(GamepadButtonType::DPadUp) || axes_moved(GamepadAxisType::LeftStickY) > 0.05 {
             x_mov += 1.0;
+            z_mov += 0.0;
         }
         if button_pressed(GamepadButtonType::DPadDown) || axes_moved(GamepadAxisType::LeftStickY) < -0.05 {
             x_mov -= 1.0;
@@ -107,18 +112,23 @@ pub fn player_camera_system(
     for event in mouse_motion_event.iter() {
         camera.yaw  += event.delta.x / 5.0;
         camera.roll += event.delta.y / 5.0;
+        camera.roll = camera.roll.min(89.99999).max(-89.99999);
 
-        let roll = camera.yaw.to_radians();
-        let yaw = camera.roll.to_radians();
+        info!(camera.roll);
+
+        let yaw = camera.yaw.to_radians();
+        let roll = camera.roll.to_radians();
 
         let p_translation = *(&p_transform.translation.clone());
 
-        c_translation.x = p_translation.x + (roll.cos() * yaw.cos() * 5.0);
-        c_translation.y = p_translation.y + (roll.sin() * 5.0);
-        c_translation.z = p_translation.z + (roll.cos() * yaw.sin() * 5.0);
+        let roll_cos = roll.cos();
+
+        c_translation.x = roll_cos * yaw.cos() * 5.0;
+        c_translation.y = roll.sin() * 5.0;
+        c_translation.z = roll_cos * yaw.sin() * 5.0;
 
         c_transform.translation = c_translation;
-        c_transform.look_at(p_translation, Vec3::Y);
+        c_transform.look_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y);
     }}
 }
 
