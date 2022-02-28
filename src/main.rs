@@ -1,7 +1,8 @@
 use bevy::{prelude::*, core::FixedTimestep};
+use bevy_obj::ObjPlugin;
 use constants::DELTA_TIME;
 use player::{Player, player_movement_system, CameraComp, player_camera_system};
-use terrain_generation_system::generator::GeneratorOptions;
+use terrain_generation_system::generator::{GeneratorOptions, generate_terrain};
 
 pub mod player;
 pub mod constants;
@@ -13,7 +14,13 @@ fn main() {
     App::new()
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
+        .add_plugin(ObjPlugin)
         .add_startup_system(setup)
+        .insert_resource(GeneratorOptions {
+            width: 10,
+            height: 1,
+        })
+        .add_startup_system(generate_terrain)
         .add_system_set(
             SystemSet::new()
                 .with_run_criteria(FixedTimestep::step(DELTA_TIME as f64))
@@ -29,11 +36,6 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    commands.insert_resource(GeneratorOptions {
-        width: 10,
-        height: 1,
-    });
-
     // player 
     commands.spawn_bundle(PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
