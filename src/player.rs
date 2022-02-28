@@ -23,7 +23,7 @@ pub fn player_movement_system(
     gamepad_input: Res<Input<GamepadButton>>,
     gamepad_axes: Res<Axis<GamepadAxis>>,
 
-    mut c_query: Query<&mut CameraComp>,
+    c_query: Query<&mut CameraComp>,
     mut p_query: Query<(&Player, &mut Transform), Without<CameraComp>>
 ) {
     // Get the player and their transform
