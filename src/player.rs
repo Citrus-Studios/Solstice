@@ -1,8 +1,6 @@
-use std::f32::consts::PI;
-
 use bevy::{prelude::*, input::mouse::{MouseMotion, MouseWheel}};
 
-use crate::constants::{DELTA_TIME, SQRT_OF_2};
+use crate::constants::{DELTA_TIME, SQRT_OF_2, HALF_PI};
 
 #[derive(Component)]
 pub struct Player {
@@ -40,10 +38,8 @@ pub fn player_movement_system(
     let cos_yaw = yaw.cos();
     let sin_yaw = yaw.sin();
 
-    let half_pi = (PI / 2.0);
-
-    let cos_yaw_half = (yaw + half_pi).cos();
-    let sin_yaw_half = (yaw + half_pi).sin();
+    let cos_yaw_half = (yaw + HALF_PI).cos();
+    let sin_yaw_half = (yaw + HALF_PI).sin();
 
     // Get gamepad inputs
     for gamepad in gamepads.iter().cloned() {
