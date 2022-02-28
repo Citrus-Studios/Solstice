@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use heron::{CollisionShape, RigidBody};
 use rand::Rng;
 
 #[derive(Component)]
@@ -29,5 +30,10 @@ pub fn generate_terrain(
         material: materials.add(Color::rgb(randomcolor.0, randomcolor.1, randomcolor.2).into()),
         transform: Transform::from_xyz(0.0, -2.0, 0.0),
         ..Default::default()
-    });
+    })
+    .insert(CollisionShape::Cuboid {
+        half_extends: Vec3::new(10.0, 1.0, 10.0),
+        border_radius: None,
+    })
+    .insert(RigidBody::Static);
 }
