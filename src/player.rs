@@ -129,6 +129,7 @@ pub fn player_camera_system(
         if rmb_pressed {
             for event in mouse_motion_event.iter() {
                 camera.yaw  += event.delta.x / 5.0;
+                camera.yaw = camera.yaw % 360.0;
                 camera.roll += event.delta.y / 5.0;
                 camera.roll = camera.roll.min(89.99999).max(-89.99999);
             }
