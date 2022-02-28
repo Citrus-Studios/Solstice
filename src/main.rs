@@ -1,9 +1,7 @@
-use std::f32::consts::PI;
-
 use bevy::{prelude::*, core::FixedTimestep};
 use bevy_obj::ObjPlugin;
 use constants::DELTA_TIME;
-use heron::{PhysicsLayer, PhysicsPlugin, CollisionShape, RigidBody, Gravity, AxisAngle, Velocity};
+use heron::{PhysicsPlugin, CollisionShape, RigidBody, Gravity};
 use player::{Player, player_movement_system, CameraComp, player_camera_system};
 use terrain_generation_system::generator::{GeneratorOptions, generate_terrain};
 
