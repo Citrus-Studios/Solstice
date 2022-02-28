@@ -1,4 +1,5 @@
 use bevy::{prelude::*, input::mouse::{MouseMotion, MouseWheel}};
+use heron::Velocity;
 
 use crate::constants::{DELTA_TIME, SQRT_OF_2, HALF_PI};
 
@@ -17,18 +18,24 @@ pub struct CameraComp {
 
 
 pub fn player_movement_system(
+    mut commands: Commands,
+
     keyboard_input: Res<Input<KeyCode>>,
 
     gamepads: Res<Gamepads>,
     gamepad_input: Res<Input<GamepadButton>>,
     gamepad_axes: Res<Axis<GamepadAxis>>,
 
-    mut c_query: Query<(&mut CameraComp, &mut Transform)>,
-    mut p_query: Query<(&Player, &mut Transform), Without<CameraComp>>
+    c_query: Query<&mut CameraComp>,
+    p_query: Query<&Player, Without<CameraComp>>,
+    player_entity_query: Query<Entity, With<Player>>
 ) {
     // Get the player and their transform
-    let (player, mut p_transform) = p_query.single_mut();
-    let (camera, _) = c_query.single_mut();
+    let player = p_query.single();
+    let camera = c_query.single();
+
+    // get the player so we can add velocity later
+    let player_entity = &mut commands.entity(player_entity_query.single());
 
     let mut x_mov = 0f32;
     let mut z_mov = 0f32;
@@ -103,9 +110,11 @@ pub fn player_movement_system(
         z_mov = SQRT_OF_2 * z_mov;
     }
 
-    let p_translation = &mut p_transform.translation;
-    p_translation.x += x_mov * player.speed * DELTA_TIME;
-    p_translation.z += z_mov * player.speed * DELTA_TIME;
+    player_entity.insert(
+        Velocity::from_linear(
+            (Vec3::X * x_mov * player.speed * DELTA_TIME * 15.0)
+          + (Vec3::Z * z_mov * player.speed * DELTA_TIME * 15.0)
+    ));
 }
 
 pub fn player_camera_system(

@@ -1,6 +1,9 @@
+
 use std::f32::consts::PI;
 
 use bevy::{prelude::*, core::FixedTimestep, render::primitives::Aabb};
+use bevy::{prelude::*, core::FixedTimestep};
+
 use bevy_obj::ObjPlugin;
 
 use bevy_mod_raycast::{
@@ -10,10 +13,14 @@ use bevy_mod_raycast::{
 
 use building_system::{update_raycast_with_cursor, raycast};
 use constants::DELTA_TIME;
+
 use heron::{PhysicsLayer, PhysicsPlugin, CollisionShape, RigidBody, Gravity, AxisAngle, Velocity,
     rapier_plugin::{PhysicsWorld, ShapeCastCollisionType},
     *
 };
+
+use heron::{PhysicsPlugin, CollisionShape, RigidBody, Gravity};
+
 use player::{Player, player_movement_system, CameraComp, player_camera_system};
 use terrain_generation_system::generator::{GeneratorOptions, generate_terrain};
 
@@ -35,7 +42,7 @@ fn main() {
             width: 10,
             height: 1,
         })
-        .insert_resource(Gravity::from(Vec3::new(0.0, -1.0, 0.0))) // gravity
+        .insert_resource(Gravity::from(Vec3::new(0.0, -20.0, 0.0))) // gravity
         .add_startup_system(generate_terrain)
         .add_system_set(
             SystemSet::new()
@@ -90,11 +97,11 @@ fn setup(
         name: "None".to_string(),
         speed: 10.0
     })
-    .insert(RigidBody::Dynamic)
     .insert(CollisionShape::Cuboid {
         half_extends: Vec3::new(1.0, 1.0, 1.0),
         border_radius: None,
     })
+    .insert(RigidBody::Dynamic)
     .with_children(|child| {
         // camera
         child.spawn_bundle(PerspectiveCameraBundle {
