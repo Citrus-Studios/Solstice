@@ -42,6 +42,9 @@ pub fn player_movement_system(
 
     let half_pi = (PI / 2.0);
 
+    let cos_yaw_half = (yaw + half_pi).cos();
+    let sin_yaw_half = (yaw + half_pi).sin();
+
     // Get gamepad inputs
     for gamepad in gamepads.iter().cloned() {
         let button_pressed = |button| {
@@ -74,12 +77,12 @@ pub fn player_movement_system(
         z_mov += sin_yaw;
     }
     if keyboard_input.pressed(KeyCode::A) {
-        x_mov -= (yaw - half_pi).cos();
-        z_mov -= (yaw - half_pi).sin();
+        x_mov += cos_yaw_half;
+        z_mov += sin_yaw_half;
     }
     if keyboard_input.pressed(KeyCode::D) {
-        x_mov -= (yaw + half_pi).cos();
-        z_mov -= (yaw + half_pi).sin();
+        x_mov -= cos_yaw_half;
+        z_mov -= sin_yaw_half;
     }
 
     // Clamp x and z to -1.0 and 1.0
