@@ -14,8 +14,8 @@ fn main() {
             SystemSet::new()
                 .with_run_criteria(FixedTimestep::step(DELTA_TIME as f64))
                 .with_system(player_movement_system)
-                .with_system(player_camera_system)
         )
+        .add_system(player_camera_system)
         .run();
 }
 
