@@ -24,7 +24,7 @@ fn main() {
             width: 10,
             height: 1,
         })
-        .insert_resource(Gravity::from(Vec3::new(0.0, -1.0, 0.0))) // gravity
+        .insert_resource(Gravity::from(Vec3::new(0.0, -20.0, 0.0))) // gravity
         .add_startup_system(generate_terrain)
         .add_system_set(
             SystemSet::new()
@@ -40,21 +40,6 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    commands.spawn_bundle(PbrBundle {
-        mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-        material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
-        transform: Transform::from_xyz(0.0, 0.5, 0.0),
-        ..Default::default()
-    }).insert(CollisionShape::Cuboid {
-        half_extends: Vec3::new(1.0, 1.0, 1.0),
-        border_radius: None,
-    })
-    .insert(
-        Velocity::from_linear(Vec3::X * 10.0)
-            .with_angular(AxisAngle::new(Vec3::Z, 0.5 * PI))
-    );
-
-
     // player 
     commands.spawn_bundle(PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
@@ -66,11 +51,11 @@ fn setup(
         name: "None".to_string(),
         speed: 10.0
     })
-    .insert(RigidBody::Dynamic)
     .insert(CollisionShape::Cuboid {
         half_extends: Vec3::new(1.0, 1.0, 1.0),
         border_radius: None,
     })
+    .insert(RigidBody::Dynamic)
     .with_children(|child| {
         // camera
         child.spawn_bundle(PerspectiveCameraBundle {
