@@ -32,7 +32,7 @@ pub fn generate_terrain(
         ..Default::default()
     })
     .insert(CollisionShape::Cuboid {
-        half_extends: Vec3::new(10.0, 1.0, 10.0),
+        half_extends: Vec3::new(1.0, 1.0, 1.0),
         border_radius: None,
     })
     .insert(RigidBody::Static);
