@@ -1,9 +1,19 @@
 use std::f32::consts::PI;
 
-use bevy::{prelude::*, core::FixedTimestep};
+use bevy::{prelude::*, core::FixedTimestep, render::primitives::Aabb};
 use bevy_obj::ObjPlugin;
+
+use bevy_mod_raycast::{
+    DefaultPluginState, DefaultRaycastingPlugin, RayCastMesh, RayCastMethod, RayCastSource,
+    RaycastSystem, SimplifiedMesh,
+};
+
+use building_system::{update_raycast_with_cursor, raycast};
 use constants::DELTA_TIME;
-use heron::{PhysicsLayer, PhysicsPlugin, CollisionShape, RigidBody, Gravity, AxisAngle, Velocity};
+use heron::{PhysicsLayer, PhysicsPlugin, CollisionShape, RigidBody, Gravity, AxisAngle, Velocity,
+    rapier_plugin::{PhysicsWorld, ShapeCastCollisionType},
+    *
+};
 use player::{Player, player_movement_system, CameraComp, player_camera_system};
 use terrain_generation_system::generator::{GeneratorOptions, generate_terrain};
 
@@ -17,6 +27,7 @@ fn main() {
     App::new()
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
+        .add_plugin(DefaultRaycastingPlugin::<RaycastSet>::default())
         .add_plugin(ObjPlugin)
         .add_plugin(PhysicsPlugin::default())
         .add_startup_system(setup)
@@ -32,8 +43,18 @@ fn main() {
                 .with_system(player_movement_system)
         )
         .add_system(player_camera_system)
+        .add_system_to_stage(
+            CoreStage::PreUpdate,
+            update_raycast_with_cursor.before(RaycastSystem::BuildRays),
+        )
+        .add_system_to_stage(
+            CoreStage::PostUpdate,
+            raycast.after(RaycastSystem::UpdateRaycast)
+        )
         .run();
 }
+
+pub struct RaycastSet;
 
 fn setup(
     mut commands: Commands,
@@ -52,6 +73,9 @@ fn setup(
     .insert(
         Velocity::from_linear(Vec3::X * 10.0)
             .with_angular(AxisAngle::new(Vec3::Z, 0.5 * PI))
+    )
+    .insert(Aabb::default())
+    .insert(RayCastMesh::<RaycastSet>::default()
     );
 
 
@@ -81,6 +105,7 @@ fn setup(
             yaw: 0.0,
             roll: 0.0,
             zoom: 5.0,
-        });
+        })
+        .insert(RayCastSource::<RaycastSet>::new());
     });
 }
