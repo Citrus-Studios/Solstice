@@ -1,6 +1,7 @@
 use bevy::{prelude::*, core::FixedTimestep};
 use constants::DELTA_TIME;
 use player::{Player, player_movement_system, CameraComp, player_camera_system};
+use terrain_generation_system::generator::GeneratorOptions;
 
 pub mod player;
 pub mod constants;
@@ -28,6 +29,11 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+    commands.insert_resource(GeneratorOptions {
+        width: 10,
+        height: 1,
+    });
+
     // player 
     commands.spawn_bundle(PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
