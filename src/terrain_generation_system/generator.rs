@@ -2,8 +2,8 @@ use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct GeneratorOptions {
-    width: u32,
-    height: u32,
+    pub width: u32,
+    pub height: u32,
 }
 
 pub fn generate(
