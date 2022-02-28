@@ -109,6 +109,10 @@ pub fn player_camera_system(
     mouse_input: Res<Input<MouseButton>>,
     mut mouse_scroll_event: EventReader<MouseWheel>,
 
+    gamepads: Res<Gamepads>,
+    gamepad_input: Res<Input<GamepadButton>>,
+    gamepad_axes: Res<Axis<GamepadAxis>>,
+
     mut c_query: Query<(&mut CameraComp, &mut Transform)>,
 ) {
     let (mut camera, mut c_transform) = c_query.single_mut();
@@ -124,15 +128,62 @@ pub fn player_camera_system(
 
     let rmb_pressed = mouse_input.pressed(MouseButton::Right);
 
-    if rmb_pressed || last_camera_zoom != camera.zoom {
+    let mut gamepad_axes_moved = false;
+
+    for gamepad in gamepads.iter().cloned() {
+        let button_pressed = |button| {
+            gamepad_input.pressed(GamepadButton(gamepad, button))
+        };
+        let axes_moved = |axis| {
+            gamepad_axes.get(GamepadAxis(gamepad, axis)).unwrap()
+        };
+
+        let rsy = axes_moved(GamepadAxisType::RightStickY);
+        let rsx = axes_moved(GamepadAxisType::RightStickX);
+        if rsy > 0.05 {
+            camera.roll += 2.0 * rsy;
+            gamepad_axes_moved = true;
+        }
+        if rsy < -0.05 {
+            camera.roll += 2.0 * rsy;
+            gamepad_axes_moved = true;
+        }
+        if rsx > 0.05 {
+            camera.yaw += 2.0 * rsx;
+            gamepad_axes_moved = true;
+        }
+        if rsx < -0.05 {
+            camera.yaw += 2.0 * rsx;
+            gamepad_axes_moved = true;
+        }
+        
+        if button_pressed(GamepadButtonType::RightThumb) {
+            if button_pressed(GamepadButtonType::RightTrigger) {
+                camera.zoom += 1.0;
+            } else {
+                camera.zoom += 0.1;
+            }
+        }
+        if button_pressed(GamepadButtonType::LeftThumb) {
+            if button_pressed(GamepadButtonType::LeftTrigger) {
+                camera.zoom -= 1.0;
+            } else {
+                camera.zoom -= 0.1;
+            }
+        }
+    }
+
+    if rmb_pressed || last_camera_zoom != camera.zoom || gamepad_axes_moved {
         if rmb_pressed {
             for event in mouse_motion_event.iter() {
                 camera.yaw  += event.delta.x / 5.0;
-                camera.yaw = camera.yaw % 360.0;
                 camera.roll += event.delta.y / 5.0;
-                camera.roll = camera.roll.min(89.99999).max(-89.99999);
             }
         }
+
+        camera.roll = camera.roll.min(89.99999).max(-89.99999);
+        camera.yaw = camera.yaw % 360.0;
+        
         let yaw = camera.yaw.to_radians();
         let roll = camera.roll.to_radians();
 
