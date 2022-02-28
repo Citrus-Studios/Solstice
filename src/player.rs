@@ -23,12 +23,12 @@ pub fn player_movement_system(
     gamepad_input: Res<Input<GamepadButton>>,
     gamepad_axes: Res<Axis<GamepadAxis>>,
 
-    mut c_query: Query<(&mut CameraComp, &mut Transform)>,
+    mut c_query: Query<&mut CameraComp>,
     mut p_query: Query<(&Player, &mut Transform), Without<CameraComp>>
 ) {
     // Get the player and their transform
     let (player, mut p_transform) = p_query.single_mut();
-    let (camera, _) = c_query.single_mut();
+    let camera = c_query.single();
 
     let mut x_mov = 0f32;
     let mut z_mov = 0f32;
