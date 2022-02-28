@@ -51,16 +51,20 @@ pub fn player_movement_system(
         };
 
         if button_pressed(GamepadButtonType::DPadUp) || axes_moved(GamepadAxisType::LeftStickY) > 0.05 {
-            x_mov += 1.0;
+            x_mov -= cos_yaw;
+            z_mov -= sin_yaw;
         }
         if button_pressed(GamepadButtonType::DPadDown) || axes_moved(GamepadAxisType::LeftStickY) < -0.05 {
-            x_mov -= 1.0;
+            x_mov += cos_yaw;
+            z_mov += sin_yaw;
         }
         if button_pressed(GamepadButtonType::DPadLeft) || axes_moved(GamepadAxisType::LeftStickX) > 0.05 {
-            z_mov -= 1.0;
+            x_mov += cos_yaw_half;
+            z_mov += sin_yaw_half;
         }
         if button_pressed(GamepadButtonType::DPadRight) || axes_moved(GamepadAxisType::LeftStickX) < -0.05 {
-            z_mov += 1.0;
+            x_mov -= cos_yaw_half;
+            z_mov -= sin_yaw_half;
         }
     }
     // Get keyboard inputs
