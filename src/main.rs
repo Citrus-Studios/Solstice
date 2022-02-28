@@ -5,6 +5,9 @@ use player::{Player, player_movement_system, CameraComp, player_camera_system};
 pub mod player;
 pub mod constants;
 
+pub mod terrain_generation_system;
+pub mod building_system;
+
 fn main() {
     App::new()
         .insert_resource(Msaa { samples: 4 })
