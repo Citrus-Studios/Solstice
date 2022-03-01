@@ -2,7 +2,6 @@
 use std::f32::consts::PI;
 
 use bevy::{prelude::*, core::FixedTimestep, render::primitives::Aabb};
-use bevy::{prelude::*, core::FixedTimestep};
 
 use bevy_obj::ObjPlugin;
 
@@ -19,7 +18,6 @@ use heron::{PhysicsLayer, PhysicsPlugin, CollisionShape, RigidBody, Gravity, Axi
     *
 };
 
-use heron::{PhysicsPlugin, CollisionShape, RigidBody, Gravity};
 
 use player::{Player, player_movement_system, CameraComp, player_camera_system};
 use terrain_generation_system::generator::{GeneratorOptions, generate_terrain};
@@ -81,7 +79,6 @@ fn setup(
         Velocity::from_linear(Vec3::X * 10.0)
             .with_angular(AxisAngle::new(Vec3::Z, 0.5 * PI))
     )
-    .insert(Aabb::default())
     .insert(RayCastMesh::<RaycastSet>::default()
     );
 
