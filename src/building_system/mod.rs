@@ -4,6 +4,9 @@ use bevy_mod_raycast::{RayCastMethod, RayCastSource, RayCastMesh, Intersection, 
 
 use crate::{player::CameraComp, RaycastSet};
 
+#[derive(Component)]
+pub struct RaycastCursor;
+
 pub fn update_raycast_with_cursor(
     mut cursor: EventReader<CursorMoved>,
     mut query: Query<&mut RayCastSource<RaycastSet>>,
@@ -16,17 +19,34 @@ pub fn update_raycast_with_cursor(
 }
 
 pub fn raycast(
-    mut query: Query<&mut RayCastSource<RaycastSet>>,
+    mut r_query: Query<&mut RayCastSource<RaycastSet>>,
+    mut d_query: Query<&mut Transform, With<RaycastCursor>>,
 ) {
-
     let mut intersections = Vec::new();
 
-    for mut e in &mut query.iter_mut() {
+    for mut e in &mut r_query.iter_mut() {
         let f: &mut Vec<(Entity, Intersection)> = e.intersections_mut();
         intersections.append(f);
     }
 
-    info!("{:?}", intersections);
+    if !intersections.is_empty() {
+        let (_, mut closest_intersection) = intersections.pop().unwrap();
+
+        for (_, intersection) in intersections {
+            if intersection.distance() < closest_intersection.distance() {
+                closest_intersection = intersection;
+            }
+        }
+
+        let mut rc_cursor = d_query.single_mut();
+        rc_cursor.translation = closest_intersection.position() + (closest_intersection.normal() * 0.2);
+
+        //info!("Pos: {:?}  Normal: {:?}", closest_intersection.position(), closest_intersection.normal());
+
+
+    }
+
+
 }
 
 

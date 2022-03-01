@@ -10,7 +10,7 @@ use bevy_mod_raycast::{
     RaycastSystem, SimplifiedMesh,
 };
 
-use building_system::{update_raycast_with_cursor, raycast};
+use building_system::{update_raycast_with_cursor, raycast, RaycastCursor};
 use constants::DELTA_TIME;
 
 use heron::{PhysicsLayer, PhysicsPlugin, CollisionShape, RigidBody, Gravity, AxisAngle, Velocity,
@@ -81,6 +81,15 @@ fn setup(
     )
     .insert(RayCastMesh::<RaycastSet>::default()
     );
+
+    // lil thingy where cursor
+    commands.spawn_bundle(PbrBundle {
+        mesh: meshes.add(Mesh::from(shape::Icosphere { radius: 0.1, subdivisions: 3 })),
+        material: materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
+        transform: Transform::from_xyz(0.0, 0.5, 0.0),
+        ..Default::default()
+        })
+        .insert(RaycastCursor);
 
 
     // player 

@@ -1,6 +1,9 @@
 use bevy::prelude::*;
+use bevy_mod_raycast::RayCastMesh;
 use heron::{CollisionShape, RigidBody};
 use rand::Rng;
+
+use crate::RaycastSet;
 
 #[derive(Component)]
 pub struct GeneratorOptions {
@@ -35,5 +38,6 @@ pub fn generate_terrain(
         half_extends: Vec3::new(1.0, 1.0, 1.0),
         border_radius: None,
     })
-    .insert(RigidBody::Static);
+    .insert(RigidBody::Static)
+    .insert(RayCastMesh::<RaycastSet>::default());
 }
