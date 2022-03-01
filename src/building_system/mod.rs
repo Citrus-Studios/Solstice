@@ -18,24 +18,12 @@ pub fn update_raycast_with_cursor(
 pub fn raycast(
     mut query: Query<&mut RayCastSource<RaycastSet>>,
 ) {
-    // for event in events.iter() {
-    //     info!("{:?}", event.position());
-    // }
 
-
-    // this is a mess, help
-    
     let mut intersections = Vec::new();
 
-    for e in &mut query.iter_mut() {
-        let &mut f = match e.intersect_list() {
-            Some(g) => g,
-            _ => &Vec::new()
-        };
-
-        if !f.is_empty() {
-            intersections.append(&mut *f);
-        }
+    for mut e in &mut query.iter_mut() {
+        let f: &mut Vec<(Entity, Intersection)> = e.intersections_mut();
+        intersections.append(f);
     }
 
     info!("{:?}", intersections);
