@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_mod_raycast::RayCastMesh;
-use heron::{CollisionShape, RigidBody};
+use bevy_rapier3d::{physics::{ColliderPositionSync, ColliderBundle}, render::ColliderDebugRender, prelude::ColliderShape};
 use rand::Rng;
 
 use crate::RaycastSet;
@@ -18,7 +18,6 @@ pub fn generate_terrain(
 
     generator_options: Res<GeneratorOptions>
 ) {
-
     let hollowground = asset_server.load("models/ground1/ground1.obj");
 
     let mut rng = rand::thread_rng();
@@ -34,10 +33,12 @@ pub fn generate_terrain(
         transform: Transform::from_xyz(0.0, -2.0, 0.0),
         ..Default::default()
     })
-    .insert(CollisionShape::Cuboid {
-        half_extends: Vec3::new(1.0, 1.0, 1.0),
-        border_radius: None,
+    .insert_bundle(ColliderBundle {
+        shape: ColliderShape::trimesh(hollowground, indices),
+        position: [0.0, -2.0, 0.0].into(),
+        ..Default::default()
     })
-    .insert(RigidBody::Static)
+    .insert(ColliderPositionSync::Discrete)
+    .insert(ColliderDebugRender::with_id(1))
     .insert(RayCastMesh::<RaycastSet>::default());
 }

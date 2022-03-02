@@ -1,6 +1,4 @@
 
-use std::f32::consts::PI;
-
 use bevy::{prelude::*, core::FixedTimestep};
 
 use bevy_obj::ObjPlugin;
@@ -10,11 +8,9 @@ use bevy_mod_raycast::{
     RaycastSystem
 };
 
+use bevy_rapier3d::{physics::{RigidBodyBundle, ColliderBundle, ColliderPositionSync, RapierPhysicsPlugin, NoUserData}, render::ColliderDebugRender};
 use building_system::{update_raycast_with_cursor, raycast, RaycastCursor};
 use constants::DELTA_TIME;
-
-use heron::{PhysicsPlugin, CollisionShape, RigidBody, Gravity, AxisAngle, Velocity};
-
 
 use player::{Player, player_movement_system, CameraComp, player_camera_system};
 use terrain_generation_system::generator::{GeneratorOptions, generate_terrain};
@@ -31,13 +27,12 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugin(DefaultRaycastingPlugin::<RaycastSet>::default())
         .add_plugin(ObjPlugin)
-        .add_plugin(PhysicsPlugin::default())
+        .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_startup_system(setup)
         .insert_resource(GeneratorOptions {
             width: 10,
             height: 1,
         })
-        .insert_resource(Gravity::from(Vec3::new(0.0, -20.0, 0.0))) // gravity
         .add_startup_system(generate_terrain)
         .add_system_set(
             SystemSet::new()
@@ -65,14 +60,7 @@ fn setup(
         material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
         transform: Transform::from_xyz(0.0, 0.5, 0.0),
         ..Default::default()
-    }).insert(CollisionShape::Cuboid {
-        half_extends: Vec3::new(1.0, 1.0, 1.0),
-        border_radius: None,
     })
-    .insert(
-        Velocity::from_linear(Vec3::X * 10.0)
-            .with_angular(AxisAngle::new(Vec3::Z, 0.5 * PI))
-    )
     .insert(RayCastMesh::<RaycastSet>::default()
     );
 
@@ -97,11 +85,13 @@ fn setup(
         name: "None".to_string(),
         speed: 5.0
     })
-    .insert(CollisionShape::Cuboid {
-        half_extends: Vec3::new(1.0, 1.0, 1.0),
-        border_radius: None,
+    .insert_bundle(RigidBodyBundle::default())
+    .insert_bundle(ColliderBundle {
+        position: [1.0, 1.0, 1.0].into(),
+        ..Default::default()
     })
-    .insert(RigidBody::Dynamic)
+    .insert(ColliderPositionSync::Discrete)
+    .insert(ColliderDebugRender::with_id(0))
     .with_children(|child| {
         // camera
         child.spawn_bundle(PerspectiveCameraBundle {

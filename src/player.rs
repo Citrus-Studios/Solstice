@@ -1,5 +1,4 @@
 use bevy::{prelude::*, input::mouse::{MouseMotion, MouseWheel}};
-use heron::Velocity;
 
 use crate::constants::{DELTA_TIME, SQRT_OF_2, HALF_PI};
 
@@ -110,11 +109,7 @@ pub fn player_movement_system(
         z_mov = SQRT_OF_2 * z_mov;
     }
 
-    player_entity.insert(
-        Velocity::from_linear(
-            (Vec3::X * x_mov * player.speed * DELTA_TIME * 15.0)
-          + (Vec3::Z * z_mov * player.speed * DELTA_TIME * 15.0)
-    ));
+
 }
 
 pub fn player_camera_system(
