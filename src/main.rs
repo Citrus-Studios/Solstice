@@ -95,7 +95,7 @@ fn setup(
     })
     .insert(Player {
         name: "None".to_string(),
-        speed: 10.0
+        speed: 5.0
     })
     .insert(CollisionShape::Cuboid {
         half_extends: Vec3::new(1.0, 1.0, 1.0),
