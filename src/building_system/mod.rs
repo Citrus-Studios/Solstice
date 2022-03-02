@@ -24,7 +24,9 @@ pub fn update_raycast_with_cursor(
 pub fn raycast(
     mut r_query: Query<&mut RayCastSource<RaycastSet>>,
     mut d_query: Query<(&mut Transform, &mut Visibility), With<RaycastCursor>>,
-    mut rc_query: Query<&mut RaycastCursor> 
+    mut rc_query: Query<&mut RaycastCursor>,
+
+    keyboard_input: Res<Input<KeyCode>>
 ) {
     let mut intersections = Vec::new();
 
@@ -32,6 +34,14 @@ pub fn raycast(
         let f: &mut Vec<(Entity, Intersection)> = e.intersections_mut();
         intersections.append(f);
     }
+
+    let mut rcc = rc_query.single_mut();
+
+    if keyboard_input.just_pressed(KeyCode::K) {
+        rcc.visible = (1 - rcc.visible as i8) != 0 ;
+    }
+
+    let d = d_query.get_single_mut();
 
     if !intersections.is_empty() {
         let (_, mut closest_intersection) = intersections.pop().unwrap();
@@ -42,30 +52,30 @@ pub fn raycast(
             }
         }
 
-        let rcc = rc_query.get_single_mut();
+        rcc.intersection = Some(closest_intersection);
 
-        if rcc.is_ok() {
-            // This is kinda dumb
-            let mut rcc_unwrap = rcc.unwrap();
-            rcc_unwrap.intersection = Some(closest_intersection);
+        if rcc.visible {
+            if d.is_ok() {
+                let (mut rc_cursor_transform, mut rc_cursor_visible) = d.unwrap();
 
-            let d = d_query.get_single_mut();
-
-            if rcc_unwrap.visible {
-                if d.is_ok() {
-                    let (mut rc_cursor_transform, mut rc_cursor_visible) = d.unwrap();
-
-                    rc_cursor_transform.translation = closest_intersection.position();
-                    rc_cursor_visible.is_visible = true;
-                    // info!("Pos: {:?}  Normal: {:?}", closest_intersection.position(), closest_intersection.normal());
-                }
-            } else {
-                if d.is_ok() {
-                    let (_, mut rc_cursor_visible) = d.unwrap();
-
-                    rc_cursor_visible.is_visible = false;
-                }
+                rc_cursor_transform.translation = closest_intersection.position();
+                rc_cursor_visible.is_visible = true;
+                // info!("Pos: {:?}  Normal: {:?}", closest_intersection.position(), closest_intersection.normal());
             }
+        } else {
+            if d.is_ok() {
+                let (_, mut rc_cursor_visible) = d.unwrap();
+
+                rc_cursor_visible.is_visible = false;
+            }
+        }
+    } else {
+        rcc.intersection = None;
+        
+        if d.is_ok() {
+            let (_, mut rc_cursor_visible) = d.unwrap();
+
+            rc_cursor_visible.is_visible = false;
         }
     }
 }
