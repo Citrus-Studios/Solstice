@@ -83,7 +83,7 @@ fn setup(
         transform: Transform::from_xyz(0.0, 0.5, 0.0),
         ..Default::default()
         })
-        .insert(RaycastCursor { visible: false });
+        .insert(RaycastCursor { visible: false, intersection: None });
 
 
     // player 
