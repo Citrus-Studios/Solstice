@@ -5,7 +5,9 @@ use bevy_mod_raycast::{RayCastMethod, RayCastSource, Intersection};
 use crate::{RaycastSet};
 
 #[derive(Component)]
-pub struct RaycastCursor;
+pub struct RaycastCursor {
+    pub visible: bool
+}
 
 pub fn update_raycast_with_cursor(
     mut cursor: EventReader<CursorMoved>,
@@ -20,7 +22,8 @@ pub fn update_raycast_with_cursor(
 
 pub fn raycast(
     mut r_query: Query<&mut RayCastSource<RaycastSet>>,
-    mut d_query: Query<&mut Transform, With<RaycastCursor>>,
+    mut d_query: Query<(&mut Transform, &mut Visibility), With<RaycastCursor>>,
+    mut rc_query: Query<&RaycastCursor> 
 ) {
     let mut intersections = Vec::new();
 
@@ -38,12 +41,22 @@ pub fn raycast(
             }
         }
 
-        let mut rc_cursor = d_query.single_mut();
-        rc_cursor.translation = closest_intersection.position();
-
-        //info!("Pos: {:?}  Normal: {:?}", closest_intersection.position(), closest_intersection.normal());
-
+        let vis = rc_query.get_single_mut();
+        if vis.is_ok() {
+            let d = d_query.get_single_mut();
+            if vis.unwrap().visible {
+                if d.is_ok() {
+                    let (mut rc_cursor_transform, mut rc_cursor_visible) = d.unwrap();
+                    rc_cursor_transform.translation = closest_intersection.position();
+                    rc_cursor_visible.is_visible = true;
+                    //info!("Pos: {:?}  Normal: {:?}", closest_intersection.position(), closest_intersection.normal());
+                }
+            } else {
+                if d.is_ok() {
+                    let (_, mut rc_cursor_visible) = d.unwrap();
+                    rc_cursor_visible.is_visible = false;
+                }
+            }
+        }
     }
-
-
 }

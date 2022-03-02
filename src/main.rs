@@ -1,22 +1,19 @@
 
 use std::f32::consts::PI;
 
-use bevy::{prelude::*, core::FixedTimestep, render::primitives::Aabb};
+use bevy::{prelude::*, core::FixedTimestep};
 
 use bevy_obj::ObjPlugin;
 
 use bevy_mod_raycast::{
-    DefaultPluginState, DefaultRaycastingPlugin, RayCastMesh, RayCastMethod, RayCastSource,
-    RaycastSystem, SimplifiedMesh,
+    DefaultRaycastingPlugin, RayCastMesh, RayCastSource,
+    RaycastSystem
 };
 
 use building_system::{update_raycast_with_cursor, raycast, RaycastCursor};
 use constants::DELTA_TIME;
 
-use heron::{PhysicsLayer, PhysicsPlugin, CollisionShape, RigidBody, Gravity, AxisAngle, Velocity,
-    rapier_plugin::{PhysicsWorld, ShapeCastCollisionType},
-    *
-};
+use heron::{PhysicsPlugin, CollisionShape, RigidBody, Gravity, AxisAngle, Velocity};
 
 
 use player::{Player, player_movement_system, CameraComp, player_camera_system};
@@ -52,10 +49,7 @@ fn main() {
             CoreStage::PreUpdate,
             update_raycast_with_cursor.before(RaycastSystem::BuildRays),
         )
-        .add_system_to_stage(
-            CoreStage::PostUpdate,
-            raycast.after(RaycastSystem::UpdateRaycast)
-        )
+        .add_system(raycast)
         .run();
 }
 
@@ -89,7 +83,7 @@ fn setup(
         transform: Transform::from_xyz(0.0, 0.5, 0.0),
         ..Default::default()
         })
-        .insert(RaycastCursor);
+        .insert(RaycastCursor { visible: false });
 
 
     // player 
