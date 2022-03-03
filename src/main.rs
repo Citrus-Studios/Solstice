@@ -10,6 +10,7 @@ use bevy_mod_raycast::{
 
 use bevy_rapier3d::{physics::{RigidBodyBundle, ColliderBundle, ColliderPositionSync, RapierPhysicsPlugin, NoUserData}, render::ColliderDebugRender};
 use building_system::{update_raycast_with_cursor, raycast, RaycastCursor};
+use building_system::{update_raycast_with_cursor, raycast, RaycastCursor, visualizer::*};
 use constants::DELTA_TIME;
 
 use player::{Player, player_movement_system, CameraComp, player_camera_system};
@@ -20,6 +21,8 @@ pub mod constants;
 
 pub mod terrain_generation_system;
 pub mod building_system;
+
+
 
 fn main() {
     App::new()
@@ -45,6 +48,7 @@ fn main() {
             update_raycast_with_cursor.before(RaycastSystem::BuildRays),
         )
         .add_system(raycast)
+        .add_system(visualizer)
         .run();
 }
 

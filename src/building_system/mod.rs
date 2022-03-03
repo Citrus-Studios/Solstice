@@ -1,3 +1,5 @@
+pub mod visualizer;
+
 use bevy::{prelude::*};
 use bevy_mod_raycast::{RayCastMethod, RayCastSource, Intersection};
 
