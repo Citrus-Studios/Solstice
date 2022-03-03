@@ -1,4 +1,5 @@
 use bevy::{prelude::*, input::mouse::{MouseMotion, MouseWheel}};
+use bevy_rapier3d::{prelude::{RigidBodyVelocityComponent}};
 
 use crate::constants::{DELTA_TIME, SQRT_OF_2, HALF_PI};
 
@@ -17,8 +18,6 @@ pub struct CameraComp {
 
 
 pub fn player_movement_system(
-    mut commands: Commands,
-
     keyboard_input: Res<Input<KeyCode>>,
 
     gamepads: Res<Gamepads>,
@@ -26,15 +25,12 @@ pub fn player_movement_system(
     gamepad_axes: Res<Axis<GamepadAxis>>,
 
     c_query: Query<&mut CameraComp>,
+    mut r_query: Query<&mut RigidBodyVelocityComponent, (Without<CameraComp>, With<Player>)>,
     p_query: Query<&Player, Without<CameraComp>>,
-    player_entity_query: Query<Entity, With<Player>>
 ) {
-    // Get the player and their transform
+    let mut player_rigidbody = r_query.single_mut();
     let player = p_query.single();
     let camera = c_query.single();
-
-    // get the player so we can add velocity later
-    let player_entity = &mut commands.entity(player_entity_query.single());
 
     let mut x_mov = 0f32;
     let mut z_mov = 0f32;
@@ -109,7 +105,7 @@ pub fn player_movement_system(
         z_mov = SQRT_OF_2 * z_mov;
     }
 
-
+    player_rigidbody.linvel = (Vec3::new(x_mov, 0.0, z_mov) * player.speed * DELTA_TIME).into();
 }
 
 pub fn player_camera_system(
