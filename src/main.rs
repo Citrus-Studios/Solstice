@@ -21,8 +21,6 @@ pub mod constants;
 pub mod terrain_generation_system;
 pub mod building_system;
 
-
-
 fn main() {
     App::new()
         .insert_resource(Msaa { samples: 4 })
@@ -74,7 +72,7 @@ fn setup(
         transform: Transform::from_xyz(0.0, 0.5, 0.0),
         ..Default::default()
         })
-        .insert(RaycastCursor { visible: false, intersection: None });
+        .insert(RaycastCursor { visible: false });
 
 
     // player 
