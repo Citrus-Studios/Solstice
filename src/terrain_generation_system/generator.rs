@@ -1,9 +1,7 @@
 use bevy::prelude::*;
 use bevy_mod_raycast::RayCastMesh;
-use bevy_rapier3d::{physics::{ColliderPositionSync, ColliderBundle}, render::ColliderDebugRender, prelude::{ColliderShape, Point, Real}};
-use nalgebra::{Rotation3, Vector3, Matrix2x3, Isometry3};
+use bevy_rapier3d::{physics::{ColliderPositionSync, ColliderBundle}, prelude::{ColliderShape}};
 use rand::Rng;
-use std::vec::Vec;
 
 use crate::RaycastSet;
 
@@ -35,7 +33,7 @@ pub fn generate_terrain(
             base_color: Color::rgb(randomcolor.0, randomcolor.1, randomcolor.2),
             ..Default::default()
         }),
-        transform: Transform::from_xyz(0.0, -2.0, 0.0),
+        transform: Transform::from_xyz(0.0, -4.0, 0.0),
         ..Default::default()
     })
     .insert_bundle(ColliderBundle {
