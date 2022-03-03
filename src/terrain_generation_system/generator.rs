@@ -1,7 +1,9 @@
 use bevy::prelude::*;
 use bevy_mod_raycast::RayCastMesh;
-use bevy_rapier3d::{physics::{ColliderPositionSync, ColliderBundle}, render::ColliderDebugRender, prelude::ColliderShape};
+use bevy_rapier3d::{physics::{ColliderPositionSync, ColliderBundle}, render::ColliderDebugRender, prelude::{ColliderShape, Point, Real}};
+use nalgebra::{Rotation3, Vector3, Matrix2x3, Isometry3};
 use rand::Rng;
+use std::vec::Vec;
 
 use crate::RaycastSet;
 
@@ -16,9 +18,9 @@ pub fn generate_terrain(
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 
-    generator_options: Res<GeneratorOptions>
+    generator_options: Res<GeneratorOptions>,
 ) {
-    let hollowground = asset_server.load("models/ground1/ground1.obj");
+    let hollowground_handle = asset_server.load("models/ground1/ground1.obj");
 
     let mut rng = rand::thread_rng();
     let randomcolor = (
@@ -28,13 +30,16 @@ pub fn generate_terrain(
     );
 
     commands.spawn_bundle(PbrBundle {
-        mesh: hollowground,
+        mesh: hollowground_handle,
         material: materials.add(Color::rgb(randomcolor.0, randomcolor.1, randomcolor.2).into()),
         transform: Transform::from_xyz(0.0, -2.0, 0.0),
         ..Default::default()
     })
     .insert_bundle(ColliderBundle {
-        shape: ColliderShape::trimesh(hollowground, indices),
+        shape: ColliderShape::compound(vec![(
+            [0.0, -1.0, 0.0].into(), 
+            ColliderShape::cuboid(3.0, 1.0, 3.0))]
+        ).into(),
         position: [0.0, -2.0, 0.0].into(),
         ..Default::default()
     })
