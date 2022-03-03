@@ -1,5 +1,5 @@
 use bevy::{prelude::*, input::mouse::{MouseMotion, MouseWheel}};
-use bevy_rapier3d::{prelude::{RigidBodyVelocity, RigidBodyVelocityComponent}, physics::RigidBodyBundle};
+use bevy_rapier3d::{prelude::{RigidBodyVelocityComponent}};
 
 use crate::constants::{DELTA_TIME, SQRT_OF_2, HALF_PI};
 
@@ -18,8 +18,6 @@ pub struct CameraComp {
 
 
 pub fn player_movement_system(
-    mut commands: Commands,
-
     keyboard_input: Res<Input<KeyCode>>,
 
     gamepads: Res<Gamepads>,
