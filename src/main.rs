@@ -86,7 +86,7 @@ fn setup(
     })
     .insert(Player {
         name: "None".to_string(),
-        speed: 5.0
+        speed: 200.0
     })
     .insert_bundle(RigidBodyBundle::default())
     .insert_bundle(ColliderBundle {
