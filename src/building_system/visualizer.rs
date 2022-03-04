@@ -13,31 +13,38 @@ pub fn visualizer(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands
 ) {
-    let intersection_op = bc_query.single().intersection;
-    let rot = bc_query.single().rotation;
+    let build_cursor_query = bc_query.get_single();
 
-    let pipe_model: Handle<Mesh> = asset_server.load("models/pipes/pipe_base.obj");
-
-    for entity in delete_query.iter() {
-        commands.entity(entity).despawn();
-    }
+    if build_cursor_query.is_ok() {
+        let intersection_op = build_cursor_query.as_ref().unwrap().intersection;
     
-    if intersection_op.is_some() {
-        let intersection = intersection_op.unwrap();
-        let normal = intersection.normal();
+        let rot = build_cursor_query.unwrap().rotation;
 
-        // Spawn pipe for deletion next frame
-        commands.spawn_bundle(PbrBundle {
-            mesh: pipe_model,
-            material: materials.add(StandardMaterial {
-                base_color: Color::rgba(0.0, 0.2, 1.0, 0.5),
-                alpha_mode: Blend,
+        let pipe_model: Handle<Mesh> = asset_server.load("models/pipes/pipe_base.obj");
+
+        for entity in delete_query.iter() {
+            commands.entity(entity).despawn();
+        }
+        
+        if intersection_op.is_some() {
+            let intersection = intersection_op.unwrap();
+            let normal = intersection.normal();
+
+            let quat_vec = Vec4::new(normal.x, normal.y, normal.z, rot);
+
+            // Spawn pipe for deletion next frame
+            commands.spawn_bundle(PbrBundle {
+                mesh: pipe_model,
+                material: materials.add(StandardMaterial {
+                    base_color: Color::rgba(0.0, 0.2, 1.0, 0.5),
+                    alpha_mode: Blend,
+                    ..Default::default()
+                }),
+                transform: Transform::from_translation(intersection.position()).with_rotation(Quat::from_vec4(quat_vec)),
                 ..Default::default()
-            }),
-            transform: Transform::from_translation(intersection.position()),
-            ..Default::default()
-        })
-        .insert(NotShadowCaster)
-        .insert(DeleteNextFrame);
+            })
+            .insert(NotShadowCaster)
+            .insert(DeleteNextFrame);
+        }
     }
 }
