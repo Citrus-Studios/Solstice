@@ -1,7 +1,7 @@
 use bevy::pbr::{NotShadowCaster, AlphaMode::Blend};
 pub use bevy::{prelude::*};
 
-use super::{BuildCursor};
+use super::raycasting::BuildCursor;
 
 #[derive(Component)]
 pub struct DeleteNextFrame;
