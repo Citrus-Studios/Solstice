@@ -61,7 +61,13 @@ pub fn raycast(
             }
         }
 
-        commands.insert_resource(BuildCursor { intersection: Some(closest_intersection), rotation: bc_query.single().rotation });
+        commands.insert_resource(BuildCursor { 
+            intersection: Some(closest_intersection), 
+            rotation: match bc_query.get_single() {
+                Ok(e) => e.rotation,
+                Err(_) => 0.0
+            } 
+        });
 
         if rcc.visible {
             if d.is_ok() {
@@ -79,7 +85,13 @@ pub fn raycast(
             }
         }
     } else {
-        commands.insert_resource(BuildCursor { intersection: None, rotation: bc_query.single().rotation });
+        commands.insert_resource(BuildCursor { 
+            intersection: None, 
+            rotation: match bc_query.get_single() {
+                Ok(e) => e.rotation,
+                Err(_) => 0.0
+            } 
+        });
         
         if d.is_ok() {
             let (_, mut rc_cursor_visible) = d.unwrap();
