@@ -8,7 +8,7 @@ use bevy_mod_raycast::{
     RaycastSystem
 };
 
-use bevy_rapier3d::{physics::{RigidBodyBundle, ColliderBundle, ColliderPositionSync, RapierPhysicsPlugin, NoUserData}, render::ColliderDebugRender};
+use bevy_rapier3d::{physics::{RigidBodyBundle, ColliderBundle, ColliderPositionSync, RapierPhysicsPlugin, NoUserData}, render::ColliderDebugRender, prelude::RigidBodyForces};
 use building_system::{update_raycast_with_cursor, raycast, RaycastCursor, visualizer::*};
 use constants::DELTA_TIME;
 
@@ -88,7 +88,13 @@ fn setup(
         name: "None".to_string(),
         speed: 200.0
     })
-    .insert_bundle(RigidBodyBundle::default())
+    .insert_bundle(RigidBodyBundle {
+        forces: RigidBodyForces {
+            gravity_scale: 200.0,
+            ..Default::default()
+        }.into(),
+        ..Default::default()
+    })
     .insert_bundle(ColliderBundle {
         position: [1.0, 1.0, 1.0].into(),
         ..Default::default()
