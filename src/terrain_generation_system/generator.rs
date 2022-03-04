@@ -43,7 +43,7 @@ pub fn generate_terrain(
     .insert_bundle(ColliderBundle {
         shape: ColliderShape::compound(vec![(
             [0.0, -2.0, 0.0].into(), 
-            ColliderShape::cuboid(1.0/2.0, 1.0/2.0, 1.0/2.0))]
+            ColliderShape::cuboid(1.0/2.0, 1.0/3.0/2.0, 1.0/2.0))]
         ).into(),
         position: [0.0, -2.0, 0.0].into(),
         ..Default::default()

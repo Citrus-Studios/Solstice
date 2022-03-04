@@ -1,4 +1,5 @@
 
+use bevy_rapier3d::prelude::RapierRenderPlugin;
 use bevy::{prelude::*, core::FixedTimestep};
 
 use bevy_obj::ObjPlugin;
@@ -8,18 +9,18 @@ use bevy_mod_raycast::{
     RaycastSystem
 };
 
-use bevy_rapier3d::{physics::{RigidBodyBundle, ColliderBundle, ColliderPositionSync, RapierPhysicsPlugin, NoUserData}, render::ColliderDebugRender, prelude::RigidBodyForces};
-use building_system::{raycasting::*, visualizer::*};
+use bevy_rapier3d::{physics::{RigidBodyBundle, ColliderBundle, ColliderPositionSync, RapierPhysicsPlugin, NoUserData}, render::ColliderDebugRender, prelude::{RigidBodyType}};
+use building_system::{raycasting::{update_raycast_with_cursor, raycast, RaycastCursor}, visualizer::*};
 use constants::DELTA_TIME;
 
-use player::{Player, player_movement_system, CameraComp, player_camera_system};
+use player_system::player::{Player, player_movement_system, CameraComp, player_camera_system};
 use terrain_generation_system::generator::{GeneratorOptions, generate_terrain};
 
-pub mod player;
+pub mod building_system;
+pub mod player_system;
 pub mod constants;
 
 pub mod terrain_generation_system;
-pub mod building_system;
 
 fn main() {
     App::new()
@@ -28,6 +29,7 @@ fn main() {
         .add_plugin(DefaultRaycastingPlugin::<RaycastSet>::default())
         .add_plugin(ObjPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
+        .add_plugin(RapierRenderPlugin)
         .add_startup_system(setup)
         .insert_resource(GeneratorOptions {
             width: 10,
@@ -87,10 +89,7 @@ fn setup(
         speed: 200.0
     })
     .insert_bundle(RigidBodyBundle {
-        forces: RigidBodyForces {
-            gravity_scale: 200.0,
-            ..Default::default()
-        }.into(),
+        body_type: RigidBodyType::Dynamic.into(),
         ..Default::default()
     })
     .insert_bundle(ColliderBundle {
