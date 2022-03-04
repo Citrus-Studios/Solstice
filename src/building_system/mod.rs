@@ -8,8 +8,13 @@ use crate::{RaycastSet};
 
 #[derive(Component)]
 pub struct RaycastCursor {
-    pub visible: bool,
-    pub intersection: Option<Intersection>
+    pub visible: bool
+}
+
+#[derive(Component)]
+pub struct BuildCursor {
+    pub intersection: Option<Intersection>,
+    pub rotation: f32
 }
 
 pub fn update_raycast_with_cursor(
@@ -27,6 +32,8 @@ pub fn raycast(
     mut r_query: Query<&mut RayCastSource<RaycastSet>>,
     mut d_query: Query<(&mut Transform, &mut Visibility), With<RaycastCursor>>,
     mut rc_query: Query<&mut RaycastCursor>,
+    mut bc_query: Query<&mut BuildCursor>,
+    mut commands: Commands,
 
     keyboard_input: Res<Input<KeyCode>>
 ) {
@@ -54,7 +61,7 @@ pub fn raycast(
             }
         }
 
-        rcc.intersection = Some(closest_intersection);
+        commands.insert_resource(BuildCursor { intersection: Some(closest_intersection), rotation: bc_query.single().rotation });
 
         if rcc.visible {
             if d.is_ok() {
@@ -72,7 +79,7 @@ pub fn raycast(
             }
         }
     } else {
-        rcc.intersection = None;
+        commands.insert_resource(BuildCursor { intersection: None, rotation: bc_query.single().rotation });
         
         if d.is_ok() {
             let (_, mut rc_cursor_visible) = d.unwrap();
