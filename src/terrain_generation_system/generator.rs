@@ -33,13 +33,17 @@ pub fn generate_terrain(
             base_color: Color::rgb(randomcolor.0, randomcolor.1, randomcolor.2),
             ..Default::default()
         }),
-        transform: Transform::from_xyz(0.0, -4.0, 0.0),
+        transform: Transform::from_xyz(0.0, -2.0, 0.0).with_scale(Vec3::new(
+            1.0/2.0,
+            1.0/2.0,
+            1.0/2.0,
+        )),
         ..Default::default()
     })
     .insert_bundle(ColliderBundle {
         shape: ColliderShape::compound(vec![(
             [0.0, -2.0, 0.0].into(), 
-            ColliderShape::cuboid(3.0, 1.0, 3.0))]
+            ColliderShape::cuboid(1.0/2.0, 1.0/2.0, 1.0/2.0))]
         ).into(),
         position: [0.0, -2.0, 0.0].into(),
         ..Default::default()
