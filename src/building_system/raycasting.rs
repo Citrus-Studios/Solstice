@@ -57,8 +57,7 @@ pub fn raycast(
                 closest_intersection = intersection;
             }
         }
-
-        info!("Intersection inserted! {:?}", closest_intersection);
+        
         bc_res.intersection = Some(closest_intersection);
 
         if rcc.visible {

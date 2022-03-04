@@ -33,7 +33,11 @@ pub fn visualizer(
         let intersection = intersection_op.unwrap();
         let normal = intersection.normal().normalize();
 
+        // my brain
         let quat = Quat::from_axis_angle(normal, rot).mul_quat(Quat::from_rotation_arc(Vec3::Y, normal));
+        let translation = intersection.position() + (normal * 0.3);
+
+        let transform_cache = Transform::from_translation(translation).with_rotation(quat);
 
         // Spawn pipe for deletion next frame
         commands.spawn_bundle(PbrBundle {
@@ -43,9 +47,8 @@ pub fn visualizer(
                 alpha_mode: Blend,
                 ..Default::default()
             }),
-            transform: Transform::from_translation(intersection.position() + (normal * 0.3))
-                .with_rotation(quat)
-            ,..Default::default()
+            transform: transform_cache,
+            ..Default::default()
         })
         .insert(NotShadowCaster)
         .insert(DeleteNextFrame);
