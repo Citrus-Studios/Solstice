@@ -10,7 +10,7 @@ use bevy_mod_raycast::{RayCastMesh, RaycastSystem};
 
 use crate::player_system::player::player_camera_system;
 
-use self::raycasting::{raycast, update_raycast_with_cursor, RaycastCursor};
+use self::raycasting::{raycast, update_raycast_with_cursor, RaycastCursor, BuildCursor};
 
 pub mod raycasting;
 pub mod visualizer;
@@ -57,4 +57,6 @@ pub fn building_system_startup(
             ..Default::default()
         })
         .insert(RaycastCursor { visible: false });
+    
+    commands.insert_resource(BuildCursor { intersection: None, rotation: 0.0 });
 }

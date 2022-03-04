@@ -30,8 +30,7 @@ pub fn raycast(
     mut r_query: Query<&mut RayCastSource<RaycastSet>>,
     mut d_query: Query<(&mut Transform, &mut Visibility), With<RaycastCursor>>,
     mut rc_query: Query<&mut RaycastCursor>,
-    mut bc_query: Query<&mut BuildCursor>,
-    mut commands: Commands,
+    mut bc_res: ResMut<BuildCursor>,
 
     keyboard_input: Res<Input<KeyCode>>
 ) {
@@ -59,13 +58,8 @@ pub fn raycast(
             }
         }
 
-        commands.insert_resource(BuildCursor { 
-            intersection: Some(closest_intersection), 
-            rotation: match bc_query.get_single() {
-                Ok(e) => e.rotation,
-                Err(_) => 0.0
-            } 
-        });
+        info!("Intersection inserted! {:?}", closest_intersection);
+        bc_res.intersection = Some(closest_intersection);
 
         if rcc.visible {
             if d.is_ok() {
@@ -73,7 +67,6 @@ pub fn raycast(
 
                 rc_cursor_transform.translation = closest_intersection.position();
                 rc_cursor_visible.is_visible = true;
-                // info!("Pos: {:?}  Normal: {:?}", closest_intersection.position(), closest_intersection.normal());
             }
         } else {
             if d.is_ok() {
@@ -83,13 +76,7 @@ pub fn raycast(
             }
         }
     } else {
-        commands.insert_resource(BuildCursor { 
-            intersection: None, 
-            rotation: match bc_query.get_single() {
-                Ok(e) => e.rotation,
-                Err(_) => 0.0
-            } 
-        });
+        bc_res.intersection = None;
         
         if d.is_ok() {
             let (_, mut rc_cursor_visible) = d.unwrap();
