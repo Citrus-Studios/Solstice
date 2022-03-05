@@ -1,6 +1,6 @@
 use bevy::{prelude::{Mesh, Commands, ResMut, Assets, shape, Color, Transform, BuildChildren, PerspectiveCameraBundle}, pbr::{StandardMaterial, PbrBundle}};
 use bevy_mod_picking::RayCastSource;
-use bevy_rapier3d::{prelude::RigidBodyType, physics::{RigidBodyBundle, ColliderPositionSync, ColliderBundle}, render::ColliderDebugRender};
+use bevy_rapier3d::{prelude::{RigidBodyType, ColliderType, ColliderShape}, physics::{RigidBodyBundle, ColliderPositionSync, ColliderBundle}, render::ColliderDebugRender};
 
 use crate::building_system::RaycastSet;
 
@@ -23,15 +23,15 @@ pub fn player_start(
         speed: 200.0
     })
     .insert_bundle(RigidBodyBundle {
-        body_type: RigidBodyType::Dynamic.into(),
+        body_type: RigidBodyType::KinematicVelocityBased.into(),
         ..Default::default()
     })
     .insert_bundle(ColliderBundle {
+        shape: ColliderShape::cuboid(1.0, 1.0, 1.0).into(),
         position: [1.0, 1.0, 1.0].into(),
         ..Default::default()
     })
     .insert(ColliderPositionSync::Discrete)
-    .insert(ColliderDebugRender::with_id(0))
     .with_children(|child| {
         // camera
         child.spawn_bundle(PerspectiveCameraBundle {
