@@ -105,7 +105,7 @@ pub fn player_movement_system(
         z_mov = SQRT_OF_2 * z_mov;
     }
 
-    player_rigidbody.linvel = (Vec3::new(x_mov, 20.0, z_mov) * player.speed * DELTA_TIME).into();
+    player_rigidbody.linvel = (Vec3::new(x_mov, -20.0, z_mov) * player.speed * DELTA_TIME).into();
 }
 
 pub fn player_camera_system(
