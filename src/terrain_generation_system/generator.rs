@@ -3,7 +3,6 @@ use bevy_mod_raycast::RayCastMesh;
 use bevy_rapier3d::{
     physics::{ColliderBundle, ColliderPositionSync},
     prelude::ColliderShape,
-    render::ColliderDebugRender,
 };
 use rand::Rng;
 
@@ -44,7 +43,7 @@ pub fn generate_terrain(
                     .spawn_bundle(PbrBundle {
                         mesh: hollowground_handle.clone(),
                         material: materials.add(StandardMaterial {
-                            base_color: Color::rgb(50.0/255.0, 56.0/255.0, 53.0/255.0),
+                            base_color: Color::rgb(50.0 / 255.0, 56.0 / 255.0, 53.0 / 255.0),
                             ..Default::default()
                         }),
                         transform: Transform::from_xyz((i as f32) * 3.0, -2.0, (j as f32) * 3.0)
@@ -63,7 +62,43 @@ pub fn generate_terrain(
                     });
 
                 // Spires
-
+                let mut rng = rand::thread_rng();
+                if rng.gen_range(1..=10) >= 7 {
+                    let height = rng.gen_range(3..=10);
+                    for x in 3..=height {
+                        // Generate a spire
+                        commands
+                            .spawn_bundle(PbrBundle {
+                                mesh: hollowground_handle.clone(),
+                                material: materials.add(StandardMaterial {
+                                    base_color: Color::rgb(
+                                        153.0 / 255.0,
+                                        132.0 / 255.0,
+                                        0.0,
+                                    ),
+                                    ..Default::default()
+                                }),
+                                transform: Transform::from_xyz(
+                                    (i as f32) * 3.0,
+                                    -2.0 + 3.0 * (x as f32),
+                                    (j as f32) * 3.0,
+                                )
+                                .with_scale(Vec3::new(0.5, 0.5, 0.5)),
+                                ..Default::default()
+                            })
+                            .insert(RayCastMesh::<RaycastSet>::default())
+                            .insert(ColliderPositionSync::Discrete)
+                            .insert(RayCastMesh::<RaycastSet>::default())
+                            .with_children(|parent| {
+                                parent.spawn_bundle(ColliderBundle {
+                                    shape: ColliderShape::cuboid(1.5, 1.5, 1.5).into(),
+                                    position: Vec3::new((i as f32) * 3.0, -2.0 + 3.0 * (x as f32), (j as f32) * 3.0)
+                                        .into(),
+                                    ..Default::default()
+                                });
+                            });
+                    }
+                }
             }
         }
     }
