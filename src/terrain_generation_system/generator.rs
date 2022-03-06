@@ -38,32 +38,37 @@ pub fn generate_terrain(
             let n = perlin.get([(i as f64) * 0.15, (j as f64) * 0.15]);
             //info!(n);
             if n > 0.0 {
+                let mut rng = rand::thread_rng();
                 // Generate a block
-                commands
-                    .spawn_bundle(PbrBundle {
-                        mesh: hollowground_handle.clone(),
-                        material: materials.add(StandardMaterial {
-                            base_color: Color::rgb(50.0 / 255.0, 56.0 / 255.0, 53.0 / 255.0),
-                            ..Default::default()
-                        }),
-                        transform: Transform::from_xyz((i as f32) * 3.0, -2.0, (j as f32) * 3.0)
-                            .with_scale(Vec3::new(0.5, 0.5, 0.5)),
-                        ..Default::default()
-                    })
-                    .insert(RayCastMesh::<RaycastSet>::default())
-                    .insert(ColliderPositionSync::Discrete)
-                    .insert(RayCastMesh::<RaycastSet>::default())
-                    .with_children(|parent| {
-                        parent.spawn_bundle(ColliderBundle {
-                            shape: ColliderShape::cuboid(1.5, 1.5, 1.5).into(),
-                            position: Vec3::new((i as f32) * 3.0, -2.0, (j as f32) * 3.0).into(),
-                            ..Default::default()
-                        });
-                    });
+                gen_block(
+                    &mut commands,
+                    hollowground_handle.clone(),
+                    &mut materials,
+                    i as f32,
+                    j as f32,
+                    Vec3::new(0.0, 0.0, 0.0),
+                );
+                if rng.gen_range(1..=10) >= 5 {
+                gen_block(
+                    &mut commands,
+                    hollowground_handle.clone(),
+                    &mut materials,
+                    i as f32,
+                    j as f32,
+                    Vec3::new(0.0, -3.0, 0.0),
+                );}
+                if rng.gen_range(1..=10) >= 3 {
+                gen_block(
+                    &mut commands,
+                    hollowground_handle.clone(),
+                    &mut materials,
+                    i as f32,
+                    j as f32,
+                    Vec3::new(0.0, -6.0, 0.0),
+                );}
 
                 // Spires
-                let mut rng = rand::thread_rng();
-                if rng.gen_range(1..=10) >= 7 {
+                if rng.gen_range(1..=10) >= 9 {
                     let height = rng.gen_range(3..=10);
                     for x in 1..=height {
                         // Generate a spire
@@ -71,16 +76,12 @@ pub fn generate_terrain(
                             .spawn_bundle(PbrBundle {
                                 mesh: hollowground_handle.clone(),
                                 material: materials.add(StandardMaterial {
-                                    base_color: Color::rgb(
-                                        153.0 / 255.0,
-                                        132.0 / 255.0,
-                                        0.0,
-                                    ),
+                                    base_color: Color::rgb(153.0 / 255.0, 132.0 / 255.0, 0.0),
                                     ..Default::default()
                                 }),
                                 transform: Transform::from_xyz(
                                     (i as f32) * 3.0,
-                                    x as f32 - 2.0,
+                                    x as f32,
                                     (j as f32) * 3.0,
                                 )
                                 .with_scale(Vec3::new(0.5, 0.5, 0.5)),
@@ -92,8 +93,12 @@ pub fn generate_terrain(
                             .with_children(|parent| {
                                 parent.spawn_bundle(ColliderBundle {
                                     shape: ColliderShape::cuboid(1.5, 1.5, 1.5).into(),
-                                    position: Vec3::new((i as f32) * 3.0, x as f32 - 2.0, (j as f32) * 3.0)
-                                        .into(),
+                                    position: Vec3::new(
+                                        (i as f32) * 3.0,
+                                        x as f32,
+                                        (j as f32) * 3.0,
+                                    )
+                                    .into(),
                                     ..Default::default()
                                 });
                             });
@@ -102,4 +107,39 @@ pub fn generate_terrain(
             }
         }
     }
+}
+
+fn gen_block(
+    commands: &mut Commands,
+    hollowground_handle: Handle<Mesh>,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
+    i: f32,
+    j: f32,
+    offset: Vec3,
+) {
+    commands
+        .spawn_bundle(PbrBundle {
+            mesh: hollowground_handle.clone(),
+            material: materials.add(StandardMaterial {
+                base_color: Color::rgb(50.0 / 255.0, 56.0 / 255.0, 53.0 / 255.0),
+                ..Default::default()
+            }),
+            transform: Transform::from_xyz(
+                ((i as f32) * 3.0) + offset.x,
+                (-2.0) + offset.y,
+                ((j as f32) * 3.0) + offset.z,
+            )
+            .with_scale(Vec3::new(0.5, 0.5, 0.5)),
+            ..Default::default()
+        })
+        .insert(RayCastMesh::<RaycastSet>::default())
+        .insert(ColliderPositionSync::Discrete)
+        .insert(RayCastMesh::<RaycastSet>::default())
+        .with_children(|parent| {
+            parent.spawn_bundle(ColliderBundle {
+                shape: ColliderShape::cuboid(1.5, 1.5, 1.5).into(),
+                position: (Vec3::new((i as f32) * 3.0, -2.0, (j as f32) * 3.0) + offset).into(),
+                ..Default::default()
+            });
+        });
 }
