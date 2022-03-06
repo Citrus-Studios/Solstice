@@ -9,8 +9,8 @@ pub struct GeneratorPlugin;
 impl Plugin for GeneratorPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(GeneratorOptions {
-            width: 1000,
-            length: 1000,
+            width: 100,
+            length: 100,
             height: 1,
         })
         .add_startup_system(generate_terrain);
