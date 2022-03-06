@@ -12,6 +12,7 @@ pub mod player_system;
 pub mod terrain_generation_system; 
 
 pub mod constants;
+pub mod algorithms;
 
 fn main() {
     App::new()    
