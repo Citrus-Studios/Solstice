@@ -65,7 +65,7 @@ pub fn generate_terrain(
                 let mut rng = rand::thread_rng();
                 if rng.gen_range(1..=10) >= 7 {
                     let height = rng.gen_range(3..=10);
-                    for x in 3..=height {
+                    for x in 1..=height {
                         // Generate a spire
                         commands
                             .spawn_bundle(PbrBundle {
@@ -80,7 +80,7 @@ pub fn generate_terrain(
                                 }),
                                 transform: Transform::from_xyz(
                                     (i as f32) * 3.0,
-                                    -2.0 + 3.0 * (x as f32),
+                                    x as f32 - 2.0,
                                     (j as f32) * 3.0,
                                 )
                                 .with_scale(Vec3::new(0.5, 0.5, 0.5)),
@@ -92,7 +92,7 @@ pub fn generate_terrain(
                             .with_children(|parent| {
                                 parent.spawn_bundle(ColliderBundle {
                                     shape: ColliderShape::cuboid(1.5, 1.5, 1.5).into(),
-                                    position: Vec3::new((i as f32) * 3.0, -2.0 + 3.0 * (x as f32), (j as f32) * 3.0)
+                                    position: Vec3::new((i as f32) * 3.0, x as f32 - 2.0, (j as f32) * 3.0)
                                         .into(),
                                     ..Default::default()
                                 });
