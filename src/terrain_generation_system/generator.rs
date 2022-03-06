@@ -1,12 +1,15 @@
-
 use bevy::prelude::*;
 use bevy_mod_raycast::RayCastMesh;
-use bevy_rapier3d::{physics::{ColliderPositionSync, ColliderBundle}, prelude::{ColliderShape}, render::ColliderDebugRender};
+use bevy_rapier3d::{
+    physics::{ColliderBundle, ColliderPositionSync},
+    prelude::ColliderShape,
+    render::ColliderDebugRender,
+};
 use rand::Rng;
 
 use noise::{NoiseFn, Perlin, Seedable};
 
-use crate::{RaycastSet, constants::SEED};
+use crate::{constants::SEED, RaycastSet};
 
 #[derive(Component)]
 pub struct GeneratorOptions {
@@ -26,9 +29,9 @@ pub fn generate_terrain(
 
     let mut rng = rand::thread_rng();
     let randomcolor = Color::rgba(
-        rng.gen_range(0.0..255.0)/255.0, 
-        rng.gen_range(0.0..255.0)/255.0, 
-        rng.gen_range(0.0..255.0)/255.0,
+        rng.gen_range(0.0..255.0) / 255.0,
+        rng.gen_range(0.0..255.0) / 255.0,
+        rng.gen_range(0.0..255.0) / 255.0,
         0.1,
     );
 
@@ -44,60 +47,29 @@ pub fn generate_terrain(
             let n = perlin.get([(i as f64) * 0.15, (j as f64) * 0.15]);
             //info!(n);
             if n > 0.0 {
-                let collider = ColliderBundle {
-                    shape: ColliderShape::compound(vec![
-                        ([0.0, -2.0, 0.0].into(),
-                        ColliderShape::cuboid(3.0, 1.0, 3.0)),
-                        ([0.0, 2.0, 0.0].into(),
-                        ColliderShape::cuboid(3.0, 1.0, 3.0)),
-                        ([-2.0 * (i as f32), 0.0, 2.0 * (j as f32)].into(),
-                        ColliderShape::cuboid(1.0, 1.0, 1.0)),
-                        ([-2.0 * (i as f32), 0.0, -2.0 * (j as f32)].into(),
-                        ColliderShape::cuboid(1.0, 1.0, 1.0)),
-                        ([2.0 * (i as f32), 0.0, 2.0 * (j as f32)].into(),
-                        ColliderShape::cuboid(1.0, 1.0, 1.0)),
-                        ([2.0 * (i as f32), 0.0, -2.0 * (j as f32)].into(),
-                        ColliderShape::cuboid(1.0, 1.0, 1.0)),
-                    ]).into(),
-                    ..Default::default()
-                };
-            
-                let collider2 = ColliderBundle {
-                    shape: ColliderShape::compound(vec![
-                        ([0.0, -2.0, 0.0].into(),
-                        ColliderShape::cuboid(3.0, 1.0, 3.0)),
-                        ([0.0, 2.0, 0.0].into(),
-                        ColliderShape::cuboid(3.0, 1.0, 3.0)),
-                        ([-2.0 * (i as f32), 0.0, 2.0 * (j as f32)].into(),
-                        ColliderShape::cuboid(1.0, 1.0, 1.0)),
-                        ([-2.0 * (i as f32), 0.0, -2.0 * (j as f32)].into(),
-                        ColliderShape::cuboid(1.0, 1.0, 1.0)),
-                        ([2.0 * (i as f32), 0.0, 2.0 * (j as f32)].into(),
-                        ColliderShape::cuboid(1.0, 1.0, 1.0)),
-                        ([2.0 * (i as f32), 0.0, -2.0 * (j as f32)].into(),
-                        ColliderShape::cuboid(1.0, 1.0, 1.0)),
-                    ]).into(),
-                    ..Default::default()
-                };
-
-                commands.spawn_bundle(PbrBundle {
-                    mesh: hollowground_handle.clone(),
-                    material: materials.add(StandardMaterial {
-                        base_color: randomcolor,
+                info!("generating terrain {i}, {j}, {n}");
+                // Generate a block
+                commands
+                    .spawn_bundle(PbrBundle {
+                        mesh: hollowground_handle.clone(),
+                        material: materials.add(StandardMaterial {
+                            base_color: randomcolor,
+                            ..Default::default()
+                        }),
+                        transform: Transform::from_xyz((i as f32) * 3.0, -2.0, (j as f32) * 3.0)
+                            .with_scale(Vec3::new(0.5, 0.5, 0.5)),
                         ..Default::default()
-                    }),
-                    transform: Transform::from_xyz((i as f32) * 3.0, -2.0, (j as f32) * 3.0),
-                    ..Default::default()
-                })
+                    })
                     .insert(RayCastMesh::<RaycastSet>::default())
                     .insert(ColliderPositionSync::Discrete)
-                    .insert_bundle(collider)
-                    .insert(RayCastMesh::<RaycastSet>::default());
-
-                commands.spawn_bundle(collider2)
-                    .insert(ColliderPositionSync::Discrete)
-                    .insert(ColliderDebugRender::with_id(1))
-                    .insert(RayCastMesh::<RaycastSet>::default());
+                    .insert(RayCastMesh::<RaycastSet>::default())
+                    .with_children(|parent| {
+                        parent.spawn_bundle(ColliderBundle {
+                            shape: ColliderShape::cuboid(1.5, 1.5, 1.5).into(),
+                            position: Vec3::new((i as f32) * 3.0, -2.0, (j as f32) * 3.0).into(),
+                            ..Default::default()
+                        });
+                    });
             }
         }
     }
