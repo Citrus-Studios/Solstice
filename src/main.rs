@@ -56,6 +56,7 @@ fn startup(
                 ..Default::default()
             },
             shadows_enabled: true,
+            illuminance: 32000.0,
             ..Default::default()
         },
         transform: Transform {
