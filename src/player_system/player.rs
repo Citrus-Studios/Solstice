@@ -105,7 +105,12 @@ pub fn player_movement_system(
         z_mov = SQRT_OF_2 * z_mov;
     }
 
-    player_rigidbody.linvel = (Vec3::new(x_mov, -20.0, z_mov) * player.speed * DELTA_TIME).into();
+    if keyboard_input.just_pressed(KeyCode::Space) && player_rigidbody.linvel.y == 0.0 {
+        player_rigidbody.linvel.y += 10.0;
+    }
+
+    player_rigidbody.linvel.x = x_mov * player.speed * DELTA_TIME;
+    player_rigidbody.linvel.z = z_mov * player.speed * DELTA_TIME;
 }
 
 pub fn player_camera_system(
