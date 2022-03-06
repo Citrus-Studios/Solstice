@@ -1,4 +1,4 @@
-use bevy::{prelude::{App, Msaa}, DefaultPlugins};
+use bevy::{prelude::{App, Msaa}, DefaultPlugins, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}};
 use bevy_mod_raycast::DefaultRaycastingPlugin;
 use bevy_obj::ObjPlugin;
 use bevy_rapier3d::{physics::{RapierPhysicsPlugin, NoUserData, RapierConfiguration}, render::RapierRenderPlugin};
@@ -16,6 +16,8 @@ fn main() {
     App::new()
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
+        .add_plugin(LogDiagnosticsPlugin::default())
+        .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(DefaultRaycastingPlugin::<RaycastSet>::default())
         .add_plugin(ObjPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
