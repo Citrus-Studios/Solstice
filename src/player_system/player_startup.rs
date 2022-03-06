@@ -11,7 +11,7 @@ pub fn player_start(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let lock_yz_rotation = RigidBodyMassPropsFlags::ROTATION_LOCKED_Y
+    let lock_xyz_rotation = RigidBodyMassPropsFlags::ROTATION_LOCKED_Y
         | RigidBodyMassPropsFlags::ROTATION_LOCKED_Z
         | RigidBodyMassPropsFlags::ROTATION_LOCKED_X;
 
@@ -28,7 +28,7 @@ pub fn player_start(
     })
     .insert_bundle(RigidBodyBundle {
         body_type: RigidBodyType::Dynamic.into(),
-        mass_properties: lock_yz_rotation.into(),
+        mass_properties: lock_xyz_rotation.into(),
         ..Default::default()
     })
     .insert_bundle(ColliderBundle {
