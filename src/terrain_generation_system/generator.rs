@@ -27,14 +27,6 @@ pub fn generate_terrain(
 ) {
     let hollowground_handle = asset_server.load("models/ground1/ground1.obj");
 
-    let mut rng = rand::thread_rng();
-    let randomcolor = Color::rgba(
-        rng.gen_range(0.0..255.0) / 255.0,
-        rng.gen_range(0.0..255.0) / 255.0,
-        rng.gen_range(0.0..255.0) / 255.0,
-        0.1,
-    );
-
     // let commands = Arc::new(Box::leak(Box::new(commands)));
     // let hollowground_handle = &hollowground_handle;
     // let materials = Arc::new(materials);
@@ -47,13 +39,12 @@ pub fn generate_terrain(
             let n = perlin.get([(i as f64) * 0.15, (j as f64) * 0.15]);
             //info!(n);
             if n > 0.0 {
-                info!("generating terrain {i}, {j}, {n}");
                 // Generate a block
                 commands
                     .spawn_bundle(PbrBundle {
                         mesh: hollowground_handle.clone(),
                         material: materials.add(StandardMaterial {
-                            base_color: randomcolor,
+                            base_color: Color::rgb(50.0/255.0, 56.0/255.0, 53.0/255.0),
                             ..Default::default()
                         }),
                         transform: Transform::from_xyz((i as f32) * 3.0, -2.0, (j as f32) * 3.0)
@@ -70,6 +61,9 @@ pub fn generate_terrain(
                             ..Default::default()
                         });
                     });
+
+                // Spires
+
             }
         }
     }
