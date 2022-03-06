@@ -24,7 +24,7 @@ pub fn player_start(
     })
     .insert(Player {
         name: "None".to_string(),
-        speed: 10000.0
+        speed: 300.0
     })
     .insert_bundle(RigidBodyBundle {
         body_type: RigidBodyType::Dynamic.into(),
@@ -32,7 +32,7 @@ pub fn player_start(
         ..Default::default()
     })
     .insert_bundle(ColliderBundle {
-        shape: ColliderShape::cuboid(1.0, 1.0, 1.0).into(),
+        shape: ColliderShape::cuboid(0.5, 0.5, 0.5).into(),
         position: [0.0, 20.0, 0.0].into(),
         ..Default::default()
     })
@@ -50,4 +50,5 @@ pub fn player_start(
         })
         .insert(RayCastSource::<RaycastSet>::new());
     });
+
 }
