@@ -1,6 +1,6 @@
 use bevy::{prelude::{Mesh, Commands, ResMut, Assets, shape, Color, Transform, BuildChildren, PerspectiveCameraBundle}, pbr::{StandardMaterial, PbrBundle}};
 use bevy_mod_picking::RayCastSource;
-use bevy_rapier3d::{prelude::{RigidBodyType, ColliderType, ColliderShape}, physics::{RigidBodyBundle, ColliderPositionSync, ColliderBundle}, render::ColliderDebugRender};
+use bevy_rapier3d::{prelude::{RigidBodyType, ColliderType, ColliderShape, RigidBodyMassPropsFlags, RigidBodyForces}, physics::{RigidBodyBundle, ColliderPositionSync, ColliderBundle}, render::ColliderDebugRender};
 
 use crate::building_system::RaycastSet;
 
@@ -11,6 +11,10 @@ pub fn player_start(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+    let lock_yz_rotation = RigidBodyMassPropsFlags::ROTATION_LOCKED_Y
+        | RigidBodyMassPropsFlags::ROTATION_LOCKED_Z
+        | RigidBodyMassPropsFlags::ROTATION_LOCKED_X;
+
     // player 
     commands.spawn_bundle(PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
@@ -23,12 +27,13 @@ pub fn player_start(
         speed: 200.0
     })
     .insert_bundle(RigidBodyBundle {
-        body_type: RigidBodyType::KinematicVelocityBased.into(),
+        body_type: RigidBodyType::Dynamic.into(),
+        mass_properties: lock_yz_rotation.into(),
         ..Default::default()
     })
     .insert_bundle(ColliderBundle {
         shape: ColliderShape::cuboid(1.0, 1.0, 1.0).into(),
-        position: [1.0, 1.0, 1.0].into(),
+        position: [0.0, 20.0, 0.0].into(),
         ..Default::default()
     })
     .insert(ColliderPositionSync::Discrete)
