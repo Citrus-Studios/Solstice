@@ -1,8 +1,9 @@
-use bevy::{prelude::{App, Msaa}, DefaultPlugins, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}};
+use bevy::{prelude::{App, Msaa, Commands, OrthographicProjection, Transform}, DefaultPlugins, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, pbr::{DirectionalLightBundle, DirectionalLight}, math::{Vec3, Quat}};
 use bevy_mod_raycast::DefaultRaycastingPlugin;
 use bevy_obj::ObjPlugin;
 use bevy_rapier3d::{physics::{RapierPhysicsPlugin, NoUserData, RapierConfiguration}, render::RapierRenderPlugin};
 use building_system::{RaycastSet, BuildingSystemPlugin};
+use constants::HALF_SIZE;
 use player_system::PlayerSystemPlugin;
 use terrain_generation_system::GeneratorPlugin;
 
@@ -13,8 +14,8 @@ pub mod terrain_generation_system;
 pub mod constants;
 
 fn main() {
-    App::new()
-        .insert_resource(Msaa { samples: 4 })
+    App::new()    
+        // plugins    
         .add_plugins(DefaultPlugins)
         .add_plugin(LogDiagnosticsPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
@@ -25,9 +26,43 @@ fn main() {
         .add_plugin(GeneratorPlugin)
         .add_plugin(BuildingSystemPlugin)
         .add_plugin(PlayerSystemPlugin)
+
+        // startup system
+        .add_startup_system(startup)
+
+        // resources
         .insert_resource(RapierConfiguration {
             gravity: [0.0, -9.81, 0.0].into(),
             ..Default::default()
         })
+        .insert_resource(Msaa { samples: 4 })
+
         .run();
+}
+
+fn startup(
+    mut commands: Commands,
+) {
+    commands.spawn_bundle(DirectionalLightBundle {
+        directional_light: DirectionalLight {
+            // Configure the projection to better fit the scene
+            shadow_projection: OrthographicProjection {
+                left: -HALF_SIZE,
+                right: HALF_SIZE,
+                bottom: -HALF_SIZE,
+                top: HALF_SIZE,
+                near: -10.0 * HALF_SIZE,
+                far: 10.0 * HALF_SIZE,
+                ..Default::default()
+            },
+            shadows_enabled: true,
+            ..Default::default()
+        },
+        transform: Transform {
+            translation: Vec3::new(0.0, 2.0, 0.0),
+            rotation: Quat::from_rotation_x(-std::f32::consts::FRAC_PI_4),
+            ..Default::default()
+        },
+        ..Default::default()
+    });
 }
