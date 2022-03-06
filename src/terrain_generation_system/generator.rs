@@ -36,7 +36,7 @@ pub fn generate_terrain(
     // let hollowground_handle = &hollowground_handle;
     // let materials = Arc::new(materials);
 
-    let perlin = Perlin::default();
+    let perlin = Perlin::default().set_seed(*SEED);
 
     for i in 0..generator_options.width {
         for j in 0..generator_options.length {
