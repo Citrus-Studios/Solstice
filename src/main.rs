@@ -1,4 +1,4 @@
-use bevy::{prelude::{App, Msaa, Commands, OrthographicProjection, Transform}, DefaultPlugins, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, pbr::{DirectionalLightBundle, DirectionalLight}, math::{Vec3, Quat}};
+use bevy::{prelude::{App, Msaa, Commands, OrthographicProjection, Transform, Color}, DefaultPlugins, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, pbr::{DirectionalLightBundle, DirectionalLight}, math::{Vec3, Quat}, core_pipeline::ClearColor};
 use bevy_mod_raycast::DefaultRaycastingPlugin;
 use bevy_obj::ObjPlugin;
 use bevy_rapier3d::{physics::{RapierPhysicsPlugin, NoUserData, RapierConfiguration}, render::RapierRenderPlugin};
@@ -37,6 +37,7 @@ fn main() {
             ..Default::default()
         })
         .insert_resource(Msaa { samples: 4 })
+        .insert_resource(ClearColor(Color::rgb(14.0 / 255.0, 125.0 / 255.0, 127.0 / 255.0)))
 
         .run();
 }
