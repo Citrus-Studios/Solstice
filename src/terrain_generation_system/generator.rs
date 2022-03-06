@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use bevy::prelude::*;
 use bevy_mod_raycast::RayCastMesh;
 use bevy_rapier3d::{physics::{ColliderPositionSync, ColliderBundle}, prelude::{ColliderShape}};
@@ -30,6 +32,10 @@ pub fn generate_terrain(
         rng.gen_range(0.0..255.0)/255.0
     );
 
+    // let commands = Arc::new(Box::leak(Box::new(commands)));
+    // let hollowground_handle = &hollowground_handle;
+    // let materials = Arc::new(materials);
+
     let perlin = Perlin::default();
 
     for i in 0..generator_options.width {
@@ -37,40 +43,17 @@ pub fn generate_terrain(
             let n = perlin.get([(i as f64) * 0.15, (j as f64) * 0.15]);
             //info!(n);
             if n > 0.0 {
-                tokio::spawn(make_block(&mut commands, hollowground_handle, materials, randomcolor, i, j));
+                commands.spawn_bundle(PbrBundle {
+                    mesh: hollowground_handle.clone(),
+                    material: materials.add(StandardMaterial {
+                        base_color: Color::rgb(randomcolor.0, randomcolor.1, randomcolor.2),
+                        ..Default::default()
+                    }),
+                    transform: Transform::from_xyz((i as f32) * 3.0, -2.0, (j as f32) * 3.0),
+                    ..Default::default()
+                })
+                .insert(RayCastMesh::<RaycastSet>::default());
             }
         }
     }
-}
-
-pub async fn make_block(
-    commands: &mut Commands<'static, 'static>,
-    hollowground_handle: Handle<Mesh>,
-    mut materials: ResMut<'static, Assets<StandardMaterial>>,
-    randomcolor: (f32, f32, f32),
-    i: u32, j: u32,
-) {
-    commands.spawn_bundle(PbrBundle {
-        mesh: hollowground_handle.clone(),
-        material: materials.add(StandardMaterial {
-            base_color: Color::rgb(randomcolor.0, randomcolor.1, randomcolor.2),
-            ..Default::default()
-        }),
-        transform: Transform::from_xyz((i as f32) * 3.0, -2.0, (j as f32) * 3.0).with_scale(Vec3::new(
-            1.0/2.0,
-            1.0/2.0,
-            1.0/2.0,
-        )),
-        ..Default::default()
-    })
-    .insert_bundle(ColliderBundle {
-        shape: ColliderShape::compound(vec![(
-            [(i as f32) * 3.0, -2.0, (j as f32) * 3.0].into(), 
-            ColliderShape::cuboid(1.0/2.0, 1.0/3.0/2.0, 1.0/2.0))]
-        ).into(),
-        position: [(i as f32) * 3.0, -2.0, (j as f32) * 3.0].into(),
-        ..Default::default()
-    })
-    .insert(ColliderPositionSync::Discrete)
-    .insert(RayCastMesh::<RaycastSet>::default());
 }
