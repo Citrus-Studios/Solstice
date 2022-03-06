@@ -24,7 +24,7 @@ pub fn player_start(
     })
     .insert(Player {
         name: "None".to_string(),
-        speed: 200.0
+        speed: 10000.0
     })
     .insert_bundle(RigidBodyBundle {
         body_type: RigidBodyType::Dynamic.into(),
