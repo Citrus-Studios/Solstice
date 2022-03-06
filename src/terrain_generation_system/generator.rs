@@ -38,6 +38,7 @@ pub fn generate_terrain(
 
     let perlin = Perlin::default().set_seed(*SEED);
 
+    // generates terrain given a width and a length
     for i in 0..generator_options.width {
         for j in 0..generator_options.length {
             let n = perlin.get([(i as f64) * 0.15, (j as f64) * 0.15]);
