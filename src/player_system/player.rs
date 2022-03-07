@@ -1,7 +1,7 @@
 use bevy::{prelude::*, input::mouse::{MouseMotion, MouseWheel}};
 use bevy_rapier3d::{prelude::{RigidBodyVelocityComponent}};
 
-use crate::constants::{DELTA_TIME, SQRT_OF_2, HALF_PI};
+use crate::constants::{SQRT_OF_2, HALF_PI};
 
 #[derive(Component)]
 pub struct Player {
@@ -23,6 +23,8 @@ pub fn player_movement_system(
     gamepads: Res<Gamepads>,
     gamepad_input: Res<Input<GamepadButton>>,
     gamepad_axes: Res<Axis<GamepadAxis>>,
+
+    delta_time: Res<Time>,
 
     c_query: Query<&mut CameraComp>,
     mut r_query: Query<&mut RigidBodyVelocityComponent, (Without<CameraComp>, With<Player>)>,
@@ -109,8 +111,8 @@ pub fn player_movement_system(
         player_rigidbody.linvel.y += 10.0;
     }
 
-    player_rigidbody.linvel.x = x_mov * player.speed * DELTA_TIME;
-    player_rigidbody.linvel.z = z_mov * player.speed * DELTA_TIME;
+    player_rigidbody.linvel.x = x_mov * player.speed * delta_time.delta_seconds();
+    player_rigidbody.linvel.z = z_mov * player.speed * delta_time.delta_seconds();
 }
 
 pub fn player_camera_system(

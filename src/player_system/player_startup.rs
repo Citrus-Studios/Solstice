@@ -1,6 +1,6 @@
 use bevy::{prelude::{Mesh, Commands, ResMut, Assets, shape, Color, Transform, BuildChildren, PerspectiveCameraBundle}, pbr::{StandardMaterial, PbrBundle}};
 use bevy_mod_picking::RayCastSource;
-use bevy_rapier3d::{prelude::{RigidBodyType, ColliderShape, RigidBodyMassPropsFlags}, physics::{RigidBodyBundle, ColliderPositionSync, ColliderBundle}};
+use bevy_rapier3d::{prelude::{RigidBodyType, ColliderShape, RigidBodyMassPropsFlags, ColliderMaterial, CoefficientCombineRule}, physics::{RigidBodyBundle, ColliderPositionSync, ColliderBundle}};
 
 use crate::building_system::RaycastSet;
 
@@ -34,6 +34,11 @@ pub fn player_start(
     .insert_bundle(ColliderBundle {
         shape: ColliderShape::cuboid(0.5, 0.5, 0.5).into(),
         position: [0.0, 20.0, 0.0].into(),
+        material: ColliderMaterial { 
+            friction: 0.0,
+            friction_combine_rule: CoefficientCombineRule::Min,
+            ..Default::default() 
+        }.into(),
         ..Default::default()
     })
     .insert(ColliderPositionSync::Discrete)
