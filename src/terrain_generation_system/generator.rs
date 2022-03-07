@@ -32,6 +32,15 @@ pub fn generate_terrain(
 
     let perlin = Perlin::default().set_seed(*SEED);
 
+    gen_block(
+        &mut commands,
+        hollowground_handle.clone(),
+        &mut materials,
+        0.0,
+        0.0,
+        Vec3::new(0.0, 0.0, 0.0),
+    );
+
     // generates terrain given a width and a length
     for i in 0..generator_options.width {
         for j in 0..generator_options.length {
