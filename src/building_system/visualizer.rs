@@ -120,7 +120,7 @@ pub fn visualizer(
                 })
                 .insert_bundle(ColliderBundle {
                     collider_type: ColliderType::Sensor.into(),
-                    shape: ColliderShape::cylinder(0.0, 0.13).into(),
+                    shape: ColliderShape::cuboid(0.135, 0.0, 0.135).into(),
                     position: (translation, quat).into(),
                     ..Default::default()
                 })
@@ -166,10 +166,9 @@ pub fn visualizer(
                     collider_position.0.rotation = transform_c.rotation.into();
                     
                     // I am absolutely in awe that this actually works
-                    let cylinder_mut = collider_shape.as_cylinder_mut().unwrap();
+                    let cylinder_mut = collider_shape.as_cuboid_mut().unwrap();
 
-                    cylinder_mut.half_height = distance / 2.0;
-                    cylinder_mut.radius = 0.13;
+                    cylinder_mut.half_extents.data.0[0][1] = distance / 2.0;
                 }
 
                 if inter {
