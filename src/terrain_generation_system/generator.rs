@@ -87,7 +87,7 @@ pub fn generate_terrain(
                             &mut materials,
                             i as f32,
                             j as f32,
-                            Vec3::new(0.0, -6.0, 0.0),
+                            x as f32,
                         );
                     }
                 }
@@ -138,7 +138,7 @@ fn gen_spire(
     materials: &mut ResMut<Assets<StandardMaterial>>,
     i: f32,
     j: f32,
-    offset: Vec3,
+    x: f32,
 ) {
     commands
     .spawn_bundle(PbrBundle {
