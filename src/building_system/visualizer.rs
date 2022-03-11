@@ -83,6 +83,8 @@ pub fn visualizer(
         let pipe_cyl_mesh: Handle<Mesh> = asset_server.load("models/pipes/pipe_cylinder.obj");
         
         if mouse_input.just_pressed(MouseButton::Left) {
+            // If you click, and the first point is already placed
+            // Place the second point
             if pp_res.placed {
                 let first_position = pp_res.transform.unwrap().translation;
                 let pipe_cyl_translation = (first_position + translation) / 2.0;
@@ -104,6 +106,8 @@ pub fn visualizer(
                 let (entity, _) = pipe_prev_query.single();
 
                 commands.entity(entity).despawn();
+            // If you click and the first point is not placed
+            // Place the first point
             } else {
                 pp_res.placed = true;
                 pp_res.transform = Some(transform_cache);
@@ -127,7 +131,10 @@ pub fn visualizer(
                 .insert(PipePreview)
                 .insert(NotShadowCaster);
             }
+        // If you're not clicking
         } else {
+            // If the first point is placed
+            // Update the preview
             if pp_res.placed {
                 
                 let first_position = pp_res.transform.unwrap().translation;
@@ -176,7 +183,7 @@ pub fn visualizer(
                 } else {
                     material.base_color = Color::rgba(0.0, 0.2, 1.0, 0.5);
                 }
-            }
+            } // If the first isn't placed and you're not clicking, do nothing
         }
     }
 }
