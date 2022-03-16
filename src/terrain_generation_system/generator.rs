@@ -6,7 +6,7 @@ use bevy_rapier3d::{
 };
 use rand::Rng;
 
-use noise::{NoiseFn, Perlin, Seedable};
+use noise::{NoiseFn, Perlin, Seedable, Terrace};
 
 use crate::{constants::SEED, RaycastSet};
 
@@ -106,15 +106,16 @@ pub fn generate_terrain(
         meshes.as_ref().clone(),
         0.0,
         0.0,
-        Vec3::new(0.0, 0.0, 0.0),
+        Vec3::ZERO,
     );
 
-    // generates terrain given a width and a length
     for i in 0..generator_options.width {
         for j in 0..generator_options.length {
             let n = perlin.get([(i as f64) * 0.15, (j as f64) * 0.15]);
             //info!(n);
             if n > 0.0 {
+                terrain_gen.i = i as f32;
+                terrain_gen.j = j as f32;
                 let mut rng = rand::thread_rng();
                 // Generate a block
                 terrain_gen.offset.y = 0.0;
@@ -129,20 +130,20 @@ pub fn generate_terrain(
                 }
 
                 // Spires
-                if rng.gen_range(1..=10) >= 9 {
-                    let height = rng.gen_range(3..=10);
-                    for x in 1..=height {
-                        // Generate a spire
-                        gen_spire(
-                            &mut commands,
-                            hollowground_handle.clone(),
-                            &mut materials,
-                            i as f32,
-                            j as f32,
-                            x as f32,
-                        );
-                    }
-                }
+                // if rng.gen_range(1..=10) >= 9 {
+                //     let height = rng.gen_range(3..=10);
+                //     for x in 1..=height {
+                //         // Generate a spire
+                //         gen_spire(
+                //             &mut commands,
+                //             hollowground_handle.clone(),
+                //             &mut materials,
+                //             i as f32,
+                //             j as f32,
+                //             x as f32,
+                //         );
+                //     }
+                // }
             }
         }
     }
@@ -188,27 +189,13 @@ pub fn generate_terrain(
     // info!("{:?}", &final_mesh_clone);
     let final_mesh_handle = meshes.add(final_mesh_clone);
 
-fn gen_block(
-    commands: &mut Commands,
-    hollowground_handle: Handle<Mesh>,
-    materials: &mut ResMut<Assets<StandardMaterial>>,
-    i: f32,
-    j: f32,
-    offset: Vec3,
-) {
     commands
         .spawn_bundle(PbrBundle {
-            mesh: hollowground_handle.clone(),
+            mesh: final_mesh_handle.clone(),
             material: materials.add(StandardMaterial {
                 base_color: Color::rgb(50.0 / 255.0, 56.0 / 255.0, 53.0 / 255.0),
                 ..Default::default()
             }),
-            transform: Transform::from_xyz(
-                ((i as f32) * 3.0) + offset.x,
-                (-2.0) + offset.y,
-                ((j as f32) * 3.0) + offset.z,
-            )
-            .with_scale(Vec3::new(0.5, 0.5, 0.5)),
             ..Default::default()
         })
         .insert(RayCastMesh::<RaycastSet>::default());
@@ -307,34 +294,37 @@ fn gen_spire(
     j: f32,
     x: f32,
 ) {
-    commands
-    .spawn_bundle(PbrBundle {
-        mesh: hollowground_handle.clone(),
-        material: materials.add(StandardMaterial {
-            base_color: Color::rgb(153.0 / 255.0, 132.0 / 255.0, 0.0),
-            ..Default::default()
-        }),
-        transform: Transform::from_xyz(
-            (i as f32) * 3.0,
-            x as f32,
-            (j as f32) * 3.0,
-        )
-        .with_scale(Vec3::new(0.5, 0.5, 0.5)),
-        ..Default::default()
-    })
-    .insert(RayCastMesh::<RaycastSet>::default())
-    .insert(ColliderPositionSync::Discrete)
-    .insert(RayCastMesh::<RaycastSet>::default())
-    .with_children(|parent| {
-        parent.spawn_bundle(ColliderBundle {
-            shape: ColliderShape::cuboid(1.5, 1.5, 1.5).into(),
-            position: Vec3::new(
-                (i as f32) * 3.0,
-                x as f32,
-                (j as f32) * 3.0,
-            )
-            .into(),
-            ..Default::default()
-        });
-    });
+
+
+    // commands
+    // .spawn_bundle(PbrBundle {
+    //     mesh: hollowground_handle.clone(),
+    //     material: materials.add(StandardMaterial {
+    //         base_color: Color::rgb(153.0 / 255.0, 132.0 / 255.0, 0.0),
+    //         ..Default::default()
+    //     }),
+    //     transform: Transform::from_xyz(
+    //         (i as f32) * 3.0,
+    //         x as f32,
+    //         (j as f32) * 3.0,
+    //     )
+    //     //.with_scale(Vec3::new(0.5, 0.5, 0.5))
+    //     ,
+    //     ..Default::default()
+    // })
+    // .insert(RayCastMesh::<RaycastSet>::default())
+    // .insert(ColliderPositionSync::Discrete)
+    // .insert(RayCastMesh::<RaycastSet>::default())
+    // .with_children(|parent| {
+    //     parent.spawn_bundle(ColliderBundle {
+    //         shape: ColliderShape::cuboid(1.5, 1.5, 1.5).into(),
+    //         position: Vec3::new(
+    //             (i as f32) * 3.0,
+    //             x as f32,
+    //             (j as f32) * 3.0,
+    //         )
+    //         .into(),
+    //         ..Default::default()
+    //     });
+    // });
 }
