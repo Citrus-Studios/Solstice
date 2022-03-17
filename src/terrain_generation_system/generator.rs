@@ -116,16 +116,21 @@ pub fn generate_terrain(
             if n > 0.0 {
                 terrain_gen.i = i as f32;
                 terrain_gen.j = j as f32;
-                let mut rng = rand::thread_rng();
+                // let mut rng = rand::thread_rng();
                 // Generate a block
                 terrain_gen.offset.y = 0.0;
                     gen_block(&mut terrain_gen);
-                if rng.gen_range(1..=10) >= 5 {
+                if n >= 0.3 {
                     terrain_gen.offset.y = -3.0;
                     gen_block(&mut terrain_gen);
                 }
-                if rng.gen_range(1..=10) >= 3 {
+                if n >= 0.6 {
                     terrain_gen.offset.y = -6.0;
+                    gen_block(&mut terrain_gen);
+                }
+
+                if n >= 0.95 {
+                    terrain_gen.offset.y = -9.0;
                     gen_block(&mut terrain_gen);
                 }
 
@@ -328,3 +333,75 @@ fn gen_spire(
     //     });
     // });
 }
+
+pub trait CombineMesh {
+    fn combine_mesh(self, mesh_2: Mesh, offset: Vec3) -> Self;
+    fn relevant_attributes(self) -> (Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<[f32; 2]>, Vec<u32>);
+}
+
+impl CombineMesh for Mesh {
+    fn combine_mesh(mut self, mesh_2: Mesh, offset: Vec3) -> Self {
+        let (pos_1, norm_1, uvs_1, indices_1) = self.clone().relevant_attributes();
+        let (pos_2, norm_2, uvs_2, indices_2) = mesh_2.relevant_attributes();
+
+        let mut pos_offset = Vec::new();
+
+        for vertice in pos_2 {
+            pos_offset.push([
+                vertice[0] + offset.x,
+                vertice[1] + offset.y,
+                vertice[2] + offset.z
+            ]);
+        }
+
+        let num_vertices = pos_1.clone().len() as u32;
+
+        let mut indices_offset = Vec::new();
+
+        for indice in indices_2 {
+            indices_offset.push(indice + num_vertices);
+        }
+
+        let pos = vec![pos_1.clone(), pos_offset].concat();
+        let norm = vec![norm_1.clone(), norm_2.clone()].concat();
+        let uvs = vec![uvs_1.clone(), uvs_2.clone()].concat();
+        let indices = vec![indices_1.clone(), indices_offset].concat();
+
+        self.set_attribute("Vertex_Position", VertexAttributeValues::Float32x3(pos));
+        self.set_attribute("Vertex_Normal", VertexAttributeValues::Float32x3(norm));
+        self.set_attribute("Vertex_Uv", VertexAttributeValues::Float32x2(uvs));
+        self.set_indices(Some(Indices::U32(indices)));
+
+        self
+    }
+
+    fn relevant_attributes(self) -> (Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<[f32; 2]>, Vec<u32>) {
+
+        let self_clone = self.clone();
+        let positions = match self_clone.attribute("Vertex_Position").unwrap() {
+            VertexAttributeValues::Float32x3(e) => e,
+            _ => panic!("WHAT")
+        };
+
+        let self_clone_2 = self.clone();
+        let normals = match self_clone_2.attribute("Vertex_Normal").unwrap() {
+            VertexAttributeValues::Float32x3(e) => e,
+            _ => panic!("WHAT")
+        };
+
+        let self_clone_3 = self.clone();
+        let uvs = match self_clone_3.attribute("Vertex_Uv").unwrap() {
+            VertexAttributeValues::Float32x2(e) => e,
+            _ => panic!("WHAT")
+        };
+
+        let self_clone_4 = self.clone();
+        let indices = match self_clone_4.indices().unwrap() {
+            Indices::U32(e) => e,
+            _ => panic!("WHAT")
+        };
+
+        (positions.clone(), normals.clone(), uvs.clone(), indices.clone())
+    }
+}
+
