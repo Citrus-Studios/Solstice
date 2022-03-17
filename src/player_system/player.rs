@@ -1,5 +1,6 @@
 use bevy::{prelude::*, input::mouse::{MouseMotion, MouseWheel}};
-use bevy_rapier3d::{prelude::{RigidBodyVelocityComponent}};
+use bevy_rapier3d::{prelude::{RigidBodyVelocityComponent, RigidBodyPosition, RigidBodyPositionComponent}};
+use nalgebra::{Translation, Translation3};
 
 use crate::constants::{SQRT_OF_2, HALF_PI};
 
@@ -109,6 +110,10 @@ pub fn player_movement_system(
 
     if keyboard_input.just_pressed(KeyCode::Space) && player_rigidbody.linvel.y == 0.0 {
         player_rigidbody.linvel.y += 10.0;
+    }
+
+    if keyboard_input.just_pressed(KeyCode::P) {
+        player_rigidbody.linvel.y = 10.0;
     }
 
     player_rigidbody.linvel.x = x_mov * player.speed * delta_time.delta_seconds();
