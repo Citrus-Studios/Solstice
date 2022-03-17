@@ -376,32 +376,27 @@ impl CombineMesh for Mesh {
     }
 
     fn relevant_attributes(self) -> (Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<[f32; 2]>, Vec<u32>) {
-
-        let self_clone = self.clone();
-        let positions = match self_clone.attribute("Vertex_Position").unwrap() {
-            VertexAttributeValues::Float32x3(e) => e,
+        let positions = match self.attribute("Vertex_Position").unwrap() {
+            VertexAttributeValues::Float32x3(e) => e.clone(),
             _ => panic!("WHAT")
         };
 
-        let self_clone_2 = self.clone();
-        let normals = match self_clone_2.attribute("Vertex_Normal").unwrap() {
-            VertexAttributeValues::Float32x3(e) => e,
+        let normals = match self.attribute("Vertex_Normal").unwrap() {
+            VertexAttributeValues::Float32x3(e) => e.clone(),
             _ => panic!("WHAT")
         };
 
-        let self_clone_3 = self.clone();
-        let uvs = match self_clone_3.attribute("Vertex_Uv").unwrap() {
-            VertexAttributeValues::Float32x2(e) => e,
+        let uvs = match self.attribute("Vertex_Uv").unwrap() {
+            VertexAttributeValues::Float32x2(e) => e.clone(),
             _ => panic!("WHAT")
         };
 
-        let self_clone_4 = self.clone();
-        let indices = match self_clone_4.indices().unwrap() {
-            Indices::U32(e) => e,
+        let indices = match self.indices().unwrap() {
+            Indices::U32(e) => e.clone(),
             _ => panic!("WHAT")
         };
 
-        (positions.clone(), normals.clone(), uvs.clone(), indices.clone())
+        (positions, normals, uvs, indices)
     }
 }
 
