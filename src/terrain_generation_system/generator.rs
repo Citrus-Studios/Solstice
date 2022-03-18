@@ -1,9 +1,13 @@
-use bevy::{prelude::*, render::mesh::{VertexAttributeValues, Indices}};
+use bevy::{
+    prelude::*,
+    render::mesh::{Indices, VertexAttributeValues},
+};
 use bevy_mod_raycast::RayCastMesh;
 use bevy_rapier3d::{
     physics::{ColliderBundle, ColliderPositionSync},
     prelude::ColliderShape,
 };
+use nalgebra::{Vector3, Point3, Isometry3};
 use rand::Rng;
 
 use noise::{NoiseFn, Perlin, Seedable, Terrace};
@@ -18,7 +22,7 @@ pub struct GeneratorOptions {
 }
 
 pub struct TerrainGenDone {
-    pub done: bool
+    pub done: bool,
 }
 
 struct TerrainGenerator<'a> {
@@ -31,7 +35,7 @@ struct TerrainGenerator<'a> {
     positions: Vec<[f32; 3]>,
     normals: Vec<[f32; 3]>,
     uvs: Vec<[f32; 2]>,
-    indices: Vec<u32>
+    indices: Vec<u32>,
 }
 
 impl<'a> TerrainGenerator<'a> {
@@ -53,7 +57,7 @@ impl<'a> TerrainGenerator<'a> {
             positions: Vec::new(),
             normals: Vec::new(),
             uvs: Vec::new(),
-            indices: Vec::new()
+            indices: Vec::new(),
         }
     }
 }
@@ -68,12 +72,12 @@ pub fn generate_terrain(
     generator_options: Res<GeneratorOptions>,
 ) {
     if done.done {
-        return
+        return;
     }
 
     info!("hewo?");
 
-    let hollowground_handle: Handle<Mesh> = asset_server.load("models/ground1/hollow_ground.obj");    
+    let hollowground_handle: Handle<Mesh> = asset_server.load("models/ground1/hollow_ground.obj");
 
     // let commands = Arc::new(Box::leak(Box::new(commands)));
     // let hollowground_handle = &hollowground_handle;
@@ -81,34 +85,61 @@ pub fn generate_terrain(
 
     let perlin = Perlin::default().set_seed(*SEED);
 
-
     let handle_temp = match meshes.get(&hollowground_handle) {
         Some(e) => e.clone(),
-        _ => return
+        _ => return,
     };
 
     let mesh_handle = meshes.add(handle_temp);
 
     let mut mesh = meshes.get(mesh_handle).unwrap().clone();
     let hollowground_ref = meshes.get(&hollowground_handle).unwrap();
-    
+
+    let mut compound_colliders = vec![];
     // generates terrain given a width and a length
     for i in 0..generator_options.width {
         for j in 0..generator_options.length {
             let n = perlin.get([(i as f64) * 0.15, (j as f64) * 0.15]);
             //info!(n);
-            if n > 0.0 {
-                    mesh = mesh.combine_mesh(hollowground_ref.clone(), Vec3::new((i as f32) * 3.0, 0.0, (j as f32) * 3.0));
-
+            if n > 0.0 && {
+                mesh = mesh.combine_mesh(
+                    hollowground_ref.clone(),
+                    Vec3::new((i as f32) * 3.0, 0.0, (j as f32) * 3.0),
+                );
+                compound_colliders.push((
+                    Isometry3::translation((i as f32) * 3.0, 0.0, (j as f32) * 3.0),
+                    ColliderShape::cuboid(1.5, 1.5, 1.5),
+                ));
                 if n >= 0.3 {
-                    mesh = mesh.combine_mesh(hollowground_ref.clone(), Vec3::new((i as f32) * 3.0, -3.0, (j as f32) * 3.0));
+                    compound_colliders.push((
+                        Isometry3::translation((i as f32) * 3.0, -3.0, (j as f32) * 3.0),
+                        ColliderShape::cuboid(1.5, 1.5, 1.5),
+                    ));
+                    mesh = mesh.combine_mesh(
+                        hollowground_ref.clone(),
+                        Vec3::new((i as f32) * 3.0, -3.0, (j as f32) * 3.0),
+                    );
                 }
                 if n >= 0.6 {
-                    mesh = mesh.combine_mesh(hollowground_ref.clone(), Vec3::new((i as f32) * 3.0, -6.0, (j as f32) * 3.0));
+                    compound_colliders.push((
+                        Isometry3::translation((i as f32) * 3.0, -6.0, (j as f32) * 3.0),
+                        ColliderShape::cuboid(1.5, 1.5, 1.5),
+                    ));
+                    mesh = mesh.combine_mesh(
+                        hollowground_ref.clone(),
+                        Vec3::new((i as f32) * 3.0, -6.0, (j as f32) * 3.0),
+                    );
                 }
 
                 if n >= 0.95 {
-                    mesh = mesh.combine_mesh(hollowground_ref.clone(), Vec3::new((i as f32) * 3.0, -9.0, (j as f32) * 3.0));
+                    compound_colliders.push((
+                        Isometry3::translation((i as f32) * 3.0, -9.0, (j as f32) * 3.0),
+                        ColliderShape::cuboid(1.5, 1.5, 1.5),
+                    ));
+                    mesh = mesh.combine_mesh(
+                        hollowground_ref.clone(),
+                        Vec3::new((i as f32) * 3.0, -9.0, (j as f32) * 3.0),
+                    );
                 }
 
                 // Spires
@@ -129,6 +160,7 @@ pub fn generate_terrain(
             }
         }
     }
+    
 
     let final_mesh_handle = meshes.add(mesh);
 
@@ -141,8 +173,12 @@ pub fn generate_terrain(
             }),
             ..Default::default()
         })
-        .insert(RayCastMesh::<RaycastSet>::default());
-    
+        .insert(RayCastMesh::<RaycastSet>::default())
+        .insert_bundle(ColliderBundle {
+            shape: ColliderShape::compound(compound_colliders).into(),
+            ..Default::default()
+        });
+
     done.done = true;
 }
 
@@ -154,7 +190,6 @@ fn gen_spire(
     j: f32,
     x: f32,
 ) {
-
 
     // commands
     // .spawn_bundle(PbrBundle {
@@ -205,7 +240,7 @@ impl CombineMesh for Mesh {
             pos_offset.push([
                 vertice[0] + offset.x,
                 vertice[1] + offset.y,
-                vertice[2] + offset.z
+                vertice[2] + offset.z,
             ]);
         }
 
@@ -233,25 +268,24 @@ impl CombineMesh for Mesh {
     fn relevant_attributes(self) -> (Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<[f32; 2]>, Vec<u32>) {
         let positions = match self.attribute("Vertex_Position").unwrap() {
             VertexAttributeValues::Float32x3(e) => e.clone(),
-            _ => panic!("WHAT")
+            _ => panic!("WHAT"),
         };
 
         let normals = match self.attribute("Vertex_Normal").unwrap() {
             VertexAttributeValues::Float32x3(e) => e.clone(),
-            _ => panic!("WHAT")
+            _ => panic!("WHAT"),
         };
 
         let uvs = match self.attribute("Vertex_Uv").unwrap() {
             VertexAttributeValues::Float32x2(e) => e.clone(),
-            _ => panic!("WHAT")
+            _ => panic!("WHAT"),
         };
 
         let indices = match self.indices().unwrap() {
             Indices::U32(e) => e.clone(),
-            _ => panic!("WHAT")
+            _ => panic!("WHAT"),
         };
 
         (positions, normals, uvs, indices)
     }
 }
-
