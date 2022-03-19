@@ -33,7 +33,7 @@ pub fn player_start(
     })
     .insert_bundle(ColliderBundle {
         shape: ColliderShape::cuboid(0.5, 0.5, 0.5).into(),
-        position: [0.0, 20.0, 0.0].into(),
+        position: [100.0, 20.0, 100.0].into(),
         material: ColliderMaterial { 
             friction: 0.0,
             friction_combine_rule: CoefficientCombineRule::Min,
