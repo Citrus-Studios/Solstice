@@ -7,6 +7,7 @@ use bevy_rapier3d::{
     physics::{ColliderBundle, ColliderPositionSync},
     prelude::{ColliderShape, SharedShape},
 };
+use bevy::render::render_resource::PrimitiveTopology::TriangleList;
 use nalgebra::{Vector3, Point3, Isometry3, OPoint, Point};
 use rand::{Rng, prelude::ThreadRng};
 
@@ -93,7 +94,7 @@ pub fn generate_terrain(
 
     let mesh_handle = meshes.add(handle_temp);
 
-    let mut mesh = meshes.get(mesh_handle).unwrap().clone();
+    // let mut mesh = meshes.get(mesh_handle).unwrap().clone();
     let hollowground_ref = meshes.get(&hollowground_handle).unwrap();
     let ground1_ref = meshes.get(&ground1_handle).unwrap();
 
@@ -103,6 +104,8 @@ pub fn generate_terrain(
     // let ground1_collider = ColliderShape::cuboid(1.5, 1.5, 1.5);
 
     // let mut compound_colliders = vec![];
+
+    let mut attr = RelevantAttributes::new();
 
     let middle = Vec2::new(generator_options.width as f32 / 2.0, generator_options.length as f32 / 2.0);
     // generates terrain given a width and a length
@@ -114,41 +117,25 @@ pub fn generate_terrain(
             //info!(n);
             let rng = rand::thread_rng();
             if n > 0.0 && distance_vec2(middle, Vec2::new(i_pos, j_pos)) < middle.x {
-                mesh = mesh.combine_mesh(
+                attr = attr.combine_with_mesh(
                     rng.clone().random_pick(0.5, ground1_ref, hollowground_ref).clone(),
                     Vec3::new(i_pos, 0.0, j_pos),
                 );
-                // compound_colliders.push((
-                //     Isometry3::translation(i_pos, 0.0, j_pos),
-                //     ColliderShape::cuboid(1.5, 1.5, 1.5),
-                // ));
                 if n >= 0.3 {
-                    // compound_colliders.push((
-                    //     Isometry3::translation(i_pos, -3.0, j_pos),
-                    //     ColliderShape::cuboid(1.5, 1.5, 1.5),
-                    // ));
-                    mesh = mesh.combine_mesh(
+                    attr = attr.combine_with_mesh(
                         rng.clone().random_pick(0.5, ground1_ref, hollowground_ref).clone(),
                         Vec3::new(i_pos, -3.0, j_pos),
                     );
                 }
                 if n >= 0.6 {
-                    // compound_colliders.push((
-                    //     Isometry3::translation(i_pos, -6.0, j_pos),
-                    //     ColliderShape::cuboid(1.5, 1.5, 1.5),
-                    // ));
-                    mesh = mesh.combine_mesh(
+                    attr = attr.combine_with_mesh(
                         rng.clone().random_pick(0.5, ground1_ref, hollowground_ref).clone(),
                         Vec3::new(i_pos, -6.0, j_pos),
                     );
                 }
 
                 if n >= 0.95 {
-                    // compound_colliders.push((
-                    //     Isometry3::translation(i_pos, -9.0, j_pos),
-                    //     ColliderShape::cuboid(1.5, 1.5, 1.5),
-                    // ));
-                    mesh = mesh.combine_mesh(
+                    attr = attr.combine_with_mesh(
                         rng.clone().random_pick(0.5, ground1_ref, hollowground_ref).clone(),
                         Vec3::new(i_pos, -9.0, j_pos),
                     );
@@ -173,6 +160,9 @@ pub fn generate_terrain(
         }
     } 
 
+    // info!("{:?}", attr.pos);
+    let mesh = Mesh::new(TriangleList).set_attributes(attr);
+    
     let final_collider = mesh.clone().into_shared_shape();
     let final_mesh_handle = meshes.add(mesh);
 
@@ -252,20 +242,80 @@ impl<T> Pick<T> for ThreadRng {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct RelevantAttributes {
+    pub pos: Vec<[f32; 3]>,
+    pub norm: Vec<[f32; 3]>,
+    pub uv: Vec<[f32; 2]>,
+    pub ind: Vec<u32>
+}
+
+impl RelevantAttributes {
+    pub fn new() -> RelevantAttributes {
+        RelevantAttributes {
+            pos: Vec::new(),
+            norm: Vec::new(),
+            uv: Vec::new(),
+            ind: Vec::new()
+        }
+    }
+
+    pub fn pos(mut self, pos: Vec<[f32; 3]>) -> Self {
+        self.pos = pos; self
+    }
+
+    pub fn norm(mut self, norm: Vec<[f32; 3]>) -> Self {
+        self.norm = norm; self
+    }
+
+    pub fn uv(mut self, uv: Vec<[f32; 2]>) -> Self {
+        self.uv = uv; self
+    }
+
+    pub fn ind(mut self, ind: Vec<u32>) -> Self {
+        self.ind = ind; self
+    }
+
+    pub fn append(mut self, mut attr: RelevantAttributes) -> Self {
+        self.pos.append(&mut attr.pos);
+        self.norm.append(&mut attr.norm);
+        self.uv.append(&mut attr.uv);
+        self.ind.append(&mut attr.ind);
+        self
+    }
+
+    pub fn combine_with_mesh(self, mesh: Mesh, offset: Vec3) -> Self {
+        let mut attr = mesh.relevant_attributes();
+        for vertice in attr.pos.iter_mut() {
+            for (i, coord) in vertice.into_iter().enumerate() {
+                *coord += offset[i];
+            }
+        }
+
+        let num_vertices = self.pos.len() as u32;
+        for indice in attr.ind.iter_mut() {
+            *indice += num_vertices;
+        }
+        
+        self.append(attr)
+    }
+}
+
 pub trait MutateMesh {
     fn combine_mesh(self, mesh_2: Mesh, offset: Vec3) -> Self;
-    fn relevant_attributes(self) -> (Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<[f32; 2]>, Vec<u32>);
+    fn relevant_attributes(self) -> RelevantAttributes;
     fn into_shared_shape(self) -> SharedShape;
+    fn set_attributes(self, attr: RelevantAttributes) -> Mesh;
 }
 
 impl MutateMesh for Mesh {
     fn combine_mesh(mut self, mesh_2: Mesh, offset: Vec3) -> Self {
-        let (pos_1, norm_1, uvs_1, indices_1) = self.clone().relevant_attributes();
-        let (pos_2, norm_2, uvs_2, indices_2) = mesh_2.relevant_attributes();
+        let attr_1 = self.clone().relevant_attributes();
+        let attr_2 = mesh_2.relevant_attributes();
 
         let mut pos_offset = Vec::new();
 
-        for vertice in pos_2 {
+        for vertice in attr_2.pos {
             pos_offset.push([
                 vertice[0] + offset.x,
                 vertice[1] + offset.y,
@@ -273,18 +323,18 @@ impl MutateMesh for Mesh {
             ]);
         }
 
-        let num_vertices = pos_1.clone().len() as u32;
+        let num_vertices = attr_1.pos.clone().len() as u32;
 
         let mut indices_offset = Vec::new();
 
-        for indice in indices_2 {
+        for indice in attr_2.ind {
             indices_offset.push(indice + num_vertices);
         }
 
-        let pos = vec![pos_1.clone(), pos_offset].concat();
-        let norm = vec![norm_1.clone(), norm_2.clone()].concat();
-        let uvs = vec![uvs_1.clone(), uvs_2.clone()].concat();
-        let indices = vec![indices_1.clone(), indices_offset].concat();
+        let pos = vec![attr_1.pos.clone(), pos_offset].concat();
+        let norm = vec![attr_1.norm.clone(), attr_2.norm.clone()].concat();
+        let uvs = vec![attr_1.uv.clone(), attr_2.uv.clone()].concat();
+        let indices = vec![attr_1.ind.clone(), indices_offset].concat();
 
         self.set_attribute("Vertex_Position", VertexAttributeValues::Float32x3(pos));
         self.set_attribute("Vertex_Normal", VertexAttributeValues::Float32x3(norm));
@@ -294,7 +344,7 @@ impl MutateMesh for Mesh {
         self
     }
 
-    fn relevant_attributes(self) -> (Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<[f32; 2]>, Vec<u32>) {
+    fn relevant_attributes(self) -> RelevantAttributes {
         let positions = match self.attribute("Vertex_Position").unwrap() {
             VertexAttributeValues::Float32x3(e) => e.clone(),
             _ => panic!("WHAT"),
@@ -315,25 +365,33 @@ impl MutateMesh for Mesh {
             _ => panic!("WHAT"),
         };
 
-        (positions, normals, uvs, indices)
+        RelevantAttributes::new().pos(positions).norm(normals).uv(uvs).ind(indices)
     }
 
     fn into_shared_shape(self) -> SharedShape {
-        let (vertex_positions, _, _, indices_vec) = self.clone().relevant_attributes();
+        let attr = self.clone().relevant_attributes();
 
         let mut points: Vec<Point3<f32>> = Vec::new();
-        for vertex in vertex_positions {
+        for vertex in attr.pos {
             points.push(Point3::from_slice(&vertex));
         }
 
         // assert_eq!(0, indices.len() % 3);
         let mut indices = Vec::new();
-        for i in 0..indices_vec.len() {
+        for i in 0..attr.ind.len() {
             if i % 3 == 0 {
-                indices.push([indices_vec[i], indices_vec[i+1], indices_vec[i+2]]);
+                indices.push([attr.ind[i], attr.ind[i+1], attr.ind[i+2]]);
             }
         }    
 
         ColliderShape::trimesh(points, indices)
+    }
+
+    fn set_attributes(mut self, attr: RelevantAttributes) -> Mesh {
+        self.set_attribute("Vertex_Position", VertexAttributeValues::Float32x3(attr.pos));
+        self.set_attribute("Vertex_Normal", VertexAttributeValues::Float32x3(attr.norm));
+        self.set_attribute("Vertex_Uv", VertexAttributeValues::Float32x2(attr.uv));
+        self.set_indices(Some(Indices::U32(attr.ind)));
+        self
     }
 }
