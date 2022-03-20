@@ -5,7 +5,7 @@ use bevy::{
 use bevy_mod_raycast::RayCastMesh;
 use bevy_rapier3d::{
     physics::{ColliderBundle, ColliderPositionSync},
-    prelude::ColliderShape,
+    prelude::{ColliderShape, SharedShape},
 };
 use nalgebra::{Vector3, Point3, Isometry3, OPoint, Point};
 use rand::{Rng, prelude::ThreadRng};
@@ -171,25 +171,9 @@ pub fn generate_terrain(
                 // }
             }
         }
-    }
+    } 
 
-    // Mutate the hollowground model into a collider
-    let (vertex_positions, _, _, indices_vec) = mesh.clone().relevant_attributes();
-
-    let mut points: Vec<Point3<f32>> = Vec::new();
-    for vertex in vertex_positions {
-        points.push(Point3::from_slice(&vertex));
-    }
-
-    // assert_eq!(0, indices.len() % 3);
-    let mut indices = Vec::new();
-    for i in 0..indices_vec.len() {
-        if i % 3 == 0 {
-            indices.push([indices_vec[i], indices_vec[i+1], indices_vec[i+2]]);
-        }
-    }    
-
-    let final_collider = ColliderShape::trimesh(points, indices);
+    let final_collider = mesh.clone().into_shared_shape();
     let final_mesh_handle = meshes.add(mesh);
 
     commands
@@ -268,12 +252,13 @@ impl<T> Pick<T> for ThreadRng {
     }
 }
 
-pub trait CombineMesh {
+pub trait MutateMesh {
     fn combine_mesh(self, mesh_2: Mesh, offset: Vec3) -> Self;
     fn relevant_attributes(self) -> (Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<[f32; 2]>, Vec<u32>);
+    fn into_shared_shape(self) -> SharedShape;
 }
 
-impl CombineMesh for Mesh {
+impl MutateMesh for Mesh {
     fn combine_mesh(mut self, mesh_2: Mesh, offset: Vec3) -> Self {
         let (pos_1, norm_1, uvs_1, indices_1) = self.clone().relevant_attributes();
         let (pos_2, norm_2, uvs_2, indices_2) = mesh_2.relevant_attributes();
@@ -331,5 +316,24 @@ impl CombineMesh for Mesh {
         };
 
         (positions, normals, uvs, indices)
+    }
+
+    fn into_shared_shape(self) -> SharedShape {
+        let (vertex_positions, _, _, indices_vec) = self.clone().relevant_attributes();
+
+        let mut points: Vec<Point3<f32>> = Vec::new();
+        for vertex in vertex_positions {
+            points.push(Point3::from_slice(&vertex));
+        }
+
+        // assert_eq!(0, indices.len() % 3);
+        let mut indices = Vec::new();
+        for i in 0..indices_vec.len() {
+            if i % 3 == 0 {
+                indices.push([indices_vec[i], indices_vec[i+1], indices_vec[i+2]]);
+            }
+        }    
+
+        ColliderShape::trimesh(points, indices)
     }
 }
