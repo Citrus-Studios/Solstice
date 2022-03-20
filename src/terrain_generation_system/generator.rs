@@ -7,7 +7,7 @@ use bevy_rapier3d::{
     physics::{ColliderBundle, ColliderPositionSync},
     prelude::ColliderShape,
 };
-use nalgebra::{Vector3, Point3, Isometry3};
+use nalgebra::{Vector3, Point3, Isometry3, OPoint, Point};
 use rand::{Rng, prelude::ThreadRng};
 
 use noise::{NoiseFn, Perlin, Seedable, Terrace};
@@ -97,7 +97,12 @@ pub fn generate_terrain(
     let hollowground_ref = meshes.get(&hollowground_handle).unwrap();
     let ground1_ref = meshes.get(&ground1_handle).unwrap();
 
-    let mut compound_colliders = vec![];
+    
+
+    // let hollowground_collider = ColliderShape::trimesh(points, indices);
+    // let ground1_collider = ColliderShape::cuboid(1.5, 1.5, 1.5);
+
+    // let mut compound_colliders = vec![];
 
     let middle = Vec2::new(generator_options.width as f32 / 2.0, generator_options.length as f32 / 2.0);
     // generates terrain given a width and a length
@@ -113,25 +118,25 @@ pub fn generate_terrain(
                     rng.clone().random_pick(0.5, ground1_ref, hollowground_ref).clone(),
                     Vec3::new(i_pos, 0.0, j_pos),
                 );
-                compound_colliders.push((
-                    Isometry3::translation(i_pos, 0.0, j_pos),
-                    ColliderShape::cuboid(1.5, 1.5, 1.5),
-                ));
+                // compound_colliders.push((
+                //     Isometry3::translation(i_pos, 0.0, j_pos),
+                //     ColliderShape::cuboid(1.5, 1.5, 1.5),
+                // ));
                 if n >= 0.3 {
-                    compound_colliders.push((
-                        Isometry3::translation(i_pos, -3.0, j_pos),
-                        ColliderShape::cuboid(1.5, 1.5, 1.5),
-                    ));
+                    // compound_colliders.push((
+                    //     Isometry3::translation(i_pos, -3.0, j_pos),
+                    //     ColliderShape::cuboid(1.5, 1.5, 1.5),
+                    // ));
                     mesh = mesh.combine_mesh(
                         rng.clone().random_pick(0.5, ground1_ref, hollowground_ref).clone(),
                         Vec3::new(i_pos, -3.0, j_pos),
                     );
                 }
                 if n >= 0.6 {
-                    compound_colliders.push((
-                        Isometry3::translation(i_pos, -6.0, j_pos),
-                        ColliderShape::cuboid(1.5, 1.5, 1.5),
-                    ));
+                    // compound_colliders.push((
+                    //     Isometry3::translation(i_pos, -6.0, j_pos),
+                    //     ColliderShape::cuboid(1.5, 1.5, 1.5),
+                    // ));
                     mesh = mesh.combine_mesh(
                         rng.clone().random_pick(0.5, ground1_ref, hollowground_ref).clone(),
                         Vec3::new(i_pos, -6.0, j_pos),
@@ -139,10 +144,10 @@ pub fn generate_terrain(
                 }
 
                 if n >= 0.95 {
-                    compound_colliders.push((
-                        Isometry3::translation(i_pos, -9.0, j_pos),
-                        ColliderShape::cuboid(1.5, 1.5, 1.5),
-                    ));
+                    // compound_colliders.push((
+                    //     Isometry3::translation(i_pos, -9.0, j_pos),
+                    //     ColliderShape::cuboid(1.5, 1.5, 1.5),
+                    // ));
                     mesh = mesh.combine_mesh(
                         rng.clone().random_pick(0.5, ground1_ref, hollowground_ref).clone(),
                         Vec3::new(i_pos, -9.0, j_pos),
@@ -164,11 +169,27 @@ pub fn generate_terrain(
                 //         );
                 //     }
                 // }
+            }
         }
     }
-}
-    
 
+    // Mutate the hollowground model into a collider
+    let (vertex_positions, _, _, indices_vec) = mesh.clone().relevant_attributes();
+
+    let mut points: Vec<Point3<f32>> = Vec::new();
+    for vertex in vertex_positions {
+        points.push(Point3::from_slice(&vertex));
+    }
+
+    // assert_eq!(0, indices.len() % 3);
+    let mut indices = Vec::new();
+    for i in 0..indices_vec.len() {
+        if i % 3 == 0 {
+            indices.push([indices_vec[i], indices_vec[i+1], indices_vec[i+2]]);
+        }
+    }    
+
+    let final_collider = ColliderShape::trimesh(points, indices);
     let final_mesh_handle = meshes.add(mesh);
 
     commands
@@ -182,7 +203,7 @@ pub fn generate_terrain(
         })
         .insert(RayCastMesh::<RaycastSet>::default())
         .insert_bundle(ColliderBundle {
-            shape: ColliderShape::compound(compound_colliders).into(),
+            shape: final_collider.into(),
             ..Default::default()
         });
 
