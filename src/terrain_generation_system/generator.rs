@@ -75,11 +75,8 @@ pub fn generate_terrain(
         return;
     }
 
-    info!("hewo?");
-
     let ground1_handle: Handle<Mesh> = asset_server.load("models/ground1/ground1.obj");
     let hollowground_handle: Handle<Mesh> = asset_server.load("models/ground1/hollow_ground.obj");
-    
 
     // let commands = Arc::new(Box::leak(Box::new(commands)));
     // let hollowground_handle = &hollowground_handle;
@@ -241,7 +238,7 @@ pub trait Pick<T> {
 impl<T> Pick<T> for ThreadRng {
     // Bias is the bias towards n1
     fn random_pick(mut self, bias: f32, n1: T, n2: T) -> T {
-        if !(0.0 <= bias && bias <= 1.0) { panic!("Bias must be between 0.0 and 1.0") }
+        if !(0.0 <= bias && bias <= 1.0) { println!("Warning: Bias should be between 0.0 and 1.0"); }
         if self.gen_range(0.0..1.0) <= bias {
             return n1;
         } else {
