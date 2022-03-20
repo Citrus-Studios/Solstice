@@ -78,6 +78,7 @@ pub fn generate_terrain(
 
     let ground1_handle: Handle<Mesh> = asset_server.load("models/ground1/ground1.obj");
     let hollowground_handle: Handle<Mesh> = asset_server.load("models/ground1/hollow_ground.obj");
+    let spires_hollow_handle: Handle<Mesh> = asset_server.load("models/ground1/spires_hollow.obj");
 
     // let commands = Arc::new(Box::leak(Box::new(commands)));
     // let hollowground_handle = &hollowground_handle;
@@ -92,12 +93,14 @@ pub fn generate_terrain(
     };
 
     if meshes.get(&ground1_handle).is_none() { return }
+    if meshes.get(&spires_hollow_handle).is_none() { return }
 
     let mesh_handle = meshes.add(handle_temp);
 
     // let mut mesh = meshes.get(mesh_handle).unwrap().clone();
     let hollowground_ref = meshes.get(&hollowground_handle).unwrap();
     let ground1_ref = meshes.get(&ground1_handle).unwrap();
+    let spires_hollow_ref = meshes.get(&spires_hollow_handle).unwrap();
 
     
 
@@ -148,7 +151,7 @@ pub fn generate_terrain(
                     let height = rng.gen_range(3..=7);
                     for x in 1..=height {
                         attr = attr.combine_with_mesh(
-                            rng.clone().random_pick(0.5, ground1_ref, hollowground_ref).clone(),
+                            rng.clone().random_pick(0.5, ground1_ref, spires_hollow_ref).clone(),
                             Vec3::new(i_pos, (x as f32) * 3.0, j_pos),
                         );
                     }
@@ -251,7 +254,7 @@ impl RelevantAttributes {
         for indice in attr.ind.iter_mut() {
             *indice += num_vertices;
         }
-        
+
         self.append(attr)
     }
 }

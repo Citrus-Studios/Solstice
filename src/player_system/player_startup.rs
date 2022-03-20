@@ -36,7 +36,7 @@ pub fn player_start(
         speed: 2000.0
     })
     .insert_bundle(ColliderBundle {
-        shape: ColliderShape::round_cuboid(0.5, 0.5, 0.5, 0.1).into(),
+        shape: ColliderShape::round_cuboid(0.4, 0.4, 0.4, 0.1).into(),
         position: [100.0, 20.0, 100.0].into(),
         material: ColliderMaterial { 
             friction: 0.0,
