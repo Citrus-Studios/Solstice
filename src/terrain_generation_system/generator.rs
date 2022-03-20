@@ -84,6 +84,7 @@ pub fn generate_terrain(
     // let materials = Arc::new(materials);
 
     let perlin = Perlin::default().set_seed(*SEED);
+    let spire_perlin = Perlin::default().set_seed(*SEED / 2);
 
     let handle_temp = match meshes.get(&hollowground_handle) {
         Some(e) => e.clone(),
@@ -112,10 +113,11 @@ pub fn generate_terrain(
     for i in 0..generator_options.width {
         for j in 0..generator_options.length {
             let n = perlin.get([(i as f64) * 0.15, (j as f64) * 0.15]);
+            let n_2 = spire_perlin.get([(i as f64) * 0.15, (j as f64) * 0.15]);
             let i_pos = (i as f32) * 3.0;
             let j_pos = (j as f32) * 3.0;
             //info!(n);
-            let rng = rand::thread_rng();
+            let mut rng = rand::thread_rng();
             if n > 0.0 && distance_vec2(middle, Vec2::new(i_pos, j_pos)) < middle.x {
                 attr = attr.combine_with_mesh(
                     rng.clone().random_pick(0.5, ground1_ref, hollowground_ref).clone(),
@@ -142,20 +144,15 @@ pub fn generate_terrain(
                 }
 
                 // Spires
-                // if rng.gen_range(1..=10) >= 9 {
-                //     let height = rng.gen_range(3..=10);
-                //     for x in 1..=height {
-                //         // Generate a spire
-                //         gen_spire(
-                //             &mut commands,
-                //             hollowground_handle.clone(),
-                //             &mut materials,
-                //             i as f32,
-                //             j as f32,
-                //             x as f32,
-                //         );
-                //     }
-                // }
+                if n_2 > 0.5 {
+                    let height = rng.gen_range(3..=7);
+                    for x in 1..=height {
+                        attr = attr.combine_with_mesh(
+                            rng.clone().random_pick(0.5, ground1_ref, hollowground_ref).clone(),
+                            Vec3::new(i_pos, (x as f32) * 3.0, j_pos),
+                        );
+                    }
+                }
             }
         }
     } 
@@ -182,48 +179,6 @@ pub fn generate_terrain(
         });
 
     done.done = true;
-}
-
-fn gen_spire(
-    commands: &mut Commands,
-    hollowground_handle: Handle<Mesh>,
-    materials: &mut ResMut<Assets<StandardMaterial>>,
-    i: f32,
-    j: f32,
-    x: f32,
-) {
-
-    // commands
-    // .spawn_bundle(PbrBundle {
-    //     mesh: hollowground_handle.clone(),
-    //     material: materials.add(StandardMaterial {
-    //         base_color: Color::rgb(153.0 / 255.0, 132.0 / 255.0, 0.0),
-    //         ..Default::default()
-    //     }),
-    //     transform: Transform::from_xyz(
-    //         (i as f32) * 3.0,
-    //         x as f32,
-    //         (j as f32) * 3.0,
-    //     )
-    //     //.with_scale(Vec3::new(0.5, 0.5, 0.5))
-    //     ,
-    //     ..Default::default()
-    // })
-    // .insert(RayCastMesh::<RaycastSet>::default())
-    // .insert(ColliderPositionSync::Discrete)
-    // .insert(RayCastMesh::<RaycastSet>::default())
-    // .with_children(|parent| {
-    //     parent.spawn_bundle(ColliderBundle {
-    //         shape: ColliderShape::cuboid(1.5, 1.5, 1.5).into(),
-    //         position: Vec3::new(
-    //             (i as f32) * 3.0,
-    //             x as f32,
-    //             (j as f32) * 3.0,
-    //         )
-    //         .into(),
-    //         ..Default::default()
-    //     });
-    // });
 }
 
 pub trait Pick<T> {
