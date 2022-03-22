@@ -7,12 +7,13 @@ pub const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 pub fn gui_startup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // ui camera
     commands.spawn_bundle(UiCameraBundle::default());
+    
     commands
         .spawn_bundle(ButtonBundle {
             style: Style {
-                size: Size::new(Val::Px(150.0), Val::Px(65.0)),
+                size: Size::new(Val::Px(150.0), Val::Px(150.0)),
                 // center button
-                margin: Rect::all(Val::Auto),
+                margin: Rect::default(),
                 // horizontally center child text
                 justify_content: JustifyContent::Center,
                 // vertically center child text
