@@ -114,15 +114,16 @@ pub fn player_movement_system(
         z_mov = SQRT_OF_2 * z_mov;
     }
 
-    if keyboard_input.just_pressed(KeyCode::Space) && player_rigidbody.linvel.y == 0.0 {
-        player_rigidbody.linvel.y += 10.0;
-    }
+    // if keyboard_input.just_pressed(KeyCode::Space) && player_rigidbody.linvel.y.abs() < 0.05 {
+    //     player_rigidbody.linvel.y += 10.0;
+    // }
+    // info!("{:?} {}", player_rigidbody.linvel.y.abs(), match player_rigidbody.linvel.y.abs() < 0.05 { true => "AAAAAAAAAAAAAAAAAA", _ => "nu" });
 
-    if keyboard_input.pressed(KeyCode::P) {
+    if keyboard_input.pressed(KeyCode::Space) {
         player_rigidbody.linvel.y = 10.0;
     }
 
-    if keyboard_input.pressed(KeyCode::O) {
+    if keyboard_input.pressed(KeyCode::B) {
         player_rigidbody.linvel.y = -10.0;
     }
 
