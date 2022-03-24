@@ -1,40 +1,94 @@
 use bevy::{prelude::*};
 
+use crate::constants::{ShortToString, GUI_LOOKUP};
+
+use super::gui::GuiOr;
+
 pub const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
 pub const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
-pub const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
+
+pub struct GuiSelectedBranch {
+    pub id: String
+}
+
+#[derive(Component)]
+pub struct GuiButtons {
+    pub content: GuiOr<String>
+}
+
+#[derive(Component)]
+pub struct GuiTextId {
+    pub id: u32
+}
 
 pub fn gui_startup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // ui camera
     commands.spawn_bundle(UiCameraBundle::default());
-    
-    commands
-        .spawn_bundle(ButtonBundle {
-            style: Style {
-                size: Size::new(Val::Px(150.0), Val::Px(150.0)),
-                // center button
-                margin: Rect::default(),
-                // horizontally center child text
-                justify_content: JustifyContent::Center,
-                // vertically center child text
-                align_items: AlignItems::Center,
+    commands.insert_resource(GuiSelectedBranch { id: "base".ts() });
+    let branch = GUI_LOOKUP.get(&"base".ts()).unwrap();
+    info!("{:?}", branch);
+        let mut margin = Rect::default();
+        margin.left = Val::Px(14.0);
+        // base node bundle
+        commands
+            .spawn_bundle(NodeBundle {
+                style: Style {
+                    size: Size::new(Val::Px(153.0), Val::Px(656.0)),
+                    margin,
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Baseline,
+                    flex_direction: FlexDirection::Column,
+                    ..Default::default()
+                },
+                visibility: Visibility { is_visible: false },
                 ..Default::default()
-            },
-            color: NORMAL_BUTTON.into(),
-            ..Default::default()
-        })
-        .with_children(|parent| {
-            parent.spawn_bundle(TextBundle {
-                text: Text::with_section(
-                    "Button",
-                    TextStyle {
-                        font: asset_server.load("fonts/toleis.regular.otf"),
-                        font_size: 40.0,
-                        color: Color::rgb(0.9, 0.9, 0.9),
-                    },
-                    Default::default(),
-                ),
-                ..Default::default()
+            }).with_children(|parent| {
+                // spawn 4 buttons in the bundle as children
+                for i in 0..=3 {
+                    let mut margin = Rect::default();
+                    let j = 3 - i;
+                    margin.bottom = Val::Px(5.0);
+                    parent.spawn_bundle(ButtonBundle {
+                        style: Style {
+                            size: Size::new(Val::Px(153.0), Val::Px(150.0)),
+                            margin,
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Baseline,
+                            ..Default::default()
+                        },
+                        color: NORMAL_BUTTON.into(),
+                        ..Default::default()
+                    }).insert(GuiButtons { content: branch[j].clone() })
+                    .with_children(|parent| {
+                        let mut margin = Rect::default();
+                        margin.bottom = Val::Px(114.0);
+                        parent.spawn_bundle(NodeBundle {
+                            style: Style {
+                                size: Size::new(Val::Px(147.0), Val::Px(33.0)),
+                                margin: margin,
+                                // horizontally center child text
+                                justify_content: JustifyContent::Center,
+                                // vertically center child text
+                                align_items: AlignItems::Baseline,
+                                ..Default::default()
+                            },
+                            color: Color::rgb(0.5, 0.5, 0.5).into(),
+                            ..Default::default()
+                        }).with_children(|parent| {
+                            parent.spawn_bundle(TextBundle {
+                                text: Text::with_section(
+                                    match &branch[j] { GuiOr::Id(e) => e.clone(), _ => panic!("you suck") },
+                                    TextStyle {
+                                        font: asset_server.load("fonts/zekton-rg.ttf"),
+                                        font_size: 26.0,
+                                        color: Color::rgb(0.9, 0.9, 0.9),
+                                    },
+                                    Default::default(),
+                                ),
+                                ..Default::default()
+                            }).insert(GuiTextId { id: i as u32 });
+                        });
+                    });
+                }
             });
-        });
 }
