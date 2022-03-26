@@ -6,29 +6,41 @@ use bevy::prelude::*;
 pub fn gui(
     commands: Commands,
     mut interaction_query: Query<
-        (&Interaction, &mut UiColor, &Children, &mut GuiButtons),
-        (Changed<Interaction>, With<GuiButtons>),
+        (&Interaction, &mut UiColor, &Children, &GuiButtonId),
+        Changed<Interaction>
     >,
-    mut text_query: Query<(&mut Text, &GuiTextId)>,
+    mut button_query: QuerySet<(QueryState<&mut GuiButtons>, QueryState<&GuiButtons>)>,
+    mut text_query: Query<(&mut Text, &GuiTextId, &mut Visibility)>,
 ) {
     let mut i = 0u32;
-    for (interaction, mut color, children, mut button) in interaction_query.iter_mut() {
+    for (interaction, mut color, children, button_id) in interaction_query.iter_mut() {
         // info!("{:?}", interaction);
         match *interaction {
             Interaction::Clicked => {
-                match &button.content {
+                let clicked_button_content = &button_query.q1().iter().nth(button_id.id as usize).unwrap().content;
+                match clicked_button_content {
                     GuiOr::Id(e) => {
-                        info!("ummmm hewo?");
                         let branch = GUI_LOOKUP.get(e).unwrap();
-                        for (mut text, i) in text_query.iter_mut() {
-                            let button_content = &branch[(3 - i.id)  as usize];
-                            text.sections[0].value = match &button_content {
-                                GuiOr::Id(e) => e.to_string().rsplitn(2, "_").next().unwrap().to_string(),
-                                GuiOr::Item(e) => e.to_string().rsplitn(2, "_").next().unwrap().to_string(),
-                                GuiOr::None => todo!(),
+                        let mut button_query_q0 = button_query.q0();
+                        let mut button_iter = button_query_q0.iter_mut();
+                        for (mut text, i, mut visibility) in text_query.iter_mut() {
+                            let button_content = &branch[i.id  as usize];
+                            match &button_content {
+                                // Set the text in the button                                  Ignore everything before underscores
+                                GuiOr::Id(e) => text.sections[0].value = e.to_string().rsplitn(2, "_").next().unwrap().to_string(),
+                                GuiOr::Item(e) => text.sections[0].value = e.to_string().rsplitn(2, "_").next().unwrap().to_string(),
+
+                                // Hide the button
+                                GuiOr::None => {
+                                    visibility.is_visible = false
+                                },
                             };
-                            button.content = button_content.clone();
+                            let mut current_button = button_iter.next().unwrap();
+                            current_button.content = button_content.clone();
                         }
+                    }
+                    GuiOr::Item(e) => {
+                        info!("you selected {:?}!", e);
                     }
                     _ => (),
                 }

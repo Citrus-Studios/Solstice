@@ -13,13 +13,20 @@ pub struct GuiSelectedBranch {
 
 #[derive(Component)]
 pub struct GuiButtons {
-    pub content: GuiOr<String>
+    pub content: GuiOr<String>,
+    pub id: u32
+}
+
+#[derive(Component)]
+pub struct GuiButtonId {
+    pub id: u32
 }
 
 #[derive(Component)]
 pub struct GuiTextId {
     pub id: u32
 }
+
 
 pub fn gui_startup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // ui camera
@@ -58,7 +65,8 @@ pub fn gui_startup(mut commands: Commands, asset_server: Res<AssetServer>) {
                         },
                         color: NORMAL_BUTTON.into(),
                         ..Default::default()
-                    }).insert(GuiButtons { content: branch[j].clone() })
+                    }).insert(GuiButtons { content: branch[j].clone(), id: j as u32 })
+                    .insert(GuiButtonId { id: 3 - j as u32 })
                     .with_children(|parent| {
                         let mut margin = Rect::default();
                         margin.bottom = Val::Px(114.0);
@@ -86,7 +94,7 @@ pub fn gui_startup(mut commands: Commands, asset_server: Res<AssetServer>) {
                                     Default::default(),
                                 ),
                                 ..Default::default()
-                            }).insert(GuiTextId { id: i as u32 });
+                            }).insert(GuiTextId { id: j as u32 });
                         });
                     });
                 }
