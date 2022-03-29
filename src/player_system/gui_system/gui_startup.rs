@@ -27,11 +27,21 @@ pub struct GuiTextId {
     pub id: u32
 }
 
+#[derive(Component)]
+pub struct GuiTextBox {
+    pub id: u32
+}
+
+#[derive(Component)]
+pub struct PrevQPress {
+    pub pressed: bool
+}
 
 pub fn gui_startup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // ui camera
     commands.spawn_bundle(UiCameraBundle::default());
     commands.insert_resource(GuiSelectedBranch { id: "base".ts() });
+    commands.insert_resource(PrevQPress { pressed: false });
     let branch = GUI_LOOKUP.get(&"base".ts()).unwrap();
     info!("{:?}", branch);
         let mut margin = Rect::default();
@@ -82,7 +92,9 @@ pub fn gui_startup(mut commands: Commands, asset_server: Res<AssetServer>) {
                             },
                             color: Color::rgb(0.5, 0.5, 0.5).into(),
                             ..Default::default()
-                        }).with_children(|parent| {
+                        }).remove::<Interaction>()
+                        .insert(GuiTextBox { id: 3 - j as u32 })
+                        .with_children(|parent| {
                             parent.spawn_bundle(TextBundle {
                                 text: Text::with_section(
                                     match &branch[j] { GuiOr::Id(e) => e.clone(), _ => panic!("you suck") },

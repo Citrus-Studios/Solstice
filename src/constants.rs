@@ -13,9 +13,7 @@ pub const HALF_SIZE: f32 = 10.0;
 
 lazy_static! {
     pub static ref SEED: u32 = thread_rng().gen::<u32>();
-}
 
-lazy_static! {
     pub static ref GUI_LOOKUP: HashMap<String, [GuiOr<String>; 4]> = HashMap::from([
         // NAMING: Everything BEFORE underscores (_) will be IGNORED in display text. Use spaces.
             ("base".ts(), [GuiOr::Id("Iridium".ts()), GuiOr::Id("Structures".ts()), GuiOr::Id("Military".ts()), GuiOr::Id("Technology".ts())]),
@@ -49,6 +47,35 @@ lazy_static! {
             ("Structure Tech".ts(), [GuiOr::Item("Fabricator".ts()), GuiOr::Item("Automechanic".ts()), GuiOr::None, GuiOr::None]),
             ("Technology_Misc".ts(), [GuiOr::Item("Boost Pad".ts()), GuiOr::Item("Distributor".ts()), GuiOr::Item("Transceiver".ts()), GuiOr::Item("Spatial Anchor".ts())]),
         ]);
+    
+    pub static ref GUI_BACK_LOOKUP: HashMap<String, String> = HashMap::from([
+        ("base".ts(), "base".ts()),
+
+        ("Iridium".ts(), "base".ts()),
+        ("Structures".ts(), "base".ts()),
+        ("Military".ts(), "base".ts()),
+        ("Technology".ts(), "base".ts()),
+        
+        ("Pipes".ts(), "Iridium".ts()),
+        ("Extractors".ts(), "Iridium".ts()),
+        ("Tanks".ts(), "Iridium".ts()),
+        ("Iridium_Special".ts(), "Iridium".ts()),
+
+        ("Iridium_Special_Tech".ts(), "Iridium_Special".ts()),
+        ("Valves".ts(), "Iridium_Special".ts()),
+        
+        ("Structures_Defense".ts(), "Structures".ts()),
+        ("Basic".ts(), "Structures".ts()),
+
+        ("Military_Production".ts(), "Military".ts()),
+        ("Weapons".ts(), "Military".ts()),
+
+        ("Offense".ts(), "Weapons".ts()),
+        ("Defense".ts(), "Weapons".ts()),
+        
+        ("Structure Tech".ts(), "Technology".ts()),
+        ("Technology_Misc".ts(), "Technology".ts()),
+    ]);
 }
 
 // Shorten the .to_string() method by several characters, just for looks
