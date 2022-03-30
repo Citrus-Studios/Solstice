@@ -4,6 +4,7 @@ use bevy_obj::ObjPlugin;
 use bevy_rapier3d::{physics::{RapierPhysicsPlugin, NoUserData, RapierConfiguration}, render::RapierRenderPlugin};
 use building_system::{RaycastSet, BuildingSystemPlugin};
 use constants::HALF_SIZE;
+use instancing::CustomMaterialPlugin;
 use player_system::PlayerSystemPlugin;
 use terrain_generation_system::GeneratorPlugin;
 
@@ -13,6 +14,7 @@ pub mod terrain_generation_system;
 
 pub mod constants;
 pub mod algorithms;
+pub mod instancing;
 
 fn main() {
     App::new()    
@@ -28,6 +30,8 @@ fn main() {
         .add_plugin(GeneratorPlugin)
         .add_plugin(BuildingSystemPlugin)
         .add_plugin(PlayerSystemPlugin)
+
+        .add_plugin(CustomMaterialPlugin)
 
         // startup system
         .add_startup_system(startup)

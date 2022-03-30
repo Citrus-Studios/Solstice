@@ -40,3 +40,5 @@ nalgebra = { version = "0.30.1" }
 noise = "0.7.0"
 lazy_static = "1.4.0"
 tokio = { version = "1.17.0", features = [ "full" ] }
+bytemuck = "1.9.0"
+bytemuck_derive = "1.1.0"
