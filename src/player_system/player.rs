@@ -1,5 +1,6 @@
 use bevy::{prelude::*, input::mouse::{MouseMotion, MouseWheel}};
-use bevy_rapier3d::{prelude::{RigidBodyVelocityComponent}};
+use bevy_rapier3d::{prelude::{RigidBodyVelocityComponent, RigidBodyPosition, RigidBodyPositionComponent, RigidBodyForcesComponent}};
+use nalgebra::{Translation, Translation3, Matrix, Matrix3, Const, ArrayStorage, Matrix3x1};
 
 use crate::constants::{SQRT_OF_2, HALF_PI};
 
@@ -28,9 +29,15 @@ pub fn player_movement_system(
 
     c_query: Query<&mut CameraComp>,
     mut r_query: Query<&mut RigidBodyVelocityComponent, (Without<CameraComp>, With<Player>)>,
+    mut f_query: Query<&mut RigidBodyForcesComponent, (Without<CameraComp>, With<Player>)>,
     p_query: Query<&Player, Without<CameraComp>>,
 ) {
-    let mut player_rigidbody = r_query.single_mut();
+    let r_option = r_query.get_single_mut();
+    let mut player_rigidbody = match r_option {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+    let mut player_forces = f_query.single_mut();
     let player = p_query.single();
     let camera = c_query.single();
 
@@ -107,8 +114,17 @@ pub fn player_movement_system(
         z_mov = SQRT_OF_2 * z_mov;
     }
 
-    if keyboard_input.just_pressed(KeyCode::Space) && player_rigidbody.linvel.y == 0.0 {
-        player_rigidbody.linvel.y += 10.0;
+    // if keyboard_input.just_pressed(KeyCode::Space) && player_rigidbody.linvel.y.abs() < 0.05 {
+    //     player_rigidbody.linvel.y += 10.0;
+    // }
+    // info!("{:?} {}", player_rigidbody.linvel.y.abs(), match player_rigidbody.linvel.y.abs() < 0.05 { true => "AAAAAAAAAAAAAAAAAA", _ => "nu" });
+
+    if keyboard_input.pressed(KeyCode::Space) {
+        player_rigidbody.linvel.y = 10.0;
+    }
+
+    if keyboard_input.pressed(KeyCode::B) {
+        player_rigidbody.linvel.y = -10.0;
     }
 
     player_rigidbody.linvel.x = x_mov * player.speed * delta_time.delta_seconds();
@@ -126,15 +142,20 @@ pub fn player_camera_system(
 
     mut c_query: Query<(&mut CameraComp, &mut Transform)>,
 ) {
-    let (mut camera, mut c_transform) = c_query.single_mut();
+    let c_option = c_query.get_single_mut();
+
+    let (mut camera, mut c_transform) = match c_option {
+        Ok(e) => e,
+        Err(_) => return,
+    };
 
     let mut c_translation = *(&mut c_transform.translation.clone());
 
     let last_camera_zoom = camera.zoom;
 
     for event in mouse_scroll_event.iter() {
-        camera.zoom -= event.y / 5.0;
-        camera.zoom = camera.zoom.max(0.1).min(10.0);
+        camera.zoom -= (event.y / 3.0) * camera.zoom.sqrt();
+        camera.zoom = camera.zoom.max(0.1).min(100.0);
     }
 
     let rmb_pressed = mouse_input.pressed(MouseButton::Right);

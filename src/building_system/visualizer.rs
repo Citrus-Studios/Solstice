@@ -2,7 +2,7 @@ use bevy::pbr::{NotShadowCaster, AlphaMode::Blend};
 pub use bevy::{prelude::*};
 use bevy_rapier3d::{physics::*, prelude::*};
 
-use crate::algorithms::distance_vec3;
+use crate::{algorithms::distance_vec3, player_system::gui_system::gui_startup::GuiButtonId};
 
 use super::raycasting::BuildCursor;
 
@@ -34,6 +34,8 @@ pub fn visualizer(
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands,
+
+    mut gui_hover_query: Query<&Interaction, With<GuiButtonId>>,
 
     mouse_input: Res<Input<MouseButton>>,
     keyboard_input: Res<Input<KeyCode>>
@@ -81,10 +83,19 @@ pub fn visualizer(
         }
 
         let pipe_cyl_mesh: Handle<Mesh> = asset_server.load("models/pipes/pipe_cylinder.obj");
+      
+        let mut hovered = false;
+        for interaction in gui_hover_query.iter() {
+            match interaction {
+                Interaction::None => (),
+                _ => hovered = true
+            }
+        }
         
-        if mouse_input.just_pressed(MouseButton::Left) {
+        if mouse_input.just_pressed(MouseButton::Left) && !hovered {
             // If you click, and the first point is already placed
             // Place the second point
+
             if pp_res.placed {
                 let first_position = pp_res.transform.unwrap().translation;
                 let pipe_cyl_translation = (first_position + translation) / 2.0;

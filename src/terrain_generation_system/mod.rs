@@ -1,6 +1,6 @@
 use bevy::prelude::{Plugin, App};
 
-use self::generator::{GeneratorOptions, generate_terrain};
+use self::generator::{GeneratorOptions, generate_terrain, TerrainGenDone};
 
 pub mod generator;
 
@@ -9,10 +9,11 @@ pub struct GeneratorPlugin;
 impl Plugin for GeneratorPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(GeneratorOptions {
-            width: 50,
-            length: 50,
+            width: 200,
+            length: 200,
             height: 1,
         })
-        .add_startup_system(generate_terrain);
+        .insert_resource(TerrainGenDone { done: false })
+        .add_system(generate_terrain);
     }
 }

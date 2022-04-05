@@ -24,6 +24,7 @@ fn main() {
         .add_plugin(ObjPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierRenderPlugin)
+        
         .add_plugin(GeneratorPlugin)
         .add_plugin(BuildingSystemPlugin)
         .add_plugin(PlayerSystemPlugin)
