@@ -14,6 +14,7 @@ use self::{raycasting::{raycast, update_raycast_with_cursor, RaycastCursor, Buil
 
 pub mod raycasting;
 pub mod visualizer;
+pub mod buildings;
 
 pub struct RaycastSet;
 
