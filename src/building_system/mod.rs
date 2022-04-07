@@ -1,4 +1,4 @@
-use crate::building_system::visualizer::visualizer;
+use crate::building_system::building::visualizer;
 use bevy::{
     pbr::{PbrBundle, StandardMaterial},
     prelude::{
@@ -10,10 +10,10 @@ use bevy_mod_raycast::{RayCastMesh, RaycastSystem};
 
 use crate::player_system::player::player_camera_system;
 
-use self::{raycasting::{raycast, update_raycast_with_cursor, RaycastCursor, BuildCursor}, visualizer::PipePlacement};
+use self::{raycasting::{raycast, update_raycast_with_cursor, RaycastCursor, BuildCursor}, building::PipePlacement};
 
 pub mod raycasting;
-pub mod visualizer;
+pub mod building;
 pub mod buildings;
 
 pub struct RaycastSet;
