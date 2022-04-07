@@ -32,9 +32,12 @@ pub struct GuiTextBox {
     pub id: u32
 }
 
-#[derive(Component)]
 pub struct PrevQPress {
     pub pressed: bool
+}
+
+pub struct SelectedBuilding {
+    pub id: Option<String>
 }
 
 pub fn gui_startup(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -42,6 +45,7 @@ pub fn gui_startup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn_bundle(UiCameraBundle::default());
     commands.insert_resource(GuiSelectedBranch { id: "base".ts() });
     commands.insert_resource(PrevQPress { pressed: false });
+    commands.insert_resource(SelectedBuilding { id: None });
     let branch = GUI_LOOKUP.get(&"base".ts()).unwrap();
     info!("{:?}", branch);
         let mut margin = Rect::default();

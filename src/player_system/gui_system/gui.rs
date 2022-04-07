@@ -4,7 +4,6 @@ use super::gui_startup::*;
 use bevy::{prelude::*, ecs::query::{QueryIter, WriteFetch, EntityFetch, ReadFetch}};
 
 pub fn gui(
-    commands: Commands,
     mut interaction_query: Query<
         (&Interaction, &mut UiColor, &GuiButtonId),
         Changed<Interaction>
@@ -16,6 +15,7 @@ pub fn gui(
 
     mut prev_q: ResMut<PrevQPress>,
     keyboard_input: Res<Input<KeyCode>>,
+    mut selected_building: ResMut<SelectedBuilding>,
 ) {
     let mut clicked = false;
     for (interaction, mut color, button_id) in interaction_query.iter_mut() {
@@ -33,6 +33,7 @@ pub fn gui(
                     }
                     GuiOr::Item(e) => {
                         info!("you selected {:?}!", e);
+                        selected_building.id = Some(e.to_string());
                     }
                     _ => (),
                 }
