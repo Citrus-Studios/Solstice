@@ -24,19 +24,9 @@ pub fn gui(
             Interaction::Clicked => {
                 clicked = true;
                 let clicked_button_content = &button_query.q1().iter().nth(button_id.id as usize).unwrap().content.clone();
-                match clicked_button_content {
-                    GuiOr::Id(e) => {
-                        selected_branch.id = e.to_string();
-                        let mut button_query_q0 = button_query.q0();
-                        let mut button_iter = button_query_q0.iter_mut();
-                        change_buttons(&e.to_string(), &mut button_iter, &mut text_query, &mut visibility_query);
-                    }
-                    GuiOr::Item(e) => {
-                        info!("you selected {:?}!", e);
-                        selected_building.id = Some(e.to_string());
-                    }
-                    _ => (),
-                }
+                let mut button_query_q0 = button_query.q0();
+                let mut button_iter = button_query_q0.iter_mut();
+                click_button(clicked_button_content, &mut selected_branch, &mut text_query, &mut button_iter, &mut visibility_query, &mut selected_building);
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();
@@ -61,18 +51,9 @@ pub fn gui(
 
         if pressed_id >= 0 {
             let clicked_button_content = &button_query.q1().iter().nth(pressed_id as usize).unwrap().content.clone();
-            match clicked_button_content {
-                GuiOr::Id(e) => {
-                    selected_branch.id = e.to_string();
-                    let mut button_query_q0 = button_query.q0();
-                    let mut button_iter = button_query_q0.iter_mut();
-                    change_buttons(&e.to_string(), &mut button_iter, &mut text_query, &mut visibility_query);
-                }
-                GuiOr::Item(e) => {
-                    info!("you selected {:?}!", e);
-                }
-                _ => (),
-            }
+            let mut button_query_q0 = button_query.q0();
+            let mut button_iter = button_query_q0.iter_mut();
+            click_button(clicked_button_content, &mut selected_branch, &mut text_query, &mut button_iter, &mut visibility_query, &mut selected_building);
         }
     }
 
@@ -120,5 +101,26 @@ fn change_buttons(
             },
         };
         cur_button_content.content = button_content.clone();
+    }
+}
+
+fn click_button(
+    clicked_button_content: &GuiOr<String>,
+    selected_branch: &mut ResMut<GuiSelectedBranch>,
+    text_query: &mut Query<(&mut Text, &GuiTextId, Entity)>,
+    button_iter: &mut QueryIter<(&mut GuiButtons, Entity, &Children), (WriteFetch<GuiButtons>, EntityFetch, ReadFetch<Children>), ()>,
+    visibility_query: &mut Query<&mut Visibility>,
+    selected_building: &mut ResMut<SelectedBuilding>,
+) {
+    match clicked_button_content {
+        GuiOr::Id(e) => {
+            selected_branch.id = e.to_string();
+            change_buttons(&e.to_string(), button_iter, text_query, visibility_query);
+        }
+        GuiOr::Item(e) => {
+            selected_building.id = Some(e.to_string());
+            info!("you selected {:?}!", e);
+        }
+        _ => (),
     }
 }
