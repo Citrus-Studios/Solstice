@@ -141,6 +141,7 @@ pub fn player_camera_system(
     gamepad_axes: Res<Axis<GamepadAxis>>,
 
     mut c_query: Query<(&mut CameraComp, &mut Transform)>,
+    keyboard_input: Res<Input<KeyCode>>,
 ) {
     let c_option = c_query.get_single_mut();
 
@@ -153,10 +154,13 @@ pub fn player_camera_system(
 
     let last_camera_zoom = camera.zoom;
 
-    for event in mouse_scroll_event.iter() {
-        camera.zoom -= (event.y / 3.0) * camera.zoom.sqrt();
-        camera.zoom = camera.zoom.max(0.1).min(100.0);
+    if !keyboard_input.pressed(KeyCode::LShift) {
+        for event in mouse_scroll_event.iter() {
+            camera.zoom -= (event.y / 3.0) * camera.zoom.sqrt();
+            camera.zoom = camera.zoom.max(0.1).min(100.0);
+        }
     }
+    
 
     let rmb_pressed = mouse_input.pressed(MouseButton::Right);
 

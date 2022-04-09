@@ -1,8 +1,10 @@
-use bevy::pbr::{NotShadowCaster, AlphaMode::Blend};
+use std::f32::consts::PI;
+
+use bevy::{pbr::{NotShadowCaster, AlphaMode::Blend}, input::mouse::MouseWheel};
 pub use bevy::{prelude::*};
 use bevy_rapier3d::{physics::*, prelude::*};
 
-use crate::{algorithms::distance_vec3, player_system::gui_system::gui_startup::{GuiButtonId, SelectedBuilding}};
+use crate::{algorithms::distance_vec3, player_system::gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, constants::HALF_PI};
 
 use super::raycasting::BuildCursor;
 
@@ -39,14 +41,22 @@ pub fn visualizer(
 
     mouse_input: Res<Input<MouseButton>>,
     keyboard_input: Res<Input<KeyCode>>,
+    mut mouse_scroll_event: EventReader<MouseWheel>,
+
     mut selected_building: ResMut<SelectedBuilding>,
 ) {
     for entity in delete_query.iter() {
         commands.entity(entity).despawn();
     }
 
-    if keyboard_input.pressed(KeyCode::R) {
-        bc_res.rotation += 0.1;
+    if keyboard_input.pressed(KeyCode::LShift) {
+        for event in mouse_scroll_event.iter() {
+            bc_res.rotation += event.y * (PI/8.0);
+        }
+    }
+
+    if keyboard_input.just_pressed(KeyCode::R) {
+        bc_res.rotation += HALF_PI;
     }
 
     let intersection_op = bc_res.intersection;
@@ -81,7 +91,20 @@ pub fn visualizer(
 
         match building_id.as_str() {
             "Well Pump" => {
-                
+                let mesh: Handle<Mesh> = asset_server.load("models/buildings/well_pump.obj");
+
+                commands.spawn_bundle(PbrBundle {
+                    mesh: mesh,
+                    material: materials.add(StandardMaterial {
+                        base_color: Color::rgba(0.2, 0.2, 1.0, 0.5),
+                        alpha_mode: Blend,
+                        ..Default::default()
+                    }),
+                    transform: transform_cache,
+                    ..Default::default()
+                })
+                .insert(NotShadowCaster)
+                .insert(DeleteNextFrame);
             },
             "Pipe" => {
 
