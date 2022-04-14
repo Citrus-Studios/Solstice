@@ -4,8 +4,8 @@ use bevy::{
 };
 use bevy_mod_raycast::RayCastMesh;
 use bevy_rapier3d::{
-    physics::{ColliderBundle, ColliderPositionSync},
-    prelude::{ColliderShape, SharedShape},
+    physics::{ColliderBundle, ColliderPositionSync, RigidBodyBundle},
+    prelude::{ColliderShape, SharedShape, RigidBodyMassPropsFlags, RigidBodyType, ActiveCollisionTypes, ColliderFlags, InteractionGroups},
 };
 use bevy::render::render_resource::PrimitiveTopology::TriangleList;
 use nalgebra::{Vector3, Point3, Isometry3, OPoint, Point};
@@ -102,7 +102,9 @@ pub fn generate_terrain(
     let ground1_ref = meshes.get(&ground1_handle).unwrap();
     let spires_hollow_ref = meshes.get(&spires_hollow_handle).unwrap();
 
-    
+    let hollowground_collider = hollowground_ref.clone().into_shared_shape();
+    let ground1_collider = ColliderShape::cuboid(1.5, 1.5, 1.5); // probably slightly faster than a trimesh collider
+    let spires_hollow_collider = spires_hollow_ref.clone().into_shared_shape();
 
     // let hollowground_collider = ColliderShape::trimesh(points, indices);
     // let ground1_collider = ColliderShape::cuboid(1.5, 1.5, 1.5);
@@ -114,6 +116,7 @@ pub fn generate_terrain(
     let middle = Vec2::new(generator_options.width as f32 / 2.0, generator_options.length as f32 / 2.0);
     // generates terrain given a width and a length
     for i in 0..generator_options.width {
+        let mut column_attr = RelevantAttributes::new();
         for j in 0..generator_options.length {
             let n = perlin.get([(i as f64) * 0.15, (j as f64) * 0.15]);
             let n_2 = spire_perlin.get([(i as f64) * 0.15, (j as f64) * 0.15]);
@@ -122,26 +125,30 @@ pub fn generate_terrain(
             //info!(n);
             let mut rng = rand::thread_rng();
             if n > 0.0 && distance_vec2(middle, Vec2::new(i_pos, j_pos)) < middle.x {
-                attr = attr.combine_with_mesh(
-                    rng.clone().random_pick(0.5, ground1_ref, hollowground_ref).clone(),
+                let mesh = rng.clone().random_pick(0.5, ground1_ref.clone(), hollowground_ref.clone());
+                column_attr = column_attr.combine_with_mesh(
+                    mesh.clone(),
                     Vec3::new(i_pos, 0.0, j_pos),
                 );
                 if n >= 0.3 {
-                    attr = attr.combine_with_mesh(
-                        rng.clone().random_pick(0.5, ground1_ref, hollowground_ref).clone(),
+                    let mesh = rng.clone().random_pick(0.5, ground1_ref.clone(), hollowground_ref.clone());
+                    column_attr = column_attr.combine_with_mesh(
+                        mesh,
                         Vec3::new(i_pos, -3.0, j_pos),
                     );
                 }
                 if n >= 0.6 {
-                    attr = attr.combine_with_mesh(
-                        rng.clone().random_pick(0.5, ground1_ref, hollowground_ref).clone(),
+                    let mesh = rng.clone().random_pick(0.5, ground1_ref.clone(), hollowground_ref.clone());
+                    column_attr = column_attr.combine_with_mesh(
+                        mesh,
                         Vec3::new(i_pos, -6.0, j_pos),
                     );
                 }
 
                 if n >= 0.95 {
-                    attr = attr.combine_with_mesh(
-                        rng.clone().random_pick(0.5, ground1_ref, hollowground_ref).clone(),
+                    let mesh = rng.clone().random_pick(0.5, ground1_ref.clone(), hollowground_ref.clone());
+                    column_attr = column_attr.combine_with_mesh(
+                        mesh,
                         Vec3::new(i_pos, -9.0, j_pos),
                     );
                 }
@@ -150,13 +157,29 @@ pub fn generate_terrain(
                 if n_2 > 0.5 {
                     let height = rng.gen_range(3..=7);
                     for x in 1..=height {
-                        attr = attr.combine_with_mesh(
-                            rng.clone().random_pick(0.5, ground1_ref, spires_hollow_ref).clone(),
+                        let mesh = rng.clone().random_pick(0.5, ground1_ref.clone(), spires_hollow_ref.clone());
+                        column_attr = column_attr.combine_with_mesh(
+                            mesh,
                             Vec3::new(i_pos, (x as f32) * 3.0, j_pos),
                         );
                     }
                 }
             }
+        }
+        
+        attr = attr.append_with_indices(column_attr.clone());
+
+        if !column_attr.pos.is_empty() {
+            commands.spawn_bundle(ColliderBundle {
+                shape: Mesh::new(TriangleList).set_attributes(column_attr).into_shared_shape().into(),
+                flags: ColliderFlags {
+                    collision_groups: InteractionGroups::new(0b0001, 0b1110),
+                    solver_groups: InteractionGroups::new(0b1110, 0b0001),
+                    active_collision_types: ActiveCollisionTypes::STATIC_STATIC.into(),
+                    ..Default::default()
+                }.into(),
+                ..Default::default()
+            });
         }
     } 
 
@@ -175,11 +198,16 @@ pub fn generate_terrain(
             }),
             ..Default::default()
         })
-        .insert(RayCastMesh::<RaycastSet>::default())
-        .insert_bundle(ColliderBundle {
-            shape: final_collider.into(),
-            ..Default::default()
-        });
+        .insert(RayCastMesh::<RaycastSet>::default());
+        // .insert_bundle(ColliderBundle {
+        //     shape: final_collider.into(),
+        //     position: [0.0, 0.0, 0.0].into(),
+        //     flags: ColliderFlags {
+        //         active_collision_types: ActiveCollisionTypes::STATIC_STATIC.into(),
+        //         ..Default::default()
+        //     }.into(),
+        //     ..Default::default()
+        // });
 
     done.done = true;
 }
@@ -232,6 +260,18 @@ impl RelevantAttributes {
 
     pub fn ind(mut self, ind: Vec<u32>) -> Self {
         self.ind = ind; self
+    }
+
+    pub fn append_with_indices(mut self, mut attr: RelevantAttributes) -> Self {
+        let add = self.pos.len() as u32;
+        self.pos.append(&mut attr.pos);
+        self.norm.append(&mut attr.norm);
+        self.uv.append(&mut attr.uv);
+        for i in attr.ind.iter_mut() {
+            *i += add;
+        }
+        self.ind.append(&mut attr.ind);
+        self
     }
 
     pub fn append(mut self, mut attr: RelevantAttributes) -> Self {
@@ -353,3 +393,22 @@ impl MutateMesh for Mesh {
         self
     }
 }
+
+trait SpawnCollider {
+    fn spawn_locked_collider(&mut self, col: SharedShape, trans: Vec3);
+}
+
+impl SpawnCollider for Commands<'_, '_> {
+    fn spawn_locked_collider(&mut self, col: SharedShape, trans: Vec3) {
+        self.spawn_bundle(ColliderBundle {
+            shape: col.into(),
+            position: trans.into(),
+            flags: ColliderFlags {
+                active_collision_types: ActiveCollisionTypes::STATIC_STATIC.into(),
+                ..Default::default()
+            }.into(),
+            ..Default::default()
+        });
+    }
+}
+
