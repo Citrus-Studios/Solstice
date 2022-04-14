@@ -1,7 +1,6 @@
 use bevy::{prelude::*, input::mouse::{MouseMotion, MouseWheel}};
 use bevy_mod_raycast::RayCastMesh;
-use bevy_rapier3d::{prelude::{RigidBodyVelocityComponent, RigidBodyPosition, RigidBodyPositionComponent, RigidBodyForcesComponent, ColliderShape, ColliderMaterial, CoefficientCombineRule, RigidBodyType}, physics::{ColliderBundle, RigidBodyBundle, ColliderPositionSync}};
-use nalgebra::{Translation, Translation3, Matrix, Matrix3, Const, ArrayStorage, Matrix3x1};
+use bevy_rapier3d::{prelude::{RigidBodyVelocityComponent, RigidBodyForcesComponent, ColliderShape, RigidBodyType}, physics::{ColliderBundle, RigidBodyBundle, ColliderPositionSync}};
 
 use crate::{constants::{SQRT_OF_2, HALF_PI}, building_system::RaycastSet};
 

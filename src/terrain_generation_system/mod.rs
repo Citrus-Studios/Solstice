@@ -3,6 +3,8 @@ use bevy::prelude::{Plugin, App};
 use self::generator::{GeneratorOptions, generate_terrain, TerrainGenDone};
 
 pub mod generator;
+pub mod relevant_attributes;
+pub mod mutate_mesh;
 
 pub struct GeneratorPlugin;
 

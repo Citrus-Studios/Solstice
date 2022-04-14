@@ -15,6 +15,8 @@ use noise::{NoiseFn, Perlin, Seedable, Terrace};
 
 use crate::{constants::SEED, RaycastSet, algorithms::distance_vec2};
 
+use super::{relevant_attributes::RelevantAttributes, mutate_mesh::MutateMesh};
+
 #[derive(Component)]
 pub struct GeneratorOptions {
     pub width: u32,
@@ -24,43 +26,6 @@ pub struct GeneratorOptions {
 
 pub struct TerrainGenDone {
     pub done: bool,
-}
-
-struct TerrainGenerator<'a> {
-    hollowground_handle: Handle<Mesh>,
-    materials: &'a ResMut<'a, Assets<StandardMaterial>>,
-    meshes: &'a Assets<Mesh>,
-    i: f32,
-    j: f32,
-    offset: Vec3,
-    positions: Vec<[f32; 3]>,
-    normals: Vec<[f32; 3]>,
-    uvs: Vec<[f32; 2]>,
-    indices: Vec<u32>,
-}
-
-impl<'a> TerrainGenerator<'a> {
-    pub fn new(
-        hollowground_handle: Handle<Mesh>,
-        materials: &'a ResMut<'a, Assets<StandardMaterial>>,
-        meshes: &'a Assets<Mesh>,
-        i: f32,
-        j: f32,
-        offset: Vec3,
-    ) -> Self {
-        TerrainGenerator {
-            hollowground_handle,
-            materials: &materials,
-            meshes,
-            i,
-            j,
-            offset,
-            positions: Vec::new(),
-            normals: Vec::new(),
-            uvs: Vec::new(),
-            indices: Vec::new(),
-        }
-    }
 }
 
 pub fn generate_terrain(
@@ -228,171 +193,7 @@ impl<T> Pick<T> for ThreadRng {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct RelevantAttributes {
-    pub pos: Vec<[f32; 3]>,
-    pub norm: Vec<[f32; 3]>,
-    pub uv: Vec<[f32; 2]>,
-    pub ind: Vec<u32>
-}
 
-impl RelevantAttributes {
-    pub fn new() -> RelevantAttributes {
-        RelevantAttributes {
-            pos: Vec::new(),
-            norm: Vec::new(),
-            uv: Vec::new(),
-            ind: Vec::new()
-        }
-    }
-
-    pub fn pos(mut self, pos: Vec<[f32; 3]>) -> Self {
-        self.pos = pos; self
-    }
-
-    pub fn norm(mut self, norm: Vec<[f32; 3]>) -> Self {
-        self.norm = norm; self
-    }
-
-    pub fn uv(mut self, uv: Vec<[f32; 2]>) -> Self {
-        self.uv = uv; self
-    }
-
-    pub fn ind(mut self, ind: Vec<u32>) -> Self {
-        self.ind = ind; self
-    }
-
-    pub fn append_with_indices(mut self, mut attr: RelevantAttributes) -> Self {
-        let add = self.pos.len() as u32;
-        self.pos.append(&mut attr.pos);
-        self.norm.append(&mut attr.norm);
-        self.uv.append(&mut attr.uv);
-        for i in attr.ind.iter_mut() {
-            *i += add;
-        }
-        self.ind.append(&mut attr.ind);
-        self
-    }
-
-    pub fn append(mut self, mut attr: RelevantAttributes) -> Self {
-        self.pos.append(&mut attr.pos);
-        self.norm.append(&mut attr.norm);
-        self.uv.append(&mut attr.uv);
-        self.ind.append(&mut attr.ind);
-        self
-    }
-
-    pub fn combine_with_mesh(self, mesh: Mesh, offset: Vec3) -> Self {
-        let mut attr = mesh.relevant_attributes();
-        for vertice in attr.pos.iter_mut() {
-            for (i, coord) in vertice.into_iter().enumerate() {
-                *coord += offset[i];
-            }
-        }
-
-        let num_vertices = self.pos.len() as u32;
-        for indice in attr.ind.iter_mut() {
-            *indice += num_vertices;
-        }
-
-        self.append(attr)
-    }
-}
-
-pub trait MutateMesh {
-    fn combine_mesh(self, mesh_2: Mesh, offset: Vec3) -> Self;
-    fn relevant_attributes(self) -> RelevantAttributes;
-    fn into_shared_shape(self) -> SharedShape;
-    fn set_attributes(self, attr: RelevantAttributes) -> Mesh;
-}
-
-impl MutateMesh for Mesh {
-    fn combine_mesh(mut self, mesh_2: Mesh, offset: Vec3) -> Self {
-        let attr_1 = self.clone().relevant_attributes();
-        let attr_2 = mesh_2.relevant_attributes();
-
-        let mut pos_offset = Vec::new();
-
-        for vertice in attr_2.pos {
-            pos_offset.push([
-                vertice[0] + offset.x,
-                vertice[1] + offset.y,
-                vertice[2] + offset.z,
-            ]);
-        }
-
-        let num_vertices = attr_1.pos.clone().len() as u32;
-
-        let mut indices_offset = Vec::new();
-
-        for indice in attr_2.ind {
-            indices_offset.push(indice + num_vertices);
-        }
-
-        let pos = vec![attr_1.pos.clone(), pos_offset].concat();
-        let norm = vec![attr_1.norm.clone(), attr_2.norm.clone()].concat();
-        let uvs = vec![attr_1.uv.clone(), attr_2.uv.clone()].concat();
-        let indices = vec![attr_1.ind.clone(), indices_offset].concat();
-
-        self.set_attribute("Vertex_Position", VertexAttributeValues::Float32x3(pos));
-        self.set_attribute("Vertex_Normal", VertexAttributeValues::Float32x3(norm));
-        self.set_attribute("Vertex_Uv", VertexAttributeValues::Float32x2(uvs));
-        self.set_indices(Some(Indices::U32(indices)));
-
-        self
-    }
-
-    fn relevant_attributes(self) -> RelevantAttributes {
-        let positions = match self.attribute("Vertex_Position").unwrap() {
-            VertexAttributeValues::Float32x3(e) => e.clone(),
-            _ => panic!("WHAT"),
-        };
-
-        let normals = match self.attribute("Vertex_Normal").unwrap() {
-            VertexAttributeValues::Float32x3(e) => e.clone(),
-            _ => panic!("WHAT"),
-        };
-
-        let uvs = match self.attribute("Vertex_Uv").unwrap() {
-            VertexAttributeValues::Float32x2(e) => e.clone(),
-            _ => panic!("WHAT"),
-        };
-
-        let indices = match self.indices().unwrap() {
-            Indices::U32(e) => e.clone(),
-            _ => panic!("WHAT"),
-        };
-
-        RelevantAttributes::new().pos(positions).norm(normals).uv(uvs).ind(indices)
-    }
-
-    fn into_shared_shape(self) -> SharedShape {
-        let attr = self.clone().relevant_attributes();
-
-        let mut points: Vec<Point3<f32>> = Vec::new();
-        for vertex in attr.pos {
-            points.push(Point3::from_slice(&vertex));
-        }
-
-        // assert_eq!(0, indices.len() % 3);
-        let mut indices = Vec::new();
-        for i in 0..attr.ind.len() {
-            if i % 3 == 0 {
-                indices.push([attr.ind[i], attr.ind[i+1], attr.ind[i+2]]);
-            }
-        }    
-
-        ColliderShape::trimesh(points, indices)
-    }
-
-    fn set_attributes(mut self, attr: RelevantAttributes) -> Mesh {
-        self.set_attribute("Vertex_Position", VertexAttributeValues::Float32x3(attr.pos));
-        self.set_attribute("Vertex_Normal", VertexAttributeValues::Float32x3(attr.norm));
-        self.set_attribute("Vertex_Uv", VertexAttributeValues::Float32x2(attr.uv));
-        self.set_indices(Some(Indices::U32(attr.ind)));
-        self
-    }
-}
 
 trait SpawnCollider {
     fn spawn_locked_collider(&mut self, col: SharedShape, trans: Vec3);

@@ -2,7 +2,7 @@ use bevy::{prelude::{Mesh, Commands, ResMut, Assets, shape, Color, Transform, Bu
 use bevy_mod_picking::RayCastSource;
 use bevy_rapier3d::{prelude::{RigidBodyType, ColliderShape, RigidBodyMassPropsFlags, ColliderMaterial, CoefficientCombineRule, InteractionGroups, ColliderFlags}, physics::{RigidBodyBundle, ColliderPositionSync, ColliderBundle}};
 
-use crate::{building_system::RaycastSet, terrain_generation_system::generator::MutateMesh};
+use crate::{building_system::RaycastSet, terrain_generation_system::mutate_mesh::MutateMesh};
 
 use super::player::{Player, CameraComp};
 
