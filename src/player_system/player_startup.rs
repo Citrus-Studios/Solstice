@@ -1,6 +1,6 @@
 use bevy::{prelude::{Mesh, Commands, ResMut, Assets, shape, Color, Transform, BuildChildren, PerspectiveCameraBundle, AssetServer, Res, Handle}, pbr::{StandardMaterial, PbrBundle}};
 use bevy_mod_picking::RayCastSource;
-use bevy_rapier3d::{prelude::{RigidBodyType, ColliderShape, RigidBodyMassPropsFlags, ColliderMaterial, CoefficientCombineRule}, physics::{RigidBodyBundle, ColliderPositionSync, ColliderBundle}};
+use bevy_rapier3d::{prelude::{RigidBodyType, ColliderShape, RigidBodyMassPropsFlags, ColliderMaterial, CoefficientCombineRule, InteractionGroups, ColliderFlags}, physics::{RigidBodyBundle, ColliderPositionSync, ColliderBundle}};
 
 use crate::{building_system::RaycastSet, terrain_generation_system::generator::MutateMesh};
 
@@ -33,7 +33,7 @@ pub fn player_start(
     })
     .insert(Player {
         name: "None".to_string(),
-        speed: 2000.0
+        speed: 200.0
     })
     .insert_bundle(ColliderBundle {
         shape: ColliderShape::round_cuboid(0.4, 0.4, 0.4, 0.1).into(),
@@ -42,6 +42,11 @@ pub fn player_start(
             friction: 0.0,
             friction_combine_rule: CoefficientCombineRule::Min,
             ..Default::default() 
+        }.into(),
+        flags: ColliderFlags {
+            collision_groups: InteractionGroups::new(0b1110, 0b1111),
+            solver_groups: InteractionGroups::new(0b1111, 0b1110),
+            ..Default::default()
         }.into(),
         ..Default::default()
     })
