@@ -1,17 +1,16 @@
 use bevy::{
     prelude::*,
-    render::mesh::{Indices, VertexAttributeValues},
 };
 use bevy_mod_raycast::RayCastMesh;
 use bevy_rapier3d::{
-    physics::{ColliderBundle, ColliderPositionSync, RigidBodyBundle},
-    prelude::{ColliderShape, SharedShape, RigidBodyMassPropsFlags, RigidBodyType, ActiveCollisionTypes, ColliderFlags, InteractionGroups},
+    physics::{ColliderBundle},
+    prelude::{ColliderShape, SharedShape, ActiveCollisionTypes, ColliderFlags, InteractionGroups},
 };
 use bevy::render::render_resource::PrimitiveTopology::TriangleList;
-use nalgebra::{Vector3, Point3, Isometry3, OPoint, Point};
+
 use rand::{Rng, prelude::ThreadRng};
 
-use noise::{NoiseFn, Perlin, Seedable, Terrace};
+use noise::{NoiseFn, Perlin, Seedable};
 
 use crate::{constants::SEED, RaycastSet, algorithms::distance_vec2};
 

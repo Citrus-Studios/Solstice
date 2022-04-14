@@ -1,6 +1,6 @@
 use bevy::{prelude::*, input::mouse::{MouseMotion, MouseWheel}};
 use bevy_mod_raycast::RayCastMesh;
-use bevy_rapier3d::{prelude::{RigidBodyVelocityComponent, RigidBodyForcesComponent, ColliderShape, RigidBodyType}, physics::{ColliderBundle, RigidBodyBundle, ColliderPositionSync}};
+use bevy_rapier3d::{prelude::{RigidBodyVelocityComponent, ColliderShape, RigidBodyType}, physics::{ColliderBundle, RigidBodyBundle, ColliderPositionSync}};
 
 use crate::{constants::{SQRT_OF_2, HALF_PI}, building_system::RaycastSet};
 
@@ -29,7 +29,6 @@ pub fn player_movement_system(
 
     c_query: Query<&mut CameraComp>,
     mut r_query: Query<&mut RigidBodyVelocityComponent, (Without<CameraComp>, With<Player>)>,
-    mut f_query: Query<&mut RigidBodyForcesComponent, (Without<CameraComp>, With<Player>)>,
     p_query: Query<&Player, Without<CameraComp>>,
 ) {
     let r_option = r_query.get_single_mut();
@@ -37,7 +36,6 @@ pub fn player_movement_system(
         Ok(e) => e,
         Err(_) => return,
     };
-    let mut player_forces = f_query.single_mut();
     let player = p_query.single();
     let camera = c_query.single();
 
