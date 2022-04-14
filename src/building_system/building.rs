@@ -20,11 +20,15 @@ pub struct PipePlacement {
 #[derive(Component)]
 pub struct PipePreview;
 
+#[derive(Component)]
+pub struct TestComponent;
+
 pub fn visualizer(
     mut bc_res: ResMut<BuildCursor>,
     mut pp_res: ResMut<PipePlacement>,
 
     delete_query: Query<Entity, With<DeleteNextFrame>>,
+    test_query: Query<Entity, With<TestComponent>>,
 
     mut pipe_prev_query: Query<(Entity, &mut Transform), With<PipePreview>>,
     mut pipe_prev_mat_query: Query<&mut Handle<StandardMaterial>, With<PipePreview>>,
@@ -39,8 +43,7 @@ pub fn visualizer(
 
     gui_hover_query: Query<&Interaction, With<GuiButtonId>>,
 
-    mouse_input: Res<Input<MouseButton>>,
-    keyboard_input: Res<Input<KeyCode>>,
+    (mouse_input, keyboard_input): (Res<Input<MouseButton>>, Res<Input<KeyCode>>),
     mut mouse_scroll_event: EventReader<MouseWheel>,
 
     mut selected_building: ResMut<SelectedBuilding>,
@@ -51,7 +54,7 @@ pub fn visualizer(
 
     if keyboard_input.pressed(KeyCode::LShift) {
         for event in mouse_scroll_event.iter() {
-            bc_res.rotation += event.y * (PI/8.0);
+            bc_res.rotation += event.y * (PI/16.0);
         }
     }
 
@@ -69,9 +72,9 @@ pub fn visualizer(
 
         // my brain
         let quat = Quat::from_axis_angle(normal, rot).mul_quat(Quat::from_rotation_arc(Vec3::Y, normal));
-        let translation = intersection.position() + (normal * 0.3);
+        let mut translation = intersection.position();
 
-        let transform_cache = Transform::from_translation(translation).with_rotation(quat);
+        let mut transform_cache = Transform::from_translation(translation).with_rotation(quat);
 
         let building_id = selected_building.id.as_ref().unwrap();
 
@@ -82,6 +85,7 @@ pub fn visualizer(
                 _ => hovered = true
             }
         }
+        let sdfjooisfdjodsfi = 17;
 
         let entity_op = pipe_prev_query.get_single();
         let pipe_prev_entity_op = match entity_op {
@@ -91,26 +95,21 @@ pub fn visualizer(
 
         match building_id.as_str() {
             "Well Pump" => {
+                let scene: Handle<Scene> = asset_server.load("models/buildings/well_pump.gltf#Scene0");
                 let mesh: Handle<Mesh> = asset_server.load("models/buildings/well_pump.obj");
-
-                commands.spawn_bundle(PbrBundle {
-                    mesh: mesh,
-                    material: materials.add(StandardMaterial {
-                        base_color: Color::rgba(0.2, 0.2, 1.0, 0.5),
-                        alpha_mode: Blend,
-                        ..Default::default()
-                    }),
-                    transform: transform_cache,
-                    ..Default::default()
-                })
-                .insert(NotShadowCaster)
-                .insert(DeleteNextFrame);
+                spawn_cursor_bp(&mut commands, &mut materials, mesh.clone(), transform_cache);
+                if mouse_input.just_pressed(MouseButton::Left) && !hovered {
+                    spawn_bp(&mut commands, scene.clone(), transform_cache);
+                    selected_building.id = None;
+                }
             },
             "Pipe" => {
 
 
                 // All pipe shit vvvvv
                 let pipe_cyl_mesh: Handle<Mesh> = asset_server.load("models/pipes/pipe_cylinder.obj");        
+                translation += normal * 0.3;
+                transform_cache.translation = translation;
         
                 if mouse_input.just_pressed(MouseButton::Left) && !hovered {
                     // If you click, and the first point is already placed
@@ -176,15 +175,19 @@ pub fn visualizer(
                         let distance = distance_vec3(first_position, translation);
 
                         let transform_c = Transform::from_translation(pipe_cyl_translation).with_rotation(pipe_cyl_rotation).with_scale(Vec3::new(1.0, distance, 1.0));
-                        let (entity, mut transform) = pipe_prev_query.single_mut();
+                        let (mut entity, mut transform) = pipe_prev_query.single_mut();
+
+                        // let test_entity = test_query.iter().last();
+                        // match test_entity {
+                        //     Some(e) => entity = e,
+                        //     _ => (),
+                        // }
+
 
                         let mut inter = false;
                         for (_, _, c) in narrow_phase.intersections_with(entity.handle()) {
                             if c {
                                 inter = true;
-                                info!("yes intersection! :D");
-                            } else {
-                                info!("no intersection! >:(");
                             }
                         }
 
@@ -219,20 +222,8 @@ pub fn visualizer(
                     } // If the first isn't placed and you're not clicking, do nothing
                 }
 
-                // Spawn pipe for deletion next frame
                 let pipe_model: Handle<Mesh> = asset_server.load("models/pipes/pipe_base.obj");
-                commands.spawn_bundle(PbrBundle {
-                    mesh: pipe_model,
-                    material: materials.add(StandardMaterial {
-                        base_color: Color::rgba(0.0, 0.2, 1.0, 0.5),
-                        alpha_mode: Blend,
-                        ..Default::default()
-                    }),
-                    transform: transform_cache,
-                    ..Default::default()
-                })
-                .insert(NotShadowCaster)
-                .insert(DeleteNextFrame);
+                spawn_cursor_bp(&mut commands, &mut materials, pipe_model.clone(), transform_cache);
             },
             _ => {
                 if pipe_prev_entity_op.is_some() {
@@ -241,4 +232,40 @@ pub fn visualizer(
             }
         }       
     }
+}
+
+// TODO: collision
+fn spawn_cursor_bp(commands: &mut Commands, materials: &mut ResMut<Assets<StandardMaterial>>, mesh: Handle<Mesh>, transform: Transform) {
+    commands.spawn_bundle(PbrBundle {
+        mesh,
+        material: materials.add(StandardMaterial {
+            base_color: Color::rgba(87.0/255.0, 202.0/255.0, 1.0, 0.5),
+            alpha_mode: Blend,
+            ..Default::default()
+        }),
+        transform,
+        ..Default::default()
+    })
+    .insert(NotShadowCaster)
+    .insert(DeleteNextFrame);
+}
+
+// TODO: everything
+fn spawn_bp(commands: &mut Commands, scene: Handle<Scene>, transform: Transform) {
+    commands.spawn_bundle((
+        transform,
+        GlobalTransform::identity()
+    )).with_children(|parent| {
+        let height = 1.129;
+        let mut translation = transform.translation;
+        translation.y += height / 2.0;
+        parent.spawn_scene(scene);
+        parent.spawn_bundle(ColliderBundle {
+            shape: ColliderShape::cylinder(height, 0.9).into(),
+            position: transform.translation.into(),
+            ..Default::default()
+        });
+    })
+    .insert(TestComponent);
+    
 }
