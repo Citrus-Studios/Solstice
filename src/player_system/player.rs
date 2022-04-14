@@ -1,8 +1,9 @@
 use bevy::{prelude::*, input::mouse::{MouseMotion, MouseWheel}};
-use bevy_rapier3d::{prelude::{RigidBodyVelocityComponent, RigidBodyPosition, RigidBodyPositionComponent, RigidBodyForcesComponent}};
+use bevy_mod_raycast::RayCastMesh;
+use bevy_rapier3d::{prelude::{RigidBodyVelocityComponent, RigidBodyPosition, RigidBodyPositionComponent, RigidBodyForcesComponent, ColliderShape, ColliderMaterial, CoefficientCombineRule, RigidBodyType}, physics::{ColliderBundle, RigidBodyBundle, ColliderPositionSync}};
 use nalgebra::{Translation, Translation3, Matrix, Matrix3, Const, ArrayStorage, Matrix3x1};
 
-use crate::constants::{SQRT_OF_2, HALF_PI};
+use crate::{constants::{SQRT_OF_2, HALF_PI}, building_system::RaycastSet};
 
 #[derive(Component)]
 pub struct Player {
@@ -239,3 +240,33 @@ pub fn player_camera_system(
 // Point on the circle is x = cos(roll) * cos(yaw)
 //                        y = sin(roll)
 //                        z = cos(roll) * sin(yaw)
+
+pub fn player_collider_debug(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+
+    transform_query: Query<&Transform, With<Player>>,
+    keyboard_input: Res<Input<KeyCode>>,
+) {
+    if keyboard_input.just_pressed(KeyCode::B) {
+        let mut transform = transform_query.single().clone();
+        transform.translation.y += 10.0;
+
+        commands.spawn_bundle(PbrBundle {
+            mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
+            material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
+            ..Default::default()
+        })
+        .insert(RayCastMesh::<RaycastSet>::default())
+        .insert_bundle(ColliderBundle {
+            shape: ColliderShape::round_cuboid(0.4, 0.4, 0.4, 0.1).into(),
+            position: transform.translation.into(),
+            ..Default::default()
+        }).insert_bundle(RigidBodyBundle {
+            body_type: RigidBodyType::Dynamic.into(),
+            ..Default::default()
+        })
+        .insert(ColliderPositionSync::Discrete);
+    }
+}

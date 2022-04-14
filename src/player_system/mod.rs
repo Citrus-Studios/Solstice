@@ -4,7 +4,7 @@ use bevy::{
     prelude::{Plugin, SystemSet},
 };
 
-use self::{player::player_movement_system, player_startup::PlayerStartupDone, gui_system::gui::gui};
+use self::{player::{player_movement_system, player_collider_debug}, player_startup::PlayerStartupDone, gui_system::gui::gui};
 use crate::player_system::gui_system::gui_startup::*;
 
 pub mod player;
@@ -22,6 +22,7 @@ impl Plugin for PlayerSystemPlugin {
                     .with_run_criteria(FixedTimestep::step(DELTA_TIME as f64))
                     .with_system(player_movement_system),
             )
+            .add_system(player_collider_debug)
             .add_startup_system(gui_startup)
             .add_system(gui);
     }
