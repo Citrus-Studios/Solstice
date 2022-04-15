@@ -15,7 +15,7 @@ pub mod constants;
 pub mod algorithms;
 
 fn main() {
-    App::new()    
+    App::new()
         // plugins    
         .add_plugins(DefaultPlugins)
         .add_plugin(LogDiagnosticsPlugin::default())
