@@ -9,12 +9,10 @@ pub enum BuildingType {
     Wellpump,
 }
 
-pub struct Building<M> {
+pub struct Building {
     pub building_id: BuildingId,
     pub iridium_data: BuildingIridiumData,
     pub shape_data: BuildingShapeData,
-    pub extra_data: Option<M>,
-    pub _marker: PhantomData<M>,
 }
 
 pub struct BuildingId {

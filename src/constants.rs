@@ -1,9 +1,9 @@
-use std::{f32::consts::PI, collections::HashMap};
+use std::{f32::consts::PI, collections::HashMap, any::Any, sync::Arc};
 
 use rand::{thread_rng, Rng};
 use lazy_static::lazy_static;
 
-use crate::player_system::gui_system::gui::GuiOr;
+use crate::{player_system::gui_system::gui::GuiOr, building_system::buildings::Building};
 
 pub const DELTA_TIME: f32 = 1.0 / 60.0;
 pub const SQRT_OF_2: f32 = 1.41421356237f32 / 2.0;
@@ -76,8 +76,11 @@ lazy_static! {
         ("Structure Tech".ts(), "Technology".ts()),
         ("Technology_Misc".ts(), "Technology".ts()),
     ]);
-}
 
+    pub static ref BUILDING_LOOKUP: HashMap<String, Building> = HashMap::from([
+        
+    ]);
+}
 // Shorten the .to_string() method by several characters, just for looks
 pub trait ShortToString {
     fn ts(self) -> String;
