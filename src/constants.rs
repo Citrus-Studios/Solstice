@@ -14,7 +14,7 @@ pub const HALF_SIZE: f32 = 10.0;
 macro_rules! GUIBranch {
     ($name:literal - $x0:literal $y0:literal, $x1:literal $y1:literal, $x2:literal $y2:literal, $x3:literal $y3:literal) => {
         (
-            String::from($name)),
+            String::from($name),
             [
                 if $x0 == 0 {
                     if $y1 == "None" {
@@ -91,23 +91,23 @@ lazy_static! {
             GUIBranch!("Tanks" - 1 "Small Tank", 1 "Standard Tank", 1 "Large Tank", 1 "Reservoir"),
             GUIBranch!("Iridium_Special" - 1 "Cap", 1 "Refill Station", 0 "Iridium_Special_Tech", 0 "Valves"),
 
-            GUIBranch!("Iridium_Special_Tech" - 1 "Distributor Cap", 1 "Gauge", "None", "None"),
-            GUIBranch!("Valves" - 1 "Valve", 1 "Drop Tank", "None", "None"),
+            GUIBranch!("Iridium_Special_Tech" - 1 "Distributor Cap", 1 "Gauge", 0 "None", 0 "None"),
+            GUIBranch!("Valves" - 1 "Valve", 1 "Drop Tank", 0 "None", 0 "None"),
 
             // Structures
-            GUIBranch!("Defense_Structures" - 1 "Wall", 1 "Keep", 1 "Gate", "None"),
-             /* make these later im lazy */ 
-            GUIBranch!("Basic" - 1 "Ladder Block", "None", "None", "None"),
+            GUIBranch!("Defense_Structures" - 1 "Wall", 1 "Keep", 1 "Gate", 0 "None"),
+             /* make these later im lazy */
+            GUIBranch!("Basic" - 1 "Ladder Block", 0 "None", 0 "None", 0 "None"),
 
             // Military
-            GUIBranch!("Military_Production" - 1 "Arsenal", 1 "Garage", 1 "S.S.I.M"., "None"),
-            GUIBranch!("Weapons" - 0 "Offense", 0 "Defense", "None", "None"),
+            GUIBranch!("Military_Production" - 1 "Arsenal", 1 "Garage", 1 "S.S.I.M.", 0 "None"),
+            GUIBranch!("Weapons" - 0 "Offense", 0 "Defense", 0 "None", 0 "None"),
 
-            GUIBranch!("Offense" - 1 "Artillery", 1 "Bore", "None", "None"),
-            GUIBranch!("Defense" - 1 "Turret", 1 "Arc Turret", 1 "Point Defense", "None"),
+            GUIBranch!("Offense" - 1 "Artillery", 1 "Bore", 0 "None", 0 "None"),
+            GUIBranch!("Defense" - 1 "Turret", 1 "Arc Turret", 1 "Point Defense", 0 "None"),
 
             // Technology
-            GUIBranch!("Structure Tech" - 1 "Fabricator", 1 "Automechanic", "None", "None"),
+            GUIBranch!("Structure Tech" - 1 "Fabricator", 1 "Automechanic", 0 "None", 0 "None"),
             GUIBranch!("Technology_Misc" - 1 "Boost Pad", 1 "Distributor", 1 "Transceiver", 1 "Spatial Anchor"),
         ]);
 
