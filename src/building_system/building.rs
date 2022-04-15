@@ -85,7 +85,6 @@ pub fn visualizer(
                 _ => hovered = true
             }
         }
-        let sdfjooisfdjodsfi = 17;
 
         let entity_op = pipe_prev_query.get_single();
         let pipe_prev_entity_op = match entity_op {
@@ -175,7 +174,7 @@ pub fn visualizer(
                         let distance = distance_vec3(first_position, translation);
 
                         let transform_c = Transform::from_translation(pipe_cyl_translation).with_rotation(pipe_cyl_rotation).with_scale(Vec3::new(1.0, distance, 1.0));
-                        let (mut entity, mut transform) = pipe_prev_query.single_mut();
+                        let (entity, mut transform) = pipe_prev_query.single_mut();
 
                         // let test_entity = test_query.iter().last();
                         // match test_entity {
