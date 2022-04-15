@@ -1,5 +1,8 @@
 use std::marker::PhantomData;
 
+use bevy::prelude::{Mesh, Handle};
+use bevy_rapier3d::prelude::SharedShape;
+
 use crate::constants::GLOBAL_PIPE_ID;
 
 pub enum BuildingType {
@@ -7,13 +10,35 @@ pub enum BuildingType {
 }
 
 pub struct Building<M> {
+    pub building_id: BuildingId,
+    pub iridium_data: BuildingIridiumData,
+    pub shape_data: BuildingShapeData,
+    pub extra_data: Option<M>,
+    pub _marker: PhantomData<M>,
+}
+
+pub struct BuildingId {
     pub building_type: BuildingType,
-    pub io: u8,
+    pub building_name: String,
+}
+
+pub struct BuildingIridiumData {
+    pub io: BuildingIO,
     pub storage: Option<u32>,
     pub current: Option<u32>,
     pub generation: Option<u32>,
-    pub extra_data: Option<M>,
-    pub _marker: PhantomData<M>,
+}
+
+pub enum BuildingIO {
+    None,
+    In,
+    Out,
+    InOut,
+}
+
+pub struct BuildingShapeData {
+    pub mesh: Handle<Mesh>,
+    pub collider: SharedShape,
 }
 
 pub enum Or<A, B> {
