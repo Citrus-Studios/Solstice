@@ -46,19 +46,19 @@ pub enum Or<A, B> {
 }
 
 pub struct Pipe<T, U, V, W> {
-    pub c1: Or<T, Building<T>>,
-    pub c2: Or<U, Building<U>>,
-    pub c3: Or<V, Building<V>>,
-    pub c4: Or<W, Building<W>>,
+    pub c1: Or<T, Building>,
+    pub c2: Or<U, Building>,
+    pub c3: Or<V, Building>,
+    pub c4: Or<W, Building>,
     pub id: u32,
 }
 
 impl<T, U, V, W> Pipe<T, U, V, W> {
     pub fn new(
-        c1: Or<T, Building<T>>,
-        c2: Or<U, Building<U>>,
-        c3: Or<V, Building<V>>,
-        c4: Or<W, Building<W>>,
+        c1: Or<T, Building>,
+        c2: Or<U, Building>,
+        c3: Or<V, Building>,
+        c4: Or<W, Building>,
     ) -> Self {
         unsafe { GLOBAL_PIPE_ID += 1; }
         Self {
