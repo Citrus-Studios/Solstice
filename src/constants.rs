@@ -1,9 +1,9 @@
-use std::{f32::consts::PI, collections::HashMap, any::Any, sync::Arc};
+use std::{any::Any, collections::HashMap, f32::consts::PI, sync::Arc};
 
-use rand::{thread_rng, Rng};
 use lazy_static::lazy_static;
+use rand::{thread_rng, Rng};
 
-use crate::{player_system::gui_system::gui::GuiOr, building_system::buildings::Building};
+use crate::{building_system::buildings::Building, player_system::gui_system::gui::GuiOr};
 
 pub const DELTA_TIME: f32 = 1.0 / 60.0;
 pub const SQRT_OF_2: f32 = 1.41421356237f32 / 2.0;
@@ -11,43 +11,106 @@ pub static mut GLOBAL_PIPE_ID: u32 = 0;
 pub const HALF_PI: f32 = PI / 2.0;
 pub const HALF_SIZE: f32 = 10.0;
 
+macro_rules! GUIBranch {
+    ($name:literal - $x0:literal $y0:literal, $x1:literal $y1:literal, $x2:literal $y2:literal, $x3:literal $y3:literal) => {
+        (
+            String::from($name)),
+            [
+                if $x0 == 0 {
+                    if $y1 == "None" {
+                        GuiOr::None
+                    } else {
+                        GuiOr::Id(String::from($y0))
+                    }
+                } else {
+                    if $y1 == "None" {
+                        GuiOr::None
+                    } else {
+                        GuiOr::Item(String::from($y0))
+                    }
+                },
+                if $x1 == 0 {
+                    if $y1 == "None" {
+                        GuiOr::None
+                    } else {
+                        GuiOr::Id(String::from($y1))
+                    }
+                } else {
+                    if $y1 == "None" {
+                        GuiOr::None
+                    } else {
+                        GuiOr::Item(String::from($y1))
+                    }
+                },
+                if $x2 == 0 {
+                    if $y1 == "None" {
+                        GuiOr::None
+                    } else {
+                        GuiOr::Id(String::from($y2))
+                    }
+                } else {
+                    if $y1 == "None" {
+                        GuiOr::None
+                    } else {
+                        GuiOr::Item(String::from($y2))
+                    }
+                },
+                if $x3 == 0 {
+                    if $y1 == "None" {
+                        GuiOr::None
+                    } else {
+                        GuiOr::Id(String::from($y3))
+                    }
+                } else {
+                    if $y1 == "None" {
+                        GuiOr::None
+                    } else {
+                        GuiOr::Item(String::from($y3))
+                    }
+                },
+            ],
+        )
+    };
+}
+
 lazy_static! {
     pub static ref SEED: u32 = thread_rng().gen::<u32>();
 
     pub static ref GUI_LOOKUP: HashMap<String, [GuiOr<String>; 4]> = HashMap::from([
-        // NAMING: Everything BEFORE underscores (_) will be IGNORED in display text. Use spaces.
-            ("base".ts(), [GuiOr::Id("Iridium".ts()), GuiOr::Id("Structures".ts()), GuiOr::Id("Military".ts()), GuiOr::Id("Technology".ts())]),
-        
-            ("Iridium".ts(), [GuiOr::Id("Pipes".ts()), GuiOr::Id("Extractors".ts()), GuiOr::Id("Tanks".ts()), GuiOr::Id("Iridium_Special".ts())]),
-            ("Structures".ts(), [GuiOr::Item("Seat".ts()), GuiOr::Item("Bridge".ts()), GuiOr::Id("Structures_Defense".ts()), GuiOr::Id("Basic".ts())]),
-            ("Military".ts(), [GuiOr::Item("Priority Beacon".ts()), GuiOr::Item("Shield Generator".ts()), GuiOr::Id("Military_Production".ts()), GuiOr::Id("Weapons".ts())]),
-            ("Technology".ts(), [GuiOr::Item("Spawn Point".ts()), GuiOr::Item("Upgrade Station".ts()), GuiOr::Id("Structure Tech".ts()), GuiOr::Id("Technology_Misc".ts())]),
-        
-        // Iridium
-            ("Pipes".ts(), [GuiOr::Item("Pipe".ts()), GuiOr::Item("T-Junction".ts()), GuiOr::Item("Four-Way".ts()), GuiOr::Item("Elbow".ts())]),
-            ("Extractors".ts(), [GuiOr::Item("Well Pump".ts()), GuiOr::Item("Condenser".ts()), GuiOr::Item("Submersible".ts()), GuiOr::Item("Crystal Resonator".ts())]),
-            ("Tanks".ts(), [GuiOr::Item("Small Tank".ts()), GuiOr::Item("Standard Tank".ts()), GuiOr::Item("Large Tank".ts()), GuiOr::Item("Reservoir".ts())]),
-            ("Iridium_Special".ts(), [GuiOr::Item("Cap".ts()), GuiOr::Item("Refill Station".ts()), GuiOr::Id("Iridium_Special_Tech".ts()), GuiOr::Id("Valves".ts())]),
-        
-            ("Iridium_Special_Tech".ts(), [GuiOr::Item("Distributor Cap".ts()), GuiOr::Item("Gauge".ts()), GuiOr::None, GuiOr::None]),
-            ("Valves".ts(), [GuiOr::Item("Valve".ts()), GuiOr::Item("Drop Tank".ts()), GuiOr::None, GuiOr::None]),
-        
-        // Structures
-            ("Defense_Structures".ts(), [GuiOr::Item("Wall".ts()), GuiOr::Item("Keep".ts()), GuiOr::Item("Gate".ts()), GuiOr::None]),
-            ("Basic".ts(), [GuiOr::Item("Ladder Block".ts()), /* make these later im lazy */ GuiOr::None, GuiOr::None, GuiOr::None]),
-        
-        // Military
-            ("Military_Production".ts(), [GuiOr::Item("Arsenal".ts()), GuiOr::Item("Garage".ts()), GuiOr::Item("S.S.I.M.".ts()), GuiOr::None]),
-            ("Weapons".ts(), [GuiOr::Id("Offense".ts()), GuiOr::Id("Defense".ts()), GuiOr::None, GuiOr::None]),
-        
-            ("Offense".ts(), [GuiOr::Item("Artillery".ts()), GuiOr::Item("Bore".ts()), GuiOr::None, GuiOr::None]),
-            ("Defense".ts(), [GuiOr::Item("Turret".ts()), GuiOr::Item("Arc Turret".ts()), GuiOr::Item("Point Defense".ts()), GuiOr::None]),
-        
-        // Technology
-            ("Structure Tech".ts(), [GuiOr::Item("Fabricator".ts()), GuiOr::Item("Automechanic".ts()), GuiOr::None, GuiOr::None]),
-            ("Technology_Misc".ts(), [GuiOr::Item("Boost Pad".ts()), GuiOr::Item("Distributor".ts()), GuiOr::Item("Transceiver".ts()), GuiOr::Item("Spatial Anchor".ts())]),
+            // NAMING: Everything BEFORE underscores (_) will be IGNORED in display text. Use spaces.
+            GUIBranch!("base" - 0 "Iridium", 0 "Structures", 0 "Structures", 0 "Technology"),
+
+            GUIBranch!("Iridium" - 0 "Pipes", 0 "Extractors", 0 "Tanks", 0 "Iridium_Special"),
+            GUIBranch!("Structures" - 1 "Seat", 1 "Bridge", 0 "Structures_Defense", 0 "Basic"),
+            GUIBranch!("Military" - 1 "Priority Beacon", 1 "Shield Generator", 0 "Military_Production", 0 "Weapons"),
+            GUIBranch!("Technology" - 1 "Spawn Point", 1 "Upgrade Station", 0 "Structure Tech", 0 "Technology_Misc"),
+
+            // Iridium
+            GUIBranch!("Pipes" - 1 "Pipe", 1 "T-Junction", 1 "Four-Way", 1 "Elbow"),
+            GUIBranch!("Extractors" - 1 "Well Pump", 1 "Condenser", 1 "Submersible", 1 "Crystal Resonator"),
+            GUIBranch!("Tanks" - 1 "Small Tank", 1 "Standard Tank", 1 "Large Tank", 1 "Reservoir"),
+            GUIBranch!("Iridium_Special" - 1 "Cap", 1 "Refill Station", 0 "Iridium_Special_Tech", 0 "Valves"),
+
+            GUIBranch!("Iridium_Special_Tech" - 1 "Distributor Cap", 1 "Gauge", "None", "None"),
+            GUIBranch!("Valves" - 1 "Valve", 1 "Drop Tank", "None", "None"),
+
+            // Structures
+            GUIBranch!("Defense_Structures" - 1 "Wall", 1 "Keep", 1 "Gate", "None"),
+             /* make these later im lazy */ 
+            GUIBranch!("Basic" - 1 "Ladder Block", "None", "None", "None"),
+
+            // Military
+            GUIBranch!("Military_Production" - 1 "Arsenal", 1 "Garage", 1 "S.S.I.M"., "None"),
+            GUIBranch!("Weapons" - 0 "Offense", 0 "Defense", "None", "None"),
+
+            GUIBranch!("Offense" - 1 "Artillery", 1 "Bore", "None", "None"),
+            GUIBranch!("Defense" - 1 "Turret", 1 "Arc Turret", 1 "Point Defense", "None"),
+
+            // Technology
+            GUIBranch!("Structure Tech" - 1 "Fabricator", 1 "Automechanic", "None", "None"),
+            GUIBranch!("Technology_Misc" - 1 "Boost Pad", 1 "Distributor", 1 "Transceiver", 1 "Spatial Anchor"),
         ]);
-    
+
     pub static ref GUI_BACK_LOOKUP: HashMap<String, String> = HashMap::from([
         ("base".ts(), "base".ts()),
 
@@ -55,7 +118,7 @@ lazy_static! {
         ("Structures".ts(), "base".ts()),
         ("Military".ts(), "base".ts()),
         ("Technology".ts(), "base".ts()),
-        
+
         ("Pipes".ts(), "Iridium".ts()),
         ("Extractors".ts(), "Iridium".ts()),
         ("Tanks".ts(), "Iridium".ts()),
@@ -63,7 +126,7 @@ lazy_static! {
 
         ("Iridium_Special_Tech".ts(), "Iridium_Special".ts()),
         ("Valves".ts(), "Iridium_Special".ts()),
-        
+
         ("Structures_Defense".ts(), "Structures".ts()),
         ("Basic".ts(), "Structures".ts()),
 
@@ -72,13 +135,13 @@ lazy_static! {
 
         ("Offense".ts(), "Weapons".ts()),
         ("Defense".ts(), "Weapons".ts()),
-        
+
         ("Structure Tech".ts(), "Technology".ts()),
         ("Technology_Misc".ts(), "Technology".ts()),
     ]);
 
     pub static ref BUILDING_LOOKUP: HashMap<String, Building> = HashMap::from([
-        
+
     ]);
 }
 // Shorten the .to_string() method by several characters, just for looks
