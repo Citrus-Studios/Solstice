@@ -17,13 +17,13 @@ macro_rules! GUIBranch {
             String::from($name),
             [
                 if $x0 == 0 {
-                    if $y1 == "None" {
+                    if $y0 == "None" {
                         GuiOr::None
                     } else {
                         GuiOr::Id(String::from($y0))
                     }
                 } else {
-                    if $y1 == "None" {
+                    if $y0 == "None" {
                         GuiOr::None
                     } else {
                         GuiOr::Item(String::from($y0))
@@ -43,26 +43,26 @@ macro_rules! GUIBranch {
                     }
                 },
                 if $x2 == 0 {
-                    if $y1 == "None" {
+                    if $y2 == "None" {
                         GuiOr::None
                     } else {
                         GuiOr::Id(String::from($y2))
                     }
                 } else {
-                    if $y1 == "None" {
+                    if $y2 == "None" {
                         GuiOr::None
                     } else {
                         GuiOr::Item(String::from($y2))
                     }
                 },
                 if $x3 == 0 {
-                    if $y1 == "None" {
+                    if $y3 == "None" {
                         GuiOr::None
                     } else {
                         GuiOr::Id(String::from($y3))
                     }
                 } else {
-                    if $y1 == "None" {
+                    if $y3 == "None" {
                         GuiOr::None
                     } else {
                         GuiOr::Item(String::from($y3))
@@ -78,7 +78,7 @@ lazy_static! {
 
     pub static ref GUI_LOOKUP: HashMap<String, [GuiOr<String>; 4]> = HashMap::from([
             // NAMING: Everything BEFORE underscores (_) will be IGNORED in display text. Use spaces.
-            GUIBranch!("base" - 0 "Iridium", 0 "Structures", 0 "Structures", 0 "Technology"),
+            GUIBranch!("base" - 0 "Iridium", 0 "Structures", 0 "Military", 0 "Technology"),
 
             GUIBranch!("Iridium" - 0 "Pipes", 0 "Extractors", 0 "Tanks", 0 "Iridium_Special"),
             GUIBranch!("Structures" - 1 "Seat", 1 "Bridge", 0 "Structures_Defense", 0 "Basic"),
