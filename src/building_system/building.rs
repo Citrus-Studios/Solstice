@@ -4,9 +4,13 @@ use bevy::{pbr::{NotShadowCaster, AlphaMode::Blend}, input::mouse::MouseWheel};
 pub use bevy::{prelude::*};
 use bevy_rapier3d::{physics::*, prelude::*};
 
-use crate::{algorithms::distance_vec3, player_system::gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, constants::HALF_PI};
+use crate::{algorithms::distance_vec3, player_system::gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, constants::HALF_PI, terrain_generation_system::mutate_mesh::MutateMesh};
 
-use super::raycasting::BuildCursor;
+use super::{raycasting::BuildCursor, buildings::string_to_building};
+use lazy_static::lazy_static;
+
+static mut BLUEPRINT_MATERIAL_HANDLE: Option<Handle<StandardMaterial>> = None;
+
 
 #[derive(Component)]
 pub struct DeleteNextFrame;
@@ -24,16 +28,17 @@ pub struct PipePreview;
 pub struct TestComponent;
 
 pub fn visualizer(
-    mut bc_res: ResMut<BuildCursor>,
-    mut pp_res: ResMut<PipePlacement>,
+    (mut bc_res, mut pp_res): (ResMut<BuildCursor>, ResMut<PipePlacement>),
 
     delete_query: Query<Entity, With<DeleteNextFrame>>,
-    test_query: Query<Entity, With<TestComponent>>,
+    images: Res<Assets<Image>>,
 
     mut pipe_prev_query: Query<(Entity, &mut Transform), With<PipePreview>>,
     mut pipe_prev_mat_query: Query<&mut Handle<StandardMaterial>, With<PipePreview>>,
     mut pipe_prev_collider_query: Query<&mut ColliderPositionComponent, With<PipePreview>>,
     mut pipe_prev_shape_query: Query<&mut ColliderShapeComponent, With<PipePreview>>,
+
+    mut scenes: ResMut<Assets<Scene>>,
 
     narrow_phase: Res<NarrowPhase>,
 
@@ -93,15 +98,6 @@ pub fn visualizer(
         };
 
         match building_id.as_str() {
-            "Well Pump" => {
-                let scene: Handle<Scene> = asset_server.load("models/buildings/well_pump.gltf#Scene0");
-                let mesh: Handle<Mesh> = asset_server.load("models/buildings/well_pump.obj");
-                spawn_cursor_bp(&mut commands, &mut materials, mesh.clone(), transform_cache);
-                if mouse_input.just_pressed(MouseButton::Left) && !hovered {
-                    spawn_bp(&mut commands, scene.clone(), transform_cache);
-                    selected_building.id = None;
-                }
-            },
             "Pipe" => {
 
 
@@ -222,26 +218,77 @@ pub fn visualizer(
                 }
 
                 let pipe_model: Handle<Mesh> = asset_server.load("models/pipes/pipe_base.obj");
-                spawn_cursor_bp(&mut commands, &mut materials, pipe_model.clone(), transform_cache);
+                unsafe { spawn_cursor_bp(&mut commands, &mut materials, pipe_model.clone(), transform_cache); }
             },
+
+            // every other building
             _ => {
                 if pipe_prev_entity_op.is_some() {
                     commands.entity(pipe_prev_entity_op.unwrap()).despawn();
                 }
+                let mut building = string_to_building(building_id.to_string());
+
+                if building.shape_data.mesh.is_none() {
+                    building.shape_data.mesh = Some(asset_server.load(&building.shape_data.path.clone()));
+                }
+
+                // let the_mesh = meshes.get(building.shape_data.mesh.clone().unwrap());
+
+                // if the_mesh.is_some() {
+                //     let attrr = the_mesh.unwrap().clone().relevant_attributes();
+                //     println!("{:?}", attrr.uv);
+                // }
+
+                let image_handle: Handle<Image> = asset_server.load("checkerboard.png");
+                let image = images.get(image_handle.clone());
+
+                if image.is_some() {
+                    info!("{:?}", image.clone().unwrap());
+                }
+
+                if building.shape_data.material.is_none() {
+                    building.shape_data.material = Some(materials.add(StandardMaterial {
+                        base_color_texture: todo!(),
+                        emissive_texture: todo!(),
+                        // g: roughness, b: metallic
+                        metallic_roughness_texture: todo!(),
+                        perceptual_roughness: 1.0,
+                        metallic: 1.0,
+                        ..Default::default()
+                    }))
+                }
+
+                let material = materials.get_mut(building.shape_data.material.clone().unwrap());
+
+                if material.is_some() {
+                    let mut mat = material.unwrap();
+                    mat.base_color_texture = Some(image_handle);
+                }
+
+                unsafe { spawn_cursor_bp(&mut commands, &mut materials, building.shape_data.mesh.clone().unwrap(), transform_cache); }
+                if mouse_input.just_pressed(MouseButton::Left) && !hovered {
+                    spawn_bp(&mut commands, building.shape_data.mesh.clone().unwrap(), building.shape_data.material.clone().unwrap(), building.shape_data.collider.clone(), transform_cache);
+                    selected_building.id = None;
+                }
             }
-        }       
+        }
     }
 }
 
 // TODO: collision
-fn spawn_cursor_bp(commands: &mut Commands, materials: &mut ResMut<Assets<StandardMaterial>>, mesh: Handle<Mesh>, transform: Transform) {
-    commands.spawn_bundle(PbrBundle {
-        mesh,
-        material: materials.add(StandardMaterial {
+// spooky unsafe
+unsafe fn spawn_cursor_bp(commands: &mut Commands, materials: &mut ResMut<Assets<StandardMaterial>>, mesh: Handle<Mesh>, transform: Transform) {
+    if BLUEPRINT_MATERIAL_HANDLE.is_none() {
+        BLUEPRINT_MATERIAL_HANDLE = Some(materials.add(StandardMaterial {
             base_color: Color::rgba(87.0/255.0, 202.0/255.0, 1.0, 0.5),
             alpha_mode: Blend,
             ..Default::default()
-        }),
+        }));
+    }
+    
+    commands.spawn_bundle(PbrBundle {
+        mesh,
+        material: BLUEPRINT_MATERIAL_HANDLE.clone().unwrap(),
         transform,
         ..Default::default()
     })
@@ -250,21 +297,15 @@ fn spawn_cursor_bp(commands: &mut Commands, materials: &mut ResMut<Assets<Standa
 }
 
 // TODO: everything
-fn spawn_bp(commands: &mut Commands, scene: Handle<Scene>, transform: Transform) {
-    commands.spawn_bundle((
+fn spawn_bp(commands: &mut Commands, mesh: Handle<Mesh>, material: Handle<StandardMaterial>, collider_shape: SharedShape, transform: Transform) {
+    commands.spawn_bundle(PbrBundle {
+        mesh,
+        material,
         transform,
-        GlobalTransform::identity()
-    )).with_children(|parent| {
-        let height = 1.129;
-        let mut translation = transform.translation;
-        translation.y += height / 2.0;
-        parent.spawn_scene(scene);
-        parent.spawn_bundle(ColliderBundle {
-            shape: ColliderShape::cylinder(height, 0.9).into(),
-            position: transform.translation.into(),
-            ..Default::default()
-        });
-    })
-    .insert(TestComponent);
-    
+        ..Default::default()
+    }).insert_bundle(ColliderBundle {
+        shape: collider_shape.into(),
+        position: transform.translation.into(),
+        ..Default::default()
+    });
 }
