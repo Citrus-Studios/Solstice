@@ -14,6 +14,8 @@ pub mod terrain_generation_system;
 pub mod constants;
 pub mod algorithms;
 
+pub mod material_palette;
+
 fn main() {
     App::new()
         // plugins    
