@@ -65,26 +65,16 @@ impl MaterialPalette {
             metallic_roughness_vec.append(&mut Color::rgba(0.0, material.roughness, material.metallic, 1.0).to_vec_u8());
         }
 
-        let base_color_texture = Image::new(
+        let basic_image = Image::new(
             Extent3d { width: dimensions.0, height: dimensions.1, ..Default::default() }, 
             TextureDimension::D2,
-            base_color_vec,
+            Vec::new(),
             TextureFormat::Rgba8Uint
         );
 
-        let emissive_texture = Image::new(
-            Extent3d { width: dimensions.0, height: dimensions.1, ..Default::default() }, 
-            TextureDimension::D2,
-            emissive_vec,
-            TextureFormat::Rgba8Uint
-        );
-
-        let metallic_roughness_texture = Image::new(
-            Extent3d { width: dimensions.0, height: dimensions.1, ..Default::default() }, 
-            TextureDimension::D2,
-            metallic_roughness_vec,
-            TextureFormat::Rgba8Uint
-        );
+        let base_color_texture = basic_image.with_data(base_color_vec);
+        let emissive_texture = basic_image.with_data(emissive_vec);
+        let metallic_roughness_texture = basic_image.with_data(metallic_roughness_vec);
 
         CompiledMaterials { base_color_texture, emissive_texture, metallic_roughness_texture }
     }
@@ -102,5 +92,17 @@ impl ColorToVec for Color {
             (self.b() * 255.0).round() as u8,
             (self.a() * 255.0).round() as u8,
         ]
+    }
+}
+
+trait WithData {
+    fn with_data(&self, data: Vec<u8>) -> Self;
+}
+
+impl WithData for Image {
+    fn with_data(&self, data: Vec<u8>) -> Self {
+        let mut return_image = self.clone();
+        return_image.data = data;
+        return_image
     }
 }
