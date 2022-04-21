@@ -18,6 +18,16 @@ pub struct FlatMaterial {
     pub roughness: f32,
 }
 
+#[test]
+fn test_image() {
+    let mut palette = MaterialPalette::new();
+
+    palette.push(FlatMaterial::default().metallic(0.75));
+    palette.push(FlatMaterial::default().base_color(Color::RED));
+
+    let _compiled = palette.compile(Some(3));
+}
+
 impl Default for FlatMaterial {
     fn default() -> Self {
         FlatMaterial {
@@ -52,10 +62,20 @@ impl From<(Color, Color, f32, f32)> for FlatMaterial {
 impl MaterialPalette {
     pub fn new() -> Self { MaterialPalette { palette: Vec::new() } }
 
-    pub fn compile(self, size: Option<u32>) -> CompiledMaterials {
+    pub fn push(&mut self, material: FlatMaterial) {
+        self.palette.push(material); 
+    }
+
+    pub fn compile(mut self, size: Option<u32>) -> CompiledMaterials {
         let dimensions = (size.unwrap_or(self.palette.len() as u32), 1u32);
-        if dimensions.0 < self.palette.len() as u32 {
+        let len = self.palette.len() as u32;
+
+        if dimensions.0 < len {
             panic!("Width of image cannot be less than the number of materials given.");
+        } else if dimensions.0 > len {
+            for _ in 0..(dimensions.0 - len) {
+                self.push(FlatMaterial::default());
+            }
         }
 
         let (mut base_color_vec, mut emissive_vec, mut metallic_roughness_vec) = (Vec::new(), Vec::new(), Vec::new());
@@ -65,10 +85,15 @@ impl MaterialPalette {
             metallic_roughness_vec.append(&mut Color::rgba(0.0, material.roughness, material.metallic, 1.0).to_vec_u8());
         }
 
+        let mut basic_data = Vec::new();
+        for _ in 0..(dimensions.0 * 4) {
+            basic_data.push(0u8);
+        }
+
         let basic_image = Image::new(
             Extent3d { width: dimensions.0, height: dimensions.1, ..Default::default() }, 
             TextureDimension::D2,
-            Vec::new(),
+            basic_data,
             TextureFormat::Rgba8Uint
         );
 
