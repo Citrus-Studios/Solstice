@@ -139,10 +139,6 @@ lazy_static! {
         ("Structure Tech".ts(), "Technology".ts()),
         ("Technology_Misc".ts(), "Technology".ts()),
     ]);
-
-    pub static ref BUILDING_LOOKUP: HashMap<String, Building> = HashMap::from([
-
-    ]);
 }
 // Shorten the .to_string() method by several characters, just for looks
 pub trait ShortToString {
