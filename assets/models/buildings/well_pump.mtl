@@ -20,6 +20,8 @@ Ke 0.000000 1.812431 2.000000
 Ni 1.450000
 d 1.000000
 illum 2
+map_Kd .
+map_Ke .
 
 newmtl Material.002
 Ns 71.672139
