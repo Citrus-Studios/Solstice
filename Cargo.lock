@@ -1312,22 +1312,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ea835d29036a4087793836fa931b08837ad5e957da9e23886b29586fb9b6650"
 
 [[package]]
-name = "eclipsis"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "bevy_mod_picking",
- "bevy_mod_raycast",
- "bevy_obj",
- "bevy_rapier3d",
- "lazy_static",
- "nalgebra",
- "noise",
- "rand 0.8.5",
- "tokio",
-]
-
-[[package]]
 name = "either"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3038,6 +3022,22 @@ checksum = "66d72b759436ae32898a2af0a14218dbf55efde3feeb170eb623637db85ee1e0"
 dependencies = [
  "libc",
  "winapi",
+]
+
+[[package]]
+name = "solstice"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_mod_picking",
+ "bevy_mod_raycast",
+ "bevy_obj",
+ "bevy_rapier3d",
+ "lazy_static",
+ "nalgebra",
+ "noise",
+ "rand 0.8.5",
+ "tokio",
 ]
 
 [[package]]
