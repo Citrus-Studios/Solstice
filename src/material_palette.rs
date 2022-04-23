@@ -1,4 +1,4 @@
-use bevy::{prelude::{Color, Image}, render::render_resource::{Extent3d, TextureDimension, TextureFormat}, math::Vec2};
+use bevy::{prelude::{Color, Image}, render::render_resource::{Extent3d, TextureDimension, TextureFormat}, math::Vec2, pbr::StandardMaterial};
 
 #[derive(Clone)]
 pub struct MaterialPalette {
@@ -60,6 +60,12 @@ impl From<(Color, Color, f32, f32)> for FlatMaterial {
             // green
             roughness: tuple.3,
         }
+    }
+}
+
+impl From<StandardMaterial> for FlatMaterial {
+    fn from(mat: StandardMaterial) -> Self {
+        FlatMaterial::default().base_color(mat.base_color).emissive(mat.emissive).metallic(mat.metallic).roughness(mat.perceptual_roughness)
     }
 }
 
