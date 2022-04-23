@@ -38,7 +38,7 @@ impl RelevantAttributes {
         self.ind = ind; self
     }
 
-    pub fn append_with_indices(mut self, mut attr: RelevantAttributes) -> Self {
+    pub fn append_with_indices(&mut self, mut attr: RelevantAttributes) {
         let add = self.pos.len() as u32;
         self.pos.append(&mut attr.pos);
         self.norm.append(&mut attr.norm);
@@ -47,7 +47,6 @@ impl RelevantAttributes {
             *i += add;
         }
         self.ind.append(&mut attr.ind);
-        self
     }
 
     pub fn append(mut self, mut attr: RelevantAttributes) -> Self {

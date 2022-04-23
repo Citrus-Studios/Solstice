@@ -131,7 +131,7 @@ pub fn generate_terrain(
             }
         }
         
-        attr = attr.append_with_indices(column_attr.clone());
+        attr.append_with_indices(column_attr.clone());
 
         if !column_attr.pos.is_empty() {
             commands.spawn_bundle(ColliderBundle {
