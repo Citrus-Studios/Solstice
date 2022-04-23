@@ -1,5 +1,6 @@
-use bevy::{prelude::{Color, Image}, render::render_resource::{Extent3d, TextureDimension, TextureFormat}};
+use bevy::{prelude::{Color, Image}, render::render_resource::{Extent3d, TextureDimension, TextureFormat}, math::Vec2};
 
+#[derive(Clone)]
 pub struct MaterialPalette {
     pub palette: Vec<FlatMaterial>
 }
@@ -18,15 +19,18 @@ pub struct FlatMaterial {
     pub roughness: f32,
 }
 
-#[test]
-fn test_image() {
-    let mut palette = MaterialPalette::new();
+// #[test]
+// fn test_image() {
+//     let mut palette = MaterialPalette::new();
 
-    palette.push(FlatMaterial::default().metallic(0.75));
-    palette.push(FlatMaterial::default().base_color(Color::RED));
+//     palette.push(FlatMaterial::default().metallic(0.75));
+//     palette.push(FlatMaterial::default().base_color(Color::RED));
 
-    let _compiled = palette.compile(Some(3));
-}
+//     let compiled = palette.compile(None);
+//     let uv_pos = compiled.get_uv_pos(2);
+
+//     println!("{:?}", uv_pos);
+// }
 
 impl Default for FlatMaterial {
     fn default() -> Self {
@@ -66,20 +70,21 @@ impl MaterialPalette {
         self.palette.push(material); 
     }
 
-    pub fn compile(mut self, size: Option<u32>) -> CompiledMaterials {
+    pub fn compile(&self, size: Option<u32>) -> CompiledMaterials {
         let dimensions = (size.unwrap_or(self.palette.len() as u32), 1u32);
         let len = self.palette.len() as u32;
+        let mut self_clone = self.to_owned();
 
         if dimensions.0 < len {
             panic!("Width of image cannot be less than the number of materials given.");
         } else if dimensions.0 > len {
             for _ in 0..(dimensions.0 - len) {
-                self.push(FlatMaterial::default());
+                self_clone.push(FlatMaterial::default());
             }
         }
 
         let (mut base_color_vec, mut emissive_vec, mut metallic_roughness_vec) = (Vec::new(), Vec::new(), Vec::new());
-        for material in self.palette {
+        for material in self_clone.palette {
             base_color_vec.append(&mut material.base_color.to_vec_u8());
             emissive_vec.append(&mut material.emissive.to_vec_u8());
             metallic_roughness_vec.append(&mut Color::rgba(0.0, material.roughness, material.metallic, 1.0).to_vec_u8());
@@ -91,7 +96,7 @@ impl MaterialPalette {
         }
 
         let basic_image = Image::new(
-            Extent3d { width: dimensions.0, height: dimensions.1, ..Default::default() }, 
+            Extent3d { width: dimensions.0, height: dimensions.1, ..Default::default() },
             TextureDimension::D2,
             basic_data,
             TextureFormat::Rgba8Uint
@@ -102,6 +107,20 @@ impl MaterialPalette {
         let metallic_roughness_texture = basic_image.with_data(metallic_roughness_vec);
 
         CompiledMaterials { base_color_texture, emissive_texture, metallic_roughness_texture }
+    }
+}
+
+impl CompiledMaterials {
+    pub fn get_uv_pos(&self, material_num: u32) -> Vec2 {
+        let num_materials = self.base_color_texture.texture_descriptor.size.width;
+
+        assert!(num_materials > material_num, "Material {} out of bounds. Palette had {} materials.", material_num, num_materials);
+
+        let length = num_materials as f32;
+        let x = (material_num as f32 + 0.5) / length;
+        let y = 0.5;
+
+        Vec2::new(x, y)
     }
 }
 
