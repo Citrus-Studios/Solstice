@@ -15,6 +15,7 @@ pub mod constants;
 pub mod algorithms;
 
 pub mod material_palette;
+pub mod model_loader;
 
 fn main() {
     App::new()
