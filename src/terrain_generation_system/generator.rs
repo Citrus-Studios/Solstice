@@ -1,3 +1,5 @@
+use std::time::{Instant, Duration};
+
 use bevy::{
     prelude::*,
 };
@@ -39,6 +41,8 @@ pub fn generate_terrain(
     if done.done {
         return;
     }
+
+    let time = Instant::now();
 
     let ground1_handle: Handle<Mesh> = asset_server.load("models/ground1/ground1.obj");
     let hollowground_handle: Handle<Mesh> = asset_server.load("models/ground1/hollow_ground.obj");
@@ -172,6 +176,8 @@ pub fn generate_terrain(
         //     }.into(),
         //     ..Default::default()
         // });
+
+    info!("Generation time: {:?}", time.elapsed());
 
     done.done = true;
 }
