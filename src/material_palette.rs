@@ -105,7 +105,7 @@ impl MaterialPalette {
             Extent3d { width: dimensions.0, height: dimensions.1, ..Default::default() },
             TextureDimension::D2,
             basic_data,
-            TextureFormat::Rgba8Uint
+            TextureFormat::Rgba8Unorm
         );
 
         let base_color_texture = basic_image.with_data(base_color_vec);
