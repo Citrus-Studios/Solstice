@@ -1,20 +1,21 @@
-use crate::building_system::building::visualizer;
+use crate::building_system::building::building;
 use bevy::{
     pbr::{PbrBundle, StandardMaterial},
     prelude::{
         shape, Assets, Color, Commands, CoreStage, Mesh, ParallelSystemDescriptorCoercion, Plugin,
-        ResMut, Transform,
+        ResMut, Transform, SystemSet,
     },
 };
 use bevy_mod_raycast::{RayCastMesh, RaycastSystem};
 
 use crate::player_system::player::player_camera_system;
 
-use self::{raycasting::{raycast, update_raycast_with_cursor, RaycastCursor, BuildCursor}, building::PipePlacement};
+use self::{raycasting::{raycast, update_raycast_with_cursor, RaycastCursor, BuildCursor}, building::PipePlacement, load_models::{initiate_load, get_load_states}};
 
 pub mod raycasting;
 pub mod building;
 pub mod buildings;
+pub mod load_models;
 
 pub struct RaycastSet;
 
@@ -23,12 +24,17 @@ pub struct BuildingSystemPlugin;
 impl Plugin for BuildingSystemPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_startup_system(building_system_startup)
+            .add_startup_system(initiate_load)
             .add_system_to_stage(
                 CoreStage::PreUpdate,
                 update_raycast_with_cursor.before(RaycastSystem::BuildRays),
             )
             .add_system(raycast)
-            .add_system(visualizer)
+            .add_system_set(
+                SystemSet::new()
+                    .with_run_criteria(get_load_states)
+                    .with_system(building)
+            )
             .add_system(player_camera_system);
     }
 }
