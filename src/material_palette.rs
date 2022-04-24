@@ -1,4 +1,4 @@
-use bevy::{prelude::{Color, Image}, render::render_resource::{Extent3d, TextureDimension, TextureFormat}, math::Vec2, pbr::StandardMaterial};
+use bevy::{prelude::{Color, Image, Assets, ResMut}, render::render_resource::{Extent3d, TextureDimension, TextureFormat}, math::Vec2, pbr::StandardMaterial};
 
 #[derive(Clone)]
 pub struct MaterialPalette {
@@ -127,6 +127,21 @@ impl CompiledMaterials {
         let y = 0.5;
 
         Vec2::new(x, y)
+    }
+
+    pub fn into_standard_material(self, images: &mut ResMut<Assets<Image>>) -> StandardMaterial {
+        StandardMaterial {
+            base_color: Color::WHITE,
+            emissive: Color::WHITE,
+            perceptual_roughness: 1.0,
+            metallic: 1.0,
+
+            base_color_texture: Some(images.add(self.base_color_texture)),
+            emissive_texture: Some(images.add(self.emissive_texture)),
+            metallic_roughness_texture: Some(images.add(self.metallic_roughness_texture)),
+
+            ..Default::default()
+        }
     }
 }
 
