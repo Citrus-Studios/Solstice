@@ -130,7 +130,7 @@ pub fn string_to_building(name: String) -> Building {
             Generation: 5, 
             Mesh: None, 
             Material: None,
-            MeshPath: "models/buildings/well_pump.obj", 
+            MeshPath: "models/buildings/well_pump.gltf", 
             Collider: ColliderShape::cylinder(1.129, 0.9), 
             Offset: (0.0, 0.5645, 0.0)
         ),
