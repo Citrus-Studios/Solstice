@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 
-use bevy::{pbr::{NotShadowCaster, AlphaMode::Blend}, input::mouse::MouseWheel};
+use bevy::{pbr::{NotShadowCaster, AlphaMode::Blend}, input::mouse::MouseWheel, gltf::{Gltf, GltfMesh}};
 pub use bevy::{prelude::*};
 use bevy_rapier3d::{physics::*, prelude::*};
 
@@ -27,7 +27,7 @@ pub struct PipePreview;
 #[derive(Component)]
 pub struct TestComponent;
 
-pub fn visualizer(
+pub fn building(
     (mut bc_res, mut pp_res): (ResMut<BuildCursor>, ResMut<PipePlacement>),
 
     delete_query: Query<Entity, With<DeleteNextFrame>>,
@@ -43,7 +43,7 @@ pub fn visualizer(
     narrow_phase: Res<NarrowPhase>,
 
     asset_server: Res<AssetServer>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    (mut materials, mut gltf_meshes): (ResMut<Assets<StandardMaterial>>, ResMut<Assets<GltfMesh>>),
     mut commands: Commands,
 
     gui_hover_query: Query<&Interaction, With<GuiButtonId>>,
@@ -229,7 +229,8 @@ pub fn visualizer(
                 let mut building = string_to_building(building_id.to_string());
 
                 if building.shape_data.mesh.is_none() {
-                    building.shape_data.mesh = Some(asset_server.load(&building.shape_data.path.clone()));
+                    let gltf_mesh: Handle<GltfMesh> = asset_server.load(&format!("{}{}", &building.shape_data.path.clone(), "/#Mesh0").to_string());
+                    let the = &gltf_meshes.get(gltf_mesh).unwrap().primitives;
                 }
 
                 // let the_mesh = meshes.get(building.shape_data.mesh.clone().unwrap());
