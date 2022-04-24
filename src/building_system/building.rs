@@ -4,7 +4,7 @@ use bevy::{pbr::{NotShadowCaster, AlphaMode::Blend}, input::mouse::MouseWheel, g
 pub use bevy::{prelude::*};
 use bevy_rapier3d::{physics::*, prelude::*};
 
-use crate::{algorithms::distance_vec3, player_system::gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, constants::HALF_PI, terrain_generation_system::mutate_mesh::MutateMesh};
+use crate::{algorithms::distance_vec3, player_system::gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, constants::HALF_PI, terrain_generation_system::mutate_mesh::MutateMesh, model_loader::combine_gltf_mesh};
 
 use super::{raycasting::BuildCursor, buildings::string_to_building};
 use lazy_static::lazy_static;
@@ -31,7 +31,6 @@ pub fn building(
     (mut bc_res, mut pp_res): (ResMut<BuildCursor>, ResMut<PipePlacement>),
 
     delete_query: Query<Entity, With<DeleteNextFrame>>,
-    images: Res<Assets<Image>>,
 
     mut pipe_prev_query: Query<(Entity, &mut Transform), With<PipePreview>>,
     mut pipe_prev_mat_query: Query<&mut Handle<StandardMaterial>, With<PipePreview>>,
@@ -43,7 +42,7 @@ pub fn building(
     narrow_phase: Res<NarrowPhase>,
 
     asset_server: Res<AssetServer>,
-    (mut materials, mut gltf_meshes): (ResMut<Assets<StandardMaterial>>, ResMut<Assets<GltfMesh>>),
+    (mut materials, mut gltf_meshes, mut meshes, mut images): (ResMut<Assets<StandardMaterial>>, ResMut<Assets<GltfMesh>>, ResMut<Assets<Mesh>>, ResMut<Assets<Image>>),
     mut commands: Commands,
 
     gui_hover_query: Query<&Interaction, With<GuiButtonId>>,
@@ -229,41 +228,13 @@ pub fn building(
                 let mut building = string_to_building(building_id.to_string());
 
                 if building.shape_data.mesh.is_none() {
-                    let gltf_mesh: Handle<GltfMesh> = asset_server.load(&format!("{}{}", &building.shape_data.path.clone(), "/#Mesh0").to_string());
-                    let the = &gltf_meshes.get(gltf_mesh).unwrap().primitives;
-                }
+                    let gltf_mesh: Handle<GltfMesh> = asset_server.load(&format!("{}{}", &building.shape_data.path.clone(), "#Mesh0").to_string());
+                    let primitives = &gltf_meshes.get(gltf_mesh).unwrap().primitives;
 
-                // let the_mesh = meshes.get(building.shape_data.mesh.clone().unwrap());
+                    let bundle = combine_gltf_mesh(primitives.clone(), &mut meshes, &mut materials, &mut images);
 
-                // if the_mesh.is_some() {
-                //     let attrr = the_mesh.unwrap().clone().relevant_attributes();
-                //     println!("{:?}", attrr.uv);
-                // }
-
-                let image_handle: Handle<Image> = asset_server.load("checkerboard.png");
-                let image = images.get(image_handle.clone());
-
-                if image.is_some() {
-                    info!("{:?}", image.clone().unwrap());
-                }
-
-                if building.shape_data.material.is_none() {
-                    building.shape_data.material = Some(materials.add(StandardMaterial {
-                        base_color_texture: todo!(),
-                        emissive_texture: todo!(),
-                        // g: roughness, b: metallic
-                        metallic_roughness_texture: todo!(),
-                        perceptual_roughness: 1.0,
-                        metallic: 1.0,
-                        ..Default::default()
-                    }))
-                }
-
-                let material = materials.get_mut(building.shape_data.material.clone().unwrap());
-
-                if material.is_some() {
-                    let mut mat = material.unwrap();
-                    mat.base_color_texture = Some(image_handle);
+                    building.shape_data.mesh = Some(bundle.mesh);
+                    building.shape_data.material = Some(bundle.material);
                 }
 
                 unsafe { spawn_cursor_bp(&mut commands, &mut materials, building.shape_data.mesh.clone().unwrap(), transform_cache); }
