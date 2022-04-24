@@ -38,6 +38,13 @@ impl RelevantAttributes {
         self.ind = ind; self
     }
 
+    pub fn set_all_uv(&mut self, uv_set: Vec2) {
+        for uv in self.uv.iter_mut() {
+            uv[0] = uv_set.x;
+            uv[1] = uv_set.y;
+        }
+    }
+
     pub fn append_with_indices(&mut self, mut attr: RelevantAttributes) {
         let add = self.pos.len() as u32;
         self.pos.append(&mut attr.pos);
