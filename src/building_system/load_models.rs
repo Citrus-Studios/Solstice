@@ -18,11 +18,9 @@ pub fn initiate_load(asset_server: Res<AssetServer>) {
 }
 
 pub fn get_load_states(asset_server: Res<AssetServer>) -> ShouldRun {
-    unsafe {
-        for handle in MODEL_HANDLES.clone() {
-            if asset_server.get_load_state(handle.unwrap()) != LoadState::Loaded {
-                return ShouldRun::NoAndCheckAgain
-            }
+    for handle in unsafe { MODEL_HANDLES.clone() } {
+        if asset_server.get_load_state(handle.unwrap()) != LoadState::Loaded {
+            return ShouldRun::NoAndCheckAgain
         }
     }
     return ShouldRun::Yes
