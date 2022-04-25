@@ -7,7 +7,7 @@ use super::relevant_attributes::RelevantAttributes;
 pub trait MutateMesh {
     fn combine_mesh(self, mesh_2: Mesh, offset: Vec3) -> Self;
     fn relevant_attributes(self) -> RelevantAttributes;
-    fn into_shared_shape(self) -> SharedShape;
+    fn into_shared_shape(&self) -> SharedShape;
     fn set_attributes(self, attr: RelevantAttributes) -> Mesh;
 }
 
@@ -71,7 +71,7 @@ impl MutateMesh for Mesh {
         RelevantAttributes::new().pos(positions).norm(normals).uv(uvs).ind(indices)
     }
 
-    fn into_shared_shape(self) -> SharedShape {
+    fn into_shared_shape(&self) -> SharedShape {
         let attr = self.clone().relevant_attributes();
 
         let mut points: Vec<Point3<f32>> = Vec::new();
