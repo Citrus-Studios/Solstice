@@ -2,11 +2,12 @@ use std::f32::consts::PI;
 
 use bevy::{pbr::{NotShadowCaster, AlphaMode::Blend}, input::mouse::MouseWheel, gltf::{Gltf, GltfMesh}};
 pub use bevy::{prelude::*};
+use bevy_mod_raycast::{SimplifiedMesh, RayCastMesh};
 use bevy_rapier3d::{physics::*, prelude::*};
 
-use crate::{algorithms::distance_vec3, player_system::gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, constants::HALF_PI, model_loader::combine_gltf_mesh};
+use crate::{algorithms::distance_vec3, player_system::gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, constants::HALF_PI, model_loader::{combine_gltf_mesh, combine_gltf_primitives}, terrain_generation_system::mutate_mesh::MutateMesh};
 
-use super::{raycasting::BuildCursor, buildings::{string_to_building, BuildingShapeData}};
+use super::{raycasting::BuildCursor, buildings::{string_to_building, BuildingShapeData}, RaycastSet};
 
 static mut BLUEPRINT_MATERIAL_HANDLE: Option<Handle<StandardMaterial>> = None;
 
@@ -242,6 +243,14 @@ pub fn building(
 
                     building.shape_data.mesh = Some(bundle.mesh);
                     building.shape_data.material = Some(bundle.material);
+
+                    let gltf_mesh: Handle<GltfMesh> = asset_server.load(&format!("{}{}", &building.shape_data.path.clone(), "#Mesh1").to_string());
+                    let primitives = &gltf_meshes.get(gltf_mesh).unwrap().primitives;
+
+                    let mesh = combine_gltf_primitives(primitives.clone(), &mut meshes);
+
+                    building.shape_data.collider = Some(mesh.clone());
+                    building.shape_data.collider_handle = Some(meshes.add(mesh));
                 }
 
                 spawn_cursor_bp(&mut commands, building.shape_data.mesh.clone().unwrap(), transform_cache);
@@ -275,8 +284,12 @@ fn spawn_bp(commands: &mut Commands, shape_data: BuildingShapeData, transform: T
         transform,
         ..Default::default()
     }).insert_bundle(ColliderBundle {
-        shape: shape_data.collider.into(),
+        shape: shape_data.collider.unwrap().into_shared_shape().into(),
         position: transform.translation.into(),
         ..Default::default()
-    });
+    })
+    .insert(SimplifiedMesh {
+        mesh: shape_data.collider_handle.unwrap(),
+    })
+    .insert(RayCastMesh::<RaycastSet>::default());
 }

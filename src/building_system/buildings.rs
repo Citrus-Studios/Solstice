@@ -38,7 +38,9 @@ pub struct BuildingShapeData {
     pub mesh: Option<Handle<Mesh>>,
     pub material: Option<Handle<StandardMaterial>>,
     pub path: String,
-    pub collider: SharedShape,
+    // Will be converted to a trimesh collider
+    pub collider: Option<Mesh>,
+    pub collider_handle: Option<Handle<Mesh>>,
     pub collider_offset: Vec3,
 }
 
@@ -86,6 +88,7 @@ macro_rules! Building {
         Material: $material:expr,
         MeshPath: $meshtype:literal, 
         Collider: $collider:expr, 
+        ColliderHandle: $colliderhandle:expr,
         Offset: ($x:literal, $y:literal, $z:literal)
     ) => {
         Building {
@@ -113,6 +116,7 @@ macro_rules! Building {
                 material: $material,
                 path: $meshtype.to_string(),
                 collider: $collider,
+                collider_handle: $colliderhandle,
                 collider_offset: Vec3::new($x, $y, $z),
             },
         }
@@ -131,7 +135,8 @@ pub fn string_to_building(name: String) -> Building {
             Mesh: None, 
             Material: None,
             MeshPath: "models/buildings/well_pump.gltf", 
-            Collider: ColliderShape::cylinder(1.129, 0.9), 
+            Collider: None, 
+            ColliderHandle: None,
             Offset: (0.0, 0.5645, 0.0)
         ),
         _ => panic!("Could not match {} to any building", name)
