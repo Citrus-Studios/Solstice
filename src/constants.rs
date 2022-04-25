@@ -1,9 +1,9 @@
-use std::{any::Any, collections::HashMap, f32::consts::PI, sync::Arc};
+use std::{collections::HashMap, f32::consts::PI};
 
 use lazy_static::lazy_static;
 use rand::{thread_rng, Rng};
 
-use crate::{building_system::buildings::Building, player_system::gui_system::gui::GuiOr};
+use crate::{player_system::gui_system::gui::GuiOr};
 
 pub const DELTA_TIME: f32 = 1.0 / 60.0;
 pub const SQRT_OF_2: f32 = 1.41421356237f32 / 2.0;
