@@ -4,10 +4,9 @@ use bevy::{pbr::{NotShadowCaster, AlphaMode::Blend}, input::mouse::MouseWheel, g
 pub use bevy::{prelude::*};
 use bevy_rapier3d::{physics::*, prelude::*};
 
-use crate::{algorithms::distance_vec3, player_system::gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, constants::HALF_PI, terrain_generation_system::mutate_mesh::MutateMesh, model_loader::combine_gltf_mesh};
+use crate::{algorithms::distance_vec3, player_system::gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, constants::HALF_PI, model_loader::combine_gltf_mesh};
 
-use super::{raycasting::BuildCursor, buildings::string_to_building};
-use lazy_static::lazy_static;
+use super::{raycasting::BuildCursor, buildings::{string_to_building, BuildingShapeData}};
 
 static mut BLUEPRINT_MATERIAL_HANDLE: Option<Handle<StandardMaterial>> = None;
 
@@ -37,8 +36,6 @@ pub fn building(
     mut pipe_prev_collider_query: Query<&mut ColliderPositionComponent, With<PipePreview>>,
     mut pipe_prev_shape_query: Query<&mut ColliderShapeComponent, With<PipePreview>>,
 
-    mut scenes: ResMut<Assets<Scene>>,
-
     narrow_phase: Res<NarrowPhase>,
 
     asset_server: Res<AssetServer>,
@@ -52,6 +49,16 @@ pub fn building(
 
     mut selected_building: ResMut<SelectedBuilding>,
 ) {
+    unsafe {
+        if BLUEPRINT_MATERIAL_HANDLE.is_none() {
+            BLUEPRINT_MATERIAL_HANDLE = Some(materials.add(StandardMaterial {
+                base_color: Color::rgba(87.0/255.0, 202.0/255.0, 1.0, 0.5),
+                alpha_mode: Blend,
+                ..Default::default()
+            }));
+        }
+    }
+
     for entity in delete_query.iter() {
         commands.entity(entity).despawn();
     }
@@ -217,7 +224,7 @@ pub fn building(
                 }
 
                 let pipe_model: Handle<Mesh> = asset_server.load("models/pipes/pipe_base.obj");
-                unsafe { spawn_cursor_bp(&mut commands, &mut materials, pipe_model.clone(), transform_cache); }
+                spawn_cursor_bp(&mut commands, pipe_model.clone(), transform_cache); 
             },
 
             // every other building
@@ -237,9 +244,9 @@ pub fn building(
                     building.shape_data.material = Some(bundle.material);
                 }
 
-                unsafe { spawn_cursor_bp(&mut commands, &mut materials, building.shape_data.mesh.clone().unwrap(), transform_cache); }
+                spawn_cursor_bp(&mut commands, building.shape_data.mesh.clone().unwrap(), transform_cache);
                 if mouse_input.just_pressed(MouseButton::Left) && !hovered {
-                    spawn_bp(&mut commands, building.shape_data.mesh.clone().unwrap(), building.shape_data.material.clone().unwrap(), building.shape_data.collider.clone(), transform_cache);
+                    spawn_bp(&mut commands, building.shape_data, transform_cache);
                     selected_building.id = None;
                 }
             }
@@ -249,18 +256,10 @@ pub fn building(
 
 // TODO: collision
 // spooky unsafe
-unsafe fn spawn_cursor_bp(commands: &mut Commands, materials: &mut ResMut<Assets<StandardMaterial>>, mesh: Handle<Mesh>, transform: Transform) {
-    if BLUEPRINT_MATERIAL_HANDLE.is_none() {
-        BLUEPRINT_MATERIAL_HANDLE = Some(materials.add(StandardMaterial {
-            base_color: Color::rgba(87.0/255.0, 202.0/255.0, 1.0, 0.5),
-            alpha_mode: Blend,
-            ..Default::default()
-        }));
-    }
-    
+fn spawn_cursor_bp(commands: &mut Commands, mesh: Handle<Mesh>, transform: Transform) {    
     commands.spawn_bundle(PbrBundle {
         mesh,
-        material: BLUEPRINT_MATERIAL_HANDLE.clone().unwrap(),
+        material: unsafe { BLUEPRINT_MATERIAL_HANDLE.clone().unwrap() },
         transform,
         ..Default::default()
     })
@@ -269,14 +268,14 @@ unsafe fn spawn_cursor_bp(commands: &mut Commands, materials: &mut ResMut<Assets
 }
 
 // TODO: everything
-fn spawn_bp(commands: &mut Commands, mesh: Handle<Mesh>, material: Handle<StandardMaterial>, collider_shape: SharedShape, transform: Transform) {
+fn spawn_bp(commands: &mut Commands, shape_data: BuildingShapeData, transform: Transform) {
     commands.spawn_bundle(PbrBundle {
-        mesh,
-        material,
+        mesh: shape_data.mesh.unwrap(),
+        material: shape_data.material.unwrap(),
         transform,
         ..Default::default()
     }).insert_bundle(ColliderBundle {
-        shape: collider_shape.into(),
+        shape: shape_data.collider.into(),
         position: transform.translation.into(),
         ..Default::default()
     });
