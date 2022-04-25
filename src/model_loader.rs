@@ -30,3 +30,15 @@ pub fn combine_gltf_mesh(primitives: Vec<GltfPrimitive>, meshes: &mut ResMut<Ass
         ..Default::default()
     }
 }
+
+/// Ignores materials
+pub fn combine_gltf_primitives(primitives: Vec<GltfPrimitive>, meshes: &mut ResMut<Assets<Mesh>>) -> Mesh {
+    let mut attr = RelevantAttributes::new();
+
+    for primitive in primitives {
+        let mesh = meshes.get(primitive.mesh).unwrap().clone();
+        attr = attr.combine_with_mesh(mesh, Vec3::ZERO);
+    }
+
+    Mesh::new(PrimitiveTopology::TriangleList).set_attributes(attr)
+}
