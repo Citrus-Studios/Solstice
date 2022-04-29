@@ -1,13 +1,13 @@
 use std::f32::consts::PI;
 
-use bevy::{pbr::{NotShadowCaster, AlphaMode::Blend}, input::mouse::MouseWheel, gltf::{Gltf, GltfMesh}};
+use bevy::{pbr::{NotShadowCaster, AlphaMode::Blend}, input::mouse::MouseWheel, gltf::{Gltf, GltfMesh}, ecs::system::QuerySingleError};
 pub use bevy::{prelude::*};
 use bevy_mod_raycast::{SimplifiedMesh, RayCastMesh};
 use bevy_rapier3d::{physics::*, prelude::*};
 
 use crate::{algorithms::distance_vec3, player_system::gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, constants::HALF_PI, model_loader::{combine_gltf_mesh, combine_gltf_primitives}, terrain_generation_system::mutate_mesh::MutateMesh};
 
-use super::{raycasting::BuildCursor, buildings::{string_to_building, BuildingShapeData}, RaycastSet};
+use super::{raycasting::BuildCursor, buildings::{string_to_building, BuildingShapeData}, RaycastSet, MaterialHandles};
 
 static mut BLUEPRINT_MATERIAL_HANDLE: Option<Handle<StandardMaterial>> = None;
 
@@ -27,38 +27,61 @@ pub struct PipePreview;
 #[derive(Component)]
 pub struct TestComponent;
 
+#[derive(Component)]
+pub struct CursorBp;
+
+pub struct ChangeBuilding {
+    pub b: bool
+}
+
 pub fn building(
-    (mut bc_res, mut pp_res): (ResMut<BuildCursor>, ResMut<PipePlacement>),
+    mut commands: Commands,
 
     delete_query: Query<Entity, With<DeleteNextFrame>>,
 
-    mut pipe_prev_query: Query<(Entity, &mut Transform), With<PipePreview>>,
-    mut pipe_prev_mat_query: Query<&mut Handle<StandardMaterial>, With<PipePreview>>,
-    mut pipe_prev_collider_query: Query<&mut ColliderPositionComponent, With<PipePreview>>,
-    mut pipe_prev_shape_query: Query<&mut ColliderShapeComponent, With<PipePreview>>,
+    (mut pipe_prev_query, mut pipe_prev_mat_query, mut pipe_prev_collider_query, mut pipe_prev_shape_query): (
+        Query<(Entity, &mut Transform), With<PipePreview>>, 
+        Query<&mut Handle<StandardMaterial>, With<PipePreview>>, 
+        Query<&mut ColliderPositionComponent, With<PipePreview>>, 
+        Query<&mut ColliderShapeComponent, With<PipePreview>>,
+    ),
 
     narrow_phase: Res<NarrowPhase>,
-
     asset_server: Res<AssetServer>,
-    (mut materials, mut gltf_meshes, mut meshes, mut images): (ResMut<Assets<StandardMaterial>>, ResMut<Assets<GltfMesh>>, ResMut<Assets<Mesh>>, ResMut<Assets<Image>>),
-    mut commands: Commands,
+    mut selected_building: ResMut<SelectedBuilding>,
+
+    (mut materials, mut gltf_meshes, mut meshes, mut images): (
+        ResMut<Assets<StandardMaterial>>, 
+        ResMut<Assets<GltfMesh>>, 
+        ResMut<Assets<Mesh>>, 
+        ResMut<Assets<Image>>,
+    ),
+
+    mut cursor_bp_query: Query<(&mut Transform, &mut Handle<StandardMaterial>, &mut ColliderPositionComponent), (With<CursorBp>, Without<PipePreview>)>,
+
+    (mut bc_res, mut pp_res): (ResMut<BuildCursor>, ResMut<PipePlacement>),
+    mut bp_material_handles: ResMut<MaterialHandles>,
 
     gui_hover_query: Query<&Interaction, With<GuiButtonId>>,
-
     (mouse_input, keyboard_input): (Res<Input<MouseButton>>, Res<Input<KeyCode>>),
     mut mouse_scroll_event: EventReader<MouseWheel>,
-
-    mut selected_building: ResMut<SelectedBuilding>,
 ) {
-    unsafe {
-        if BLUEPRINT_MATERIAL_HANDLE.is_none() {
-            BLUEPRINT_MATERIAL_HANDLE = Some(materials.add(StandardMaterial {
-                base_color: Color::rgba(87.0/255.0, 202.0/255.0, 1.0, 0.5),
-                alpha_mode: Blend,
-                ..Default::default()
-            }));
-        }
+    if bp_material_handles.blueprint.is_none() {
+        bp_material_handles.blueprint = Some(materials.add(StandardMaterial {
+            base_color: Color::rgba(87.0/255.0, 202.0/255.0, 1.0, 0.5),
+            alpha_mode: Blend,
+            ..Default::default()
+        }));
     }
+
+    if bp_material_handles.obstructed.is_none() {
+        bp_material_handles.obstructed = Some(materials.add(StandardMaterial {
+            base_color: Color::rgba(1.0, 0.0, 0.0, 0.5),
+            alpha_mode: Blend,
+            ..Default::default()
+        }));
+    }
+    
 
     for entity in delete_query.iter() {
         commands.entity(entity).despawn();
@@ -88,13 +111,14 @@ pub fn building(
 
         let mut transform_cache = Transform::from_translation(translation).with_rotation(quat);
 
-        let building_id = selected_building.id.as_ref().unwrap();
+        let building_id = selected_building.id.clone().unwrap();
+        let mut building = string_to_building(building_id.to_string());
 
         let mut hovered = false;
         for interaction in gui_hover_query.iter() {
             match interaction {
                 Interaction::None => (),
-                _ => hovered = true
+                _ => { hovered = true; break }
             }
         }
 
@@ -104,9 +128,30 @@ pub fn building(
             Err(_) => None,
         };
 
-        match building_id.as_str() {
-            "Pipe" => {
+        if building.shape_data.mesh.is_none() {
+            building.shape_data.load_from_path(&asset_server, &gltf_meshes, &mut meshes, &mut materials, &mut images);
+        }
 
+        let cursor_bp = cursor_bp_query.get_single_mut();
+
+        match cursor_bp {
+            Ok(e) => {
+                move_cursor_bp(e, &bp_material_handles, transform_cache);
+            },
+            Err(e) => {
+                match e {
+                    QuerySingleError::NoEntities(_) => {
+                        let clone = building.shape_data.clone();
+                        spawn_cursor_bp(&mut commands, clone.mesh.unwrap(), &bp_material_handles, clone.collider.unwrap(), transform_cache);
+                    },
+                    QuerySingleError::MultipleEntities(_) => panic!("Multiple cursor blueprints! aaaaaaaaaa"),
+                }
+            },
+        }
+
+        match building_id.as_str() {
+            // 0.0675
+            "Pipe" => {
 
                 // All pipe shit vvvvv
                 let pipe_cyl_mesh: Handle<Mesh> = asset_server.load("models/pipes/pipe_cylinder.obj");        
@@ -115,31 +160,37 @@ pub fn building(
         
                 if mouse_input.just_pressed(MouseButton::Left) && !hovered {
                     // If you click, and the first point is already placed
-                    // Place the second point
+                    // Place the second point IF no collision
 
                     if pp_res.placed {
-                        let first_position = pp_res.transform.unwrap().translation;
-                        let pipe_cyl_translation = (first_position + translation) / 2.0;
-                        let pipe_cyl_rotation = Quat::from_rotation_arc(Vec3::Y, (first_position - translation).normalize());
-                        
-                        let distance = distance_vec3(first_position, translation);
+                        let (entity, _) = pipe_prev_query.single();
+                        let inter = check_pipe_collision(entity.handle(), narrow_phase);
 
-                        let transform_c = Transform::from_translation(pipe_cyl_translation).with_rotation(pipe_cyl_rotation).with_scale(Vec3::new(1.0, distance, 1.0));
+                        if !inter {
+                            let first_position = pp_res.transform.unwrap().translation;
+                            let pipe_cyl_translation = (first_position + translation) / 2.0;
+                            let pipe_cyl_rotation = Quat::from_rotation_arc(Vec3::Y, (first_position - translation).normalize());
+                            
+                            let distance = distance_vec3(first_position, translation);
 
-                        pp_res.placed = false;
+                            let transform_c = Transform::from_translation(pipe_cyl_translation).with_rotation(pipe_cyl_rotation).with_scale(Vec3::new(1.0, distance, 1.0));
 
-                        commands.spawn_bundle(PbrBundle {
-                            mesh: pipe_cyl_mesh,
-                            material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
-                            transform: transform_c,
-                            ..Default::default()
-                        });
+                            pp_res.placed = false;
 
-                        if pipe_prev_entity_op.is_some() {
-                            commands.entity(pipe_prev_entity_op.unwrap()).despawn();
+                            commands.spawn_bundle(PbrBundle {
+                                mesh: pipe_cyl_mesh,
+                                material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
+                                transform: transform_c,
+                                ..Default::default()
+                            });
+
+                            if pipe_prev_entity_op.is_some() {
+                                commands.entity(pipe_prev_entity_op.unwrap()).despawn();
+                            }
+
+                            selected_building.id = None;
                         }
-
-                        selected_building.id = None;
+                        
                     // If you click and the first point is not placed
                     // Place the first point
                     } else {
@@ -148,11 +199,7 @@ pub fn building(
 
                         commands.spawn_bundle(PbrBundle {
                             mesh: pipe_cyl_mesh,
-                            material: materials.add(StandardMaterial {
-                                base_color: Color::rgba(0.0, 0.2, 1.0, 0.5),
-                                alpha_mode: Blend,
-                                ..Default::default()
-                            }),
+                            material: unsafe { BLUEPRINT_MATERIAL_HANDLE.clone().unwrap() },
                             transform: Transform::from_translation(translation).with_rotation(quat).with_scale(Vec3::new(1.0, 0.0, 1.0)),
                             ..Default::default()
                         })
@@ -177,23 +224,9 @@ pub fn building(
                         let distance = distance_vec3(first_position, translation);
 
                         let transform_c = Transform::from_translation(pipe_cyl_translation).with_rotation(pipe_cyl_rotation).with_scale(Vec3::new(1.0, distance, 1.0));
+                        
                         let (entity, mut transform) = pipe_prev_query.single_mut();
-
-                        // let test_entity = test_query.iter().last();
-                        // match test_entity {
-                        //     Some(e) => entity = e,
-                        //     _ => (),
-                        // }
-
-
-                        let mut inter = false;
-                        for (_, _, c) in narrow_phase.intersections_with(entity.handle()) {
-                            if c {
-                                inter = true;
-                            }
-                        }
-
-                        // let inter = narrow_phase.intersections_with(entity.handle()).into_iter().peekable().peek().is_some();
+                        let inter = check_pipe_collision(entity.handle(), narrow_phase);
 
                         let transform_mut = transform.as_mut();
                         *transform_mut = transform_c;
@@ -210,7 +243,6 @@ pub fn building(
                             collider_position.0.translation = transform_c.translation.into();
                             collider_position.0.rotation = transform_c.rotation.into();
                             
-                            // I am absolutely in awe that this actually works
                             let cylinder_mut = collider_shape.as_cuboid_mut().unwrap();
 
                             cylinder_mut.half_extents.data.0[0][1] = distance / 2.0;
@@ -223,9 +255,6 @@ pub fn building(
                         }
                     } // If the first isn't placed and you're not clicking, do nothing
                 }
-
-                let pipe_model: Handle<Mesh> = asset_server.load("models/pipes/pipe_base.obj");
-                spawn_cursor_bp(&mut commands, pipe_model.clone(), transform_cache); 
             },
 
             // every other building
@@ -233,29 +262,9 @@ pub fn building(
                 if pipe_prev_entity_op.is_some() {
                     commands.entity(pipe_prev_entity_op.unwrap()).despawn();
                 }
-                let mut building = string_to_building(building_id.to_string());
-
-                if building.shape_data.mesh.is_none() {
-                    let gltf_mesh: Handle<GltfMesh> = asset_server.load(&format!("{}{}", &building.shape_data.path.clone(), "#Mesh0").to_string());
-                    let primitives = &gltf_meshes.get(gltf_mesh).unwrap().primitives;
-
-                    let bundle = combine_gltf_mesh(primitives.clone(), &mut meshes, &mut materials, &mut images);
-
-                    building.shape_data.mesh = Some(bundle.mesh);
-                    building.shape_data.material = Some(bundle.material);
-
-                    let gltf_mesh: Handle<GltfMesh> = asset_server.load(&format!("{}{}", &building.shape_data.path.clone(), "#Mesh1").to_string());
-                    let primitives = &gltf_meshes.get(gltf_mesh).unwrap().primitives;
-
-                    let mesh = combine_gltf_primitives(primitives.clone(), &mut meshes);
-
-                    building.shape_data.collider = Some(mesh.clone());
-                    building.shape_data.collider_handle = Some(meshes.add(mesh));
-                }
-
-                spawn_cursor_bp(&mut commands, building.shape_data.mesh.clone().unwrap(), transform_cache);
+        
                 if mouse_input.just_pressed(MouseButton::Left) && !hovered {
-                    spawn_bp(&mut commands, building.shape_data, transform_cache);
+                    spawn_bp(&mut commands, building.shape_data.clone(), transform_cache);
                     selected_building.id = None;
                 }
             }
@@ -263,17 +272,45 @@ pub fn building(
     }
 }
 
+fn check_pipe_collision(collider: ColliderHandle, narrow_phase: Res<NarrowPhase>) -> bool {
+    for (_, _, c) in narrow_phase.intersections_with(collider) {
+        if c {
+            return true
+        }
+    }
+    return false
+}
+
 // TODO: collision
-// spooky unsafe
-fn spawn_cursor_bp(commands: &mut Commands, mesh: Handle<Mesh>, transform: Transform) {    
+fn spawn_cursor_bp(commands: &mut Commands, mesh: Handle<Mesh>, bp_materials: &ResMut<MaterialHandles>, collider_mesh: Mesh, transform: Transform) {    
     commands.spawn_bundle(PbrBundle {
         mesh,
-        material: unsafe { BLUEPRINT_MATERIAL_HANDLE.clone().unwrap() },
+        material: bp_materials.blueprint.clone().unwrap(),
         transform,
+        ..Default::default()
+    }).insert_bundle(ColliderBundle {
+        shape: collider_mesh.into_shared_shape().into(),
+        position: transform.translation.into(),
+        collider_type: ColliderType::Sensor.into(),
         ..Default::default()
     })
     .insert(NotShadowCaster)
-    .insert(DeleteNextFrame);
+    .insert(CursorBp);
+}
+
+fn move_cursor_bp(
+    (mut transform, mut material, mut collider_pos): (Mut<Transform>, Mut<Handle<StandardMaterial>>, Mut<ColliderPositionComponent>),
+    bp_materials: &ResMut<MaterialHandles>, 
+    new_transform: Transform,
+) {
+    let trans = transform.as_mut();
+    *trans = new_transform;
+
+    let mat = material.as_mut();
+    *mat = bp_materials.blueprint.clone().unwrap();
+
+    let coll_pos = collider_pos.as_mut();
+    coll_pos.translation = new_transform.translation.into();
 }
 
 // TODO: everything
