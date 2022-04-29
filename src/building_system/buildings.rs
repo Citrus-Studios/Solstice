@@ -1,12 +1,13 @@
 use std::marker::PhantomData;
 
-use bevy::{prelude::{Mesh, Handle, Scene}, math::Vec3, pbr::StandardMaterial};
+use bevy::{prelude::{Mesh, Handle, Scene, Res, Assets, AssetServer, ResMut, Image}, math::Vec3, pbr::StandardMaterial, gltf::GltfMesh};
 use bevy_rapier3d::prelude::{SharedShape, ColliderShape};
 
-use crate::constants::GLOBAL_PIPE_ID;
+use crate::{constants::GLOBAL_PIPE_ID, model_loader::{combine_gltf_mesh, combine_gltf_primitives}};
 
 pub enum BuildingType {
     Wellpump,
+    Pipe,
 }
 
 pub struct Building {
@@ -34,6 +35,7 @@ pub enum BuildingIO {
     InOut,
 }
 
+#[derive(Clone)]
 pub struct BuildingShapeData {
     pub mesh: Option<Handle<Mesh>>,
     pub material: Option<Handle<StandardMaterial>>,
@@ -73,6 +75,32 @@ impl<T, U, V, W> Pipe<T, U, V, W> {
             c4,
             id: unsafe { GLOBAL_PIPE_ID },
         }
+    }
+}
+
+impl BuildingShapeData {
+    pub fn load_from_path(&mut self, 
+        asset_server: &Res<AssetServer>, 
+        gltf_meshes: &ResMut<Assets<GltfMesh>>, 
+        meshes: &mut ResMut<Assets<Mesh>>,
+        materials: &mut ResMut<Assets<StandardMaterial>>,
+        images: &mut ResMut<Assets<Image>>,
+    ) {
+        let gltf_mesh: Handle<GltfMesh> = asset_server.load(&format!("{}{}", &self.path.clone(), "#Mesh0").to_string());
+        let primitives = &gltf_meshes.get(gltf_mesh).unwrap().primitives;
+
+        let bundle = combine_gltf_mesh(primitives.clone(), meshes, materials, images);
+
+        self.mesh = Some(bundle.mesh);
+        self.material = Some(bundle.material);
+
+        let gltf_mesh: Handle<GltfMesh> = asset_server.load(&format!("{}{}", &self.path.clone(), "#Mesh1").to_string());
+        let primitives = &gltf_meshes.get(gltf_mesh).unwrap().primitives;
+
+        let mesh = combine_gltf_primitives(primitives.clone(), meshes);
+
+        self.collider = Some(mesh.clone());
+        self.collider_handle = Some(meshes.add(mesh));
     }
 }
 
@@ -137,7 +165,21 @@ pub fn string_to_building(name: String) -> Building {
             MeshPath: "models/buildings/well_pump.gltf", 
             Collider: None, 
             ColliderHandle: None,
-            Offset: (0.0, 0.5645, 0.0)
+            Offset: (0.0, 0.0, 0.0)
+        ),
+        "Pipe" => Building!(
+            Type: Pipe, 
+            Name: "Pipe", 
+            Flow: InOut, 
+            Storage: 0, 
+            Current: 0, 
+            Generation: 0, 
+            Mesh: None, 
+            Material: None,
+            MeshPath: "models/pipes/pipe_base.gltf", 
+            Collider: None, 
+            ColliderHandle: None,
+            Offset: (0.0, 0.0, 0.0)
         ),
         _ => panic!("Could not match {} to any building", name)
     }
