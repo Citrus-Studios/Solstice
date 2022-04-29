@@ -1,24 +1,24 @@
-use std::{thread::sleep, time::Duration};
-
 use bevy::{prelude::*, gltf::GltfMesh, asset::LoadState, ecs::schedule::ShouldRun};
 
-const NUM_MODELS: usize = 1;
+use super::ModelHandles;
+
+pub const NONE_HANDLE: Option<Handle<GltfMesh>> = None;
+pub const NUM_MODELS: usize = 2;
 
 const MODEL_PATHS: [&'static str; NUM_MODELS] = [
     "models/buildings/well_pump.gltf",
+    "models/pipes/pipe_base.gltf",
 ];
 
-static mut MODEL_HANDLES: [Option<Handle<GltfMesh>>; NUM_MODELS] = [None; NUM_MODELS];
-
-pub fn initiate_load(asset_server: Res<AssetServer>) {
+pub fn initiate_load(asset_server: Res<AssetServer>, mut model_handles: ResMut<ModelHandles>) {
     for (i, path) in MODEL_PATHS.iter().enumerate() {
         let e = Some(asset_server.load(&format!("{}{}", path, "#Mesh0")));
-        unsafe { MODEL_HANDLES[i] = e; }
+        model_handles.handles[i] = e;
     }
 }
 
-pub fn get_load_states(asset_server: Res<AssetServer>) -> ShouldRun {
-    for handle in unsafe { MODEL_HANDLES.clone() } {
+pub fn get_load_states(asset_server: Res<AssetServer>, model_handles: Res<ModelHandles>) -> ShouldRun {
+    for handle in model_handles.handles.clone() {
         if asset_server.get_load_state(handle.unwrap()) != LoadState::Loaded {
             return ShouldRun::NoAndCheckAgain
         }

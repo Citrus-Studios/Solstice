@@ -3,14 +3,14 @@ use bevy::{
     pbr::{PbrBundle, StandardMaterial},
     prelude::{
         shape, Assets, Color, Commands, CoreStage, Mesh, ParallelSystemDescriptorCoercion, Plugin,
-        ResMut, Transform, SystemSet,
-    },
+        ResMut, Transform, SystemSet, Handle,
+    }, gltf::GltfMesh,
 };
 use bevy_mod_raycast::{RayCastMesh, RaycastSystem};
 
 use crate::player_system::player::player_camera_system;
 
-use self::{raycasting::{raycast, update_raycast_with_cursor, RaycastCursor, BuildCursor}, building::PipePlacement, load_models::{initiate_load, get_load_states}};
+use self::{raycasting::{raycast, update_raycast_with_cursor, RaycastCursor, BuildCursor}, building::{PipePlacement, ChangeBuilding}, load_models::{initiate_load, get_load_states, NUM_MODELS, NONE_HANDLE}};
 
 pub mod raycasting;
 pub mod building;
@@ -19,11 +19,27 @@ pub mod load_models;
 
 pub struct RaycastSet;
 
+pub struct ModelHandles {
+    handles: [Option<Handle<GltfMesh>>; NUM_MODELS]
+}
+
+#[derive(Clone)]
+pub struct MaterialHandles {
+    blueprint: Option<Handle<StandardMaterial>>,
+    obstructed: Option<Handle<StandardMaterial>>,
+}
+
 pub struct BuildingSystemPlugin;
 
 impl Plugin for BuildingSystemPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_startup_system(building_system_startup)
+            .insert_resource(ModelHandles { handles: [NONE_HANDLE; NUM_MODELS] })
+            .insert_resource(MaterialHandles {
+                blueprint: None,
+                obstructed: None,
+            })
+            .insert_resource(ChangeBuilding { b: false })
             .add_startup_system(initiate_load)
             .add_system_to_stage(
                 CoreStage::PreUpdate,
