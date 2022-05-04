@@ -32,6 +32,19 @@ pub struct ChangeBuilding {
     pub b: bool
 }
 
+trait IsColliding {
+    fn is_intersecting(self, context: &Res<RapierContext>) -> bool;
+}
+
+impl IsColliding for Entity {
+    fn is_intersecting(self, context: &Res<RapierContext>) -> bool {
+        for (_, _, c) in context.intersections_with(self) {
+            if c { return true }
+        }
+        false
+    }
+}
+
 pub fn building(
     mut commands: Commands,
 
@@ -54,7 +67,7 @@ pub fn building(
         ResMut<Assets<Image>>,
     ),
 
-    mut cursor_bp_query: Query<(&mut Transform, &mut Handle<StandardMaterial>), (With<CursorBp>, Without<PipePreview>)>,
+    mut cursor_bp_query: Query<(&mut Transform, &mut Handle<StandardMaterial>, Entity), (With<CursorBp>, Without<PipePreview>)>,
 
     (mut bc_res, mut pp_res): (ResMut<BuildCursor>, ResMut<PipePlacement>),
     mut bp_material_handles: ResMut<MaterialHandles>,
@@ -131,21 +144,17 @@ pub fn building(
             building.shape_data.load_from_path(&asset_server, &gltf_meshes, &mut meshes, &mut materials, &mut images);
         }
 
-        let cursor_bp = cursor_bp_query.get_single_mut();
+        if selected_building.changed {
+            // There shouldn't be multiple, but just in case.
+            for (_, _, e) in cursor_bp_query.iter() {
+                commands.entity(e).despawn();
+            }
 
-        match cursor_bp {
-            Ok(e) => {
-                move_cursor_bp(e, &bp_material_handles, transform_cache);
-            },
-            Err(e) => {
-                match e {
-                    QuerySingleError::NoEntities(_) => {
-                        let clone = building.shape_data.clone();
-                        spawn_cursor_bp(&mut commands, clone.mesh.unwrap(), &bp_material_handles, clone.collider.unwrap(), transform_cache);
-                    },
-                    QuerySingleError::MultipleEntities(_) => panic!("Multiple cursor blueprints! aaaaaaaaaa"),
-                }
-            },
+            let clone = building.shape_data.clone();
+            spawn_cursor_bp(&mut commands, clone.mesh.unwrap(), &bp_material_handles, clone.collider.unwrap(), transform_cache);
+        } else {
+            let cursor_bp = cursor_bp_query.single_mut();
+            move_cursor_bp(cursor_bp, &bp_material_handles, transform_cache, &rapier_context);
         }
 
         match building_id.as_str() {
@@ -199,10 +208,10 @@ pub fn building(
                         commands.spawn_bundle(PbrBundle {
                             mesh: pipe_cyl_mesh,
                             material: bp_material_handles.blueprint.clone().unwrap(),
-                            transform: Transform::from_translation(translation).with_rotation(quat).with_scale(Vec3::new(1.0, 0.0, 1.0)),
+                            transform: Transform::from_translation(translation).with_rotation(quat).with_scale(Vec3::new(1.0, 0.02, 1.0)),
                             ..Default::default()
                         })
-                        .insert(Collider::cuboid(0.135, 0.0, 0.135))
+                        .insert(Collider::cuboid(0.135, 0.01, 0.135))
                         .insert(Sensor(true))
                         .insert(PipePreview)
                         .insert(NotShadowCaster);
@@ -279,20 +288,26 @@ fn spawn_cursor_bp(commands: &mut Commands, mesh: Handle<Mesh>, bp_materials: &R
     })
     .insert(Collider::bevy_mesh(&collider_mesh).unwrap())
     .insert(Sensor(true))
+    .insert(ActiveCollisionTypes::all())
     .insert(NotShadowCaster)
     .insert(CursorBp);
 }
 
 fn move_cursor_bp(
-    (mut transform, mut material): (Mut<Transform>, Mut<Handle<StandardMaterial>>),
+    (mut transform, mut material, e): (Mut<Transform>, Mut<Handle<StandardMaterial>>, Entity),
     bp_materials: &ResMut<MaterialHandles>, 
     new_transform: Transform,
+    rapier_context: &Res<RapierContext>,
 ) {
     let trans = transform.as_mut();
     *trans = new_transform;
 
     let mat = material.as_mut();
-    *mat = bp_materials.blueprint.clone().unwrap();
+    if e.is_intersecting(rapier_context) {
+        *mat = bp_materials.obstructed.clone().unwrap()
+    } else {
+        *mat = bp_materials.blueprint.clone().unwrap()
+    }
 }
 
 // TODO: everything
