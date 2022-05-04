@@ -119,6 +119,7 @@ fn click_button(
         }
         GuiOr::Item(e) => {
             selected_building.id = Some(e.to_string());
+            selected_building.changed = true;
             info!("you selected {:?}!", e);
         }
         _ => (),
