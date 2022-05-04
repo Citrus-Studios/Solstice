@@ -3,7 +3,7 @@ use bevy::{
     pbr::{PbrBundle, StandardMaterial},
     prelude::{
         shape, Assets, Color, Commands, CoreStage, Mesh, ParallelSystemDescriptorCoercion, Plugin,
-        ResMut, Transform, SystemSet, Handle,
+        ResMut, Transform, SystemSet, Handle, info,
     }, gltf::GltfMesh,
 };
 use bevy_mod_raycast::{RayCastMesh, RaycastSystem};
@@ -60,6 +60,7 @@ pub fn building_system_startup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+    info!("building start");
     commands
         .spawn_bundle(PbrBundle {
             mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
@@ -83,4 +84,5 @@ pub fn building_system_startup(
     
     commands.insert_resource(BuildCursor { intersection: None, rotation: 0.0 });
     commands.insert_resource(PipePlacement { placed: false, transform: None });
+    info!("building done");
 }

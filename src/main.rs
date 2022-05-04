@@ -1,4 +1,4 @@
-use bevy::{prelude::{App, Msaa, Commands, OrthographicProjection, Transform, Color}, DefaultPlugins, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, pbr::{DirectionalLightBundle, DirectionalLight}, math::{Vec3, Quat}, core_pipeline::ClearColor};
+use bevy::{prelude::{App, Msaa, Commands, OrthographicProjection, Transform, Color, info}, DefaultPlugins, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, pbr::{DirectionalLightBundle, DirectionalLight}, math::{Vec3, Quat}, core_pipeline::ClearColor};
 use bevy_mod_raycast::DefaultRaycastingPlugin;
 use bevy_obj::ObjPlugin;
 use bevy_rapier3d::{prelude::{RapierPhysicsPlugin, NoUserData, RapierConfiguration}, plugin::TimestepMode};
@@ -49,6 +49,7 @@ fn main() {
 fn startup(
     mut commands: Commands,
 ) {
+    info!("startup start");
     commands.spawn_bundle(DirectionalLightBundle {
         directional_light: DirectionalLight {
             // Configure the projection to better fit the scene
@@ -72,4 +73,5 @@ fn startup(
         },
         ..Default::default()
     });
+    info!("startup done");
 }

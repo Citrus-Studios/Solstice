@@ -11,10 +11,12 @@ const MODEL_PATHS: [&'static str; NUM_MODELS] = [
 ];
 
 pub fn initiate_load(asset_server: Res<AssetServer>, mut model_handles: ResMut<ModelHandles>) {
+    info!("load start");
     for (i, path) in MODEL_PATHS.iter().enumerate() {
         let e = Some(asset_server.load(&format!("{}{}", path, "#Mesh0")));
         model_handles.handles[i] = e;
     }
+    info!("load done");
 }
 
 pub fn get_load_states(asset_server: Res<AssetServer>, model_handles: Res<ModelHandles>) -> ShouldRun {
