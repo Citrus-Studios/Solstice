@@ -11,8 +11,7 @@ pub struct GeneratorPlugin;
 impl Plugin for GeneratorPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(GeneratorOptions {
-            width: 200,
-            length: 200,
+            radius: 100,
             height: 1,
         })
         .insert_resource(TerrainGenDone { done: false })
