@@ -53,7 +53,7 @@ impl MutateMesh for Mesh {
             _ => panic!("WHAT"),
         };
 
-        let normals = match self.attribute(VERTEX_POS_ATTR).unwrap() {
+        let normals = match self.attribute(VERTEX_NORM_ATTR).unwrap() {
             VertexAttributeValues::Float32x3(e) => e.clone(),
             _ => panic!("WHAT"),
         };

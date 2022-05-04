@@ -5,7 +5,7 @@ use bevy::{
 };
 use bevy_mod_raycast::RayCastMesh;
 use bevy_rapier3d::{
-    prelude::{ActiveCollisionTypes, InteractionGroups, Collider, CollisionGroups, RigidBody}, rapier::prelude::{ColliderShape, ColliderFlags, SharedShape},
+    prelude::{ActiveCollisionTypes, InteractionGroups, Collider, CollisionGroups, RigidBody, SolverGroups}, rapier::prelude::{ColliderShape, ColliderFlags, SharedShape},
 };
 use bevy::render::render_resource::PrimitiveTopology::TriangleList;
 
@@ -140,8 +140,8 @@ pub fn generate_terrain(
             commands.spawn()
                 .insert(Collider::bevy_mesh(&Mesh::new(TriangleList).set_attributes(column_attr)).unwrap())
                 .insert(CollisionGroups { memberships: 0b0001, filters: 0b1110 })
-                .insert(CollisionGroups { memberships: 0b1110, filters: 0b0001 })
-                .insert(ActiveCollisionTypes::STATIC_STATIC)
+                .insert(SolverGroups { memberships: 0b1110, filters: 0b0001 })
+                .insert(ActiveCollisionTypes::all())
             ;
         }
     }

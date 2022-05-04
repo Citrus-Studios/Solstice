@@ -36,6 +36,7 @@ pub fn player_start(
     .insert(Collider::round_cuboid(0.4, 0.4, 0.4, 0.1))
         .insert(Friction { coefficient: 0.0, combine_rule: CoefficientCombineRule::Min })
         .insert(Transform::from_xyz(100.0, 20.0, 100.0))
+        .insert(Velocity::default())
         .insert(RigidBody::Dynamic)
         .insert(LockedAxes::ROTATION_LOCKED)
         .insert(CollisionGroups { memberships: 0b1110, filters: 0b1111 })
