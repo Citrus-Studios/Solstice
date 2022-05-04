@@ -5,8 +5,7 @@ use bevy::{
 };
 use bevy_mod_raycast::RayCastMesh;
 use bevy_rapier3d::{
-    physics::{ColliderBundle},
-    prelude::{ColliderShape, SharedShape, ActiveCollisionTypes, ColliderFlags, InteractionGroups},
+    prelude::{ActiveCollisionTypes, InteractionGroups, Collider, CollisionGroups, RigidBody}, rapier::prelude::{ColliderShape, ColliderFlags, SharedShape},
 };
 use bevy::render::render_resource::PrimitiveTopology::TriangleList;
 
@@ -138,18 +137,14 @@ pub fn generate_terrain(
         attr.append_with_indices(column_attr.clone());
 
         if !column_attr.pos.is_empty() {
-            commands.spawn_bundle(ColliderBundle {
-                shape: Mesh::new(TriangleList).set_attributes(column_attr).into_shared_shape().into(),
-                flags: ColliderFlags {
-                    collision_groups: InteractionGroups::new(0b0001, 0b1110),
-                    solver_groups: InteractionGroups::new(0b1110, 0b0001),
-                    active_collision_types: ActiveCollisionTypes::STATIC_STATIC.into(),
-                    ..Default::default()
-                }.into(),
-                ..Default::default()
-            });
+            commands.spawn()
+                .insert(Collider::bevy_mesh(&Mesh::new(TriangleList).set_attributes(column_attr)).unwrap())
+                .insert(CollisionGroups { memberships: 0b0001, filters: 0b1110 })
+                .insert(CollisionGroups { memberships: 0b1110, filters: 0b0001 })
+                .insert(ActiveCollisionTypes::STATIC_STATIC)
+            ;
         }
-    } 
+    }
 
     // info!("{:?}", attr.pos);
     let mesh = Mesh::new(TriangleList).set_attributes(attr);
@@ -200,21 +195,21 @@ impl<T> Pick<T> for ThreadRng {
 
 
 
-trait SpawnCollider {
-    fn spawn_locked_collider(&mut self, col: SharedShape, trans: Vec3);
-}
+// trait SpawnCollider {
+//     fn spawn_locked_collider(&mut self, col: SharedShape, trans: Vec3);
+// }
 
-impl SpawnCollider for Commands<'_, '_> {
-    fn spawn_locked_collider(&mut self, col: SharedShape, trans: Vec3) {
-        self.spawn_bundle(ColliderBundle {
-            shape: col.into(),
-            position: trans.into(),
-            flags: ColliderFlags {
-                active_collision_types: ActiveCollisionTypes::STATIC_STATIC.into(),
-                ..Default::default()
-            }.into(),
-            ..Default::default()
-        });
-    }
-}
+// impl SpawnCollider for Commands<'_, '_> {
+//     fn spawn_locked_collider(&mut self, col: SharedShape, trans: Vec3) {
+//         self.spawn_bundle(ColliderBundle {
+//             shape: col.into(),
+//             position: trans.into(),
+//             flags: ColliderFlags {
+//                 active_collision_types: ActiveCollisionTypes::STATIC_STATIC.into(),
+//                 ..Default::default()
+//             }.into(),
+//             ..Default::default()
+//         });
+//     }
+// }
 

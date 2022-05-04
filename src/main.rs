@@ -1,7 +1,7 @@
 use bevy::{prelude::{App, Msaa, Commands, OrthographicProjection, Transform, Color}, DefaultPlugins, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, pbr::{DirectionalLightBundle, DirectionalLight}, math::{Vec3, Quat}, core_pipeline::ClearColor};
 use bevy_mod_raycast::DefaultRaycastingPlugin;
 use bevy_obj::ObjPlugin;
-use bevy_rapier3d::{physics::{RapierPhysicsPlugin, NoUserData, RapierConfiguration, TimestepMode}, render::RapierRenderPlugin};
+use bevy_rapier3d::{prelude::{RapierPhysicsPlugin, NoUserData, RapierConfiguration}, plugin::TimestepMode};
 use building_system::{RaycastSet, BuildingSystemPlugin};
 use constants::HALF_SIZE;
 use player_system::PlayerSystemPlugin;
@@ -26,7 +26,6 @@ fn main() {
         .add_plugin(DefaultRaycastingPlugin::<RaycastSet>::default())
         .add_plugin(ObjPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-        .add_plugin(RapierRenderPlugin)
         
         .add_plugin(GeneratorPlugin)
         .add_plugin(BuildingSystemPlugin)
@@ -38,7 +37,7 @@ fn main() {
         // resources
         .insert_resource(RapierConfiguration {
             gravity: [0.0, -9.81, 0.0].into(),
-            timestep_mode: TimestepMode::FixedTimestep,
+            timestep_mode: TimestepMode::Interpolated { dt: 1.0 / 60.0, time_scale: 1.0, substeps: 1 },
             ..Default::default()
         })
         .insert_resource(Msaa { samples: 4 })

@@ -8,7 +8,7 @@ pub fn gui(
         (&Interaction, &mut UiColor, &GuiButtonId),
         Changed<Interaction>
     >,
-    mut button_query: QuerySet<(QueryState<(&mut GuiButtons, Entity, &Children)>, QueryState<&GuiButtons>)>,
+    mut button_query: ParamSet<(Query<(&mut GuiButtons, Entity, &Children)>, Query<&GuiButtons>)>,
     mut text_query: Query<(&mut Text, &GuiTextId, Entity)>,
     mut visibility_query: Query<&mut Visibility>,
     mut selected_branch: ResMut<GuiSelectedBranch>,
@@ -23,8 +23,8 @@ pub fn gui(
         match *interaction {
             Interaction::Clicked => {
                 clicked = true;
-                let clicked_button_content = &button_query.q1().iter().nth(button_id.id as usize).unwrap().content.clone();
-                let mut button_query_q0 = button_query.q0();
+                let clicked_button_content = &button_query.p1().iter().nth(button_id.id as usize).unwrap().content.clone();
+                let mut button_query_q0 = button_query.p0();
                 let mut button_iter = button_query_q0.iter_mut();
                 click_button(clicked_button_content, &mut selected_branch, &mut text_query, &mut button_iter, &mut visibility_query, &mut selected_building);
             }
@@ -50,15 +50,15 @@ pub fn gui(
         }
 
         if pressed_id >= 0 {
-            let clicked_button_content = &button_query.q1().iter().nth(pressed_id as usize).unwrap().content.clone();
-            let mut button_query_q0 = button_query.q0();
+            let clicked_button_content = &button_query.p1().iter().nth(pressed_id as usize).unwrap().content.clone();
+            let mut button_query_q0 = button_query.p0();
             let mut button_iter = button_query_q0.iter_mut();
             click_button(clicked_button_content, &mut selected_branch, &mut text_query, &mut button_iter, &mut visibility_query, &mut selected_building);
         }
     }
 
     if keyboard_input.pressed(KeyCode::Q) && !prev_q.pressed {
-        let mut button_query_q0 = button_query.q0();
+        let mut button_query_q0 = button_query.p0();
         let mut button_iter = button_query_q0.iter_mut();
         selected_branch.id = GUI_BACK_LOOKUP.get(&selected_branch.id).unwrap().to_string();
         change_buttons(&selected_branch.id, &mut button_iter, &mut text_query, &mut visibility_query);

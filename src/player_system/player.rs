@@ -1,6 +1,6 @@
 use bevy::{prelude::*, input::mouse::{MouseMotion, MouseWheel}};
 use bevy_mod_raycast::RayCastMesh;
-use bevy_rapier3d::{prelude::{RigidBodyVelocityComponent, ColliderShape, RigidBodyType}, physics::{ColliderBundle, RigidBodyBundle, ColliderPositionSync}};
+use bevy_rapier3d::{rapier::prelude::{ColliderShape, RigidBodyVelocity}, prelude::*};
 
 use crate::{constants::{SQRT_OF_2, HALF_PI}, building_system::RaycastSet};
 
@@ -28,7 +28,7 @@ pub fn player_movement_system(
     delta_time: Res<Time>,
 
     c_query: Query<&mut CameraComp>,
-    mut r_query: Query<&mut RigidBodyVelocityComponent, (Without<CameraComp>, With<Player>)>,
+    mut r_query: Query<&mut Velocity, (Without<CameraComp>, With<Player>)>,
     p_query: Query<&Player, Without<CameraComp>>,
 ) {
     let r_option = r_query.get_single_mut();
@@ -256,14 +256,7 @@ pub fn player_collider_debug(
             ..Default::default()
         })
         .insert(RayCastMesh::<RaycastSet>::default())
-        .insert_bundle(ColliderBundle {
-            shape: ColliderShape::round_cuboid(0.4, 0.4, 0.4, 0.1).into(),
-            position: transform.translation.into(),
-            ..Default::default()
-        }).insert_bundle(RigidBodyBundle {
-            body_type: RigidBodyType::Dynamic.into(),
-            ..Default::default()
-        })
-        .insert(ColliderPositionSync::Discrete);
+        .insert(Collider::cuboid(0.4, 0.4, 0.4))
+        .insert(RigidBody::Dynamic);
     }
 }

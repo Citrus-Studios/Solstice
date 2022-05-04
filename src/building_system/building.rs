@@ -1,15 +1,13 @@
 use std::f32::consts::PI;
 
-use bevy::{pbr::{NotShadowCaster, AlphaMode::Blend}, input::mouse::MouseWheel, gltf::{Gltf, GltfMesh}, ecs::system::QuerySingleError};
+use bevy::{pbr::{NotShadowCaster, AlphaMode::Blend}, input::mouse::MouseWheel, gltf::GltfMesh, ecs::system::QuerySingleError};
 pub use bevy::{prelude::*};
 use bevy_mod_raycast::{SimplifiedMesh, RayCastMesh};
-use bevy_rapier3d::{physics::*, prelude::*};
+use bevy_rapier3d::prelude::*;
 
-use crate::{algorithms::distance_vec3, player_system::gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, constants::HALF_PI, model_loader::{combine_gltf_mesh, combine_gltf_primitives}, terrain_generation_system::mutate_mesh::MutateMesh};
+use crate::{algorithms::distance_vec3, player_system::gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, constants::HALF_PI};
 
 use super::{raycasting::BuildCursor, buildings::{string_to_building, BuildingShapeData}, RaycastSet, MaterialHandles};
-
-static mut BLUEPRINT_MATERIAL_HANDLE: Option<Handle<StandardMaterial>> = None;
 
 
 #[derive(Component)]
@@ -39,14 +37,13 @@ pub fn building(
 
     delete_query: Query<Entity, With<DeleteNextFrame>>,
 
-    (mut pipe_prev_query, mut pipe_prev_mat_query, mut pipe_prev_collider_query, mut pipe_prev_shape_query): (
+    (mut pipe_prev_query, mut pipe_prev_mat_query, mut pipe_prev_shape_query): (
         Query<(Entity, &mut Transform), With<PipePreview>>, 
         Query<&mut Handle<StandardMaterial>, With<PipePreview>>, 
-        Query<&mut ColliderPositionComponent, With<PipePreview>>, 
-        Query<&mut ColliderShapeComponent, With<PipePreview>>,
+        Query<&mut Collider, With<PipePreview>>,
     ),
-
-    narrow_phase: Res<NarrowPhase>,
+    
+    rapier_context: Res<RapierContext>,
     asset_server: Res<AssetServer>,
     mut selected_building: ResMut<SelectedBuilding>,
 
@@ -57,7 +54,7 @@ pub fn building(
         ResMut<Assets<Image>>,
     ),
 
-    mut cursor_bp_query: Query<(&mut Transform, &mut Handle<StandardMaterial>, &mut ColliderPositionComponent), (With<CursorBp>, Without<PipePreview>)>,
+    mut cursor_bp_query: Query<(&mut Transform, &mut Handle<StandardMaterial>), (With<CursorBp>, Without<PipePreview>)>,
 
     (mut bc_res, mut pp_res): (ResMut<BuildCursor>, ResMut<PipePlacement>),
     mut bp_material_handles: ResMut<MaterialHandles>,
@@ -96,6 +93,8 @@ pub fn building(
     if keyboard_input.just_pressed(KeyCode::R) {
         bc_res.rotation += HALF_PI;
     }
+
+
 
     let intersection_op = bc_res.intersection;
 
@@ -164,7 +163,7 @@ pub fn building(
 
                     if pp_res.placed {
                         let (entity, _) = pipe_prev_query.single();
-                        let inter = check_pipe_collision(entity.handle(), narrow_phase);
+                        let inter = check_pipe_collision(entity, rapier_context);
 
                         if !inter {
                             let first_position = pp_res.transform.unwrap().translation;
@@ -199,16 +198,12 @@ pub fn building(
 
                         commands.spawn_bundle(PbrBundle {
                             mesh: pipe_cyl_mesh,
-                            material: unsafe { BLUEPRINT_MATERIAL_HANDLE.clone().unwrap() },
+                            material: bp_material_handles.blueprint.clone().unwrap(),
                             transform: Transform::from_translation(translation).with_rotation(quat).with_scale(Vec3::new(1.0, 0.0, 1.0)),
                             ..Default::default()
                         })
-                        .insert_bundle(ColliderBundle {
-                            collider_type: ColliderType::Sensor.into(),
-                            shape: ColliderShape::cuboid(0.135, 0.0, 0.135).into(),
-                            position: (translation, quat).into(),
-                            ..Default::default()
-                        })
+                        .insert(Collider::cuboid(0.135, 0.0, 0.135))
+                        .insert(Sensor(true))
                         .insert(PipePreview)
                         .insert(NotShadowCaster);
                     }
@@ -226,7 +221,7 @@ pub fn building(
                         let transform_c = Transform::from_translation(pipe_cyl_translation).with_rotation(pipe_cyl_rotation).with_scale(Vec3::new(1.0, distance, 1.0));
                         
                         let (entity, mut transform) = pipe_prev_query.single_mut();
-                        let inter = check_pipe_collision(entity.handle(), narrow_phase);
+                        let inter = check_pipe_collision(entity, rapier_context);
 
                         let transform_mut = transform.as_mut();
                         *transform_mut = transform_c;
@@ -234,18 +229,11 @@ pub fn building(
                         let material = materials.get_mut(pipe_prev_mat_query.single_mut().clone()).unwrap();
 
                         if distance > 0.001 {
-                            let mut collider_position_ = pipe_prev_collider_query.single_mut();
-                            let collider_position = collider_position_.as_mut();
+                            let mut collider_shape = pipe_prev_shape_query.single_mut();
+                            let mut cuboid_mut = collider_shape.as_cuboid_mut().unwrap();
+                            let mut half_extents = cuboid_mut.half_extents(); half_extents.y = distance / 2.0;
 
-                            let mut collider_shape_ = pipe_prev_shape_query.single_mut();
-                            let collider_shape = collider_shape_.make_mut();
-
-                            collider_position.0.translation = transform_c.translation.into();
-                            collider_position.0.rotation = transform_c.rotation.into();
-                            
-                            let cylinder_mut = collider_shape.as_cuboid_mut().unwrap();
-
-                            cylinder_mut.half_extents.data.0[0][1] = distance / 2.0;
+                            cuboid_mut.sed_half_extents(half_extents);
                         }
 
                         if inter {
@@ -272,8 +260,8 @@ pub fn building(
     }
 }
 
-fn check_pipe_collision(collider: ColliderHandle, narrow_phase: Res<NarrowPhase>) -> bool {
-    for (_, _, c) in narrow_phase.intersections_with(collider) {
+fn check_pipe_collision(e: Entity, context: Res<RapierContext>) -> bool {
+    for (_, _, c) in context.intersections_with(e) {
         if c {
             return true
         }
@@ -288,18 +276,15 @@ fn spawn_cursor_bp(commands: &mut Commands, mesh: Handle<Mesh>, bp_materials: &R
         material: bp_materials.blueprint.clone().unwrap(),
         transform,
         ..Default::default()
-    }).insert_bundle(ColliderBundle {
-        shape: collider_mesh.into_shared_shape().into(),
-        position: transform.translation.into(),
-        collider_type: ColliderType::Sensor.into(),
-        ..Default::default()
     })
+    .insert(Collider::bevy_mesh(&collider_mesh).unwrap())
+    .insert(Sensor(true))
     .insert(NotShadowCaster)
     .insert(CursorBp);
 }
 
 fn move_cursor_bp(
-    (mut transform, mut material, mut collider_pos): (Mut<Transform>, Mut<Handle<StandardMaterial>>, Mut<ColliderPositionComponent>),
+    (mut transform, mut material): (Mut<Transform>, Mut<Handle<StandardMaterial>>),
     bp_materials: &ResMut<MaterialHandles>, 
     new_transform: Transform,
 ) {
@@ -308,9 +293,6 @@ fn move_cursor_bp(
 
     let mat = material.as_mut();
     *mat = bp_materials.blueprint.clone().unwrap();
-
-    let coll_pos = collider_pos.as_mut();
-    coll_pos.translation = new_transform.translation.into();
 }
 
 // TODO: everything
@@ -320,11 +302,8 @@ fn spawn_bp(commands: &mut Commands, shape_data: BuildingShapeData, transform: T
         material: shape_data.material.unwrap(),
         transform,
         ..Default::default()
-    }).insert_bundle(ColliderBundle {
-        shape: shape_data.collider.unwrap().into_shared_shape().into(),
-        position: transform.translation.into(),
-        ..Default::default()
     })
+    .insert(Collider::bevy_mesh(&shape_data.collider.unwrap()).unwrap())
     .insert(SimplifiedMesh {
         mesh: shape_data.collider_handle.unwrap(),
     })

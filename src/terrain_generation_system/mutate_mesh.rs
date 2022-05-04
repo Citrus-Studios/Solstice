@@ -1,5 +1,5 @@
-use bevy::{render::mesh::{VertexAttributeValues, Indices}, prelude::Mesh, math::Vec3};
-use bevy_rapier3d::prelude::{SharedShape, ColliderShape};
+use bevy::{render::{mesh::{VertexAttributeValues, Indices, MeshVertexAttribute}, render_resource::VertexFormat}, prelude::Mesh, math::Vec3};
+use bevy_rapier3d::rapier::prelude::{SharedShape, ColliderShape};
 use nalgebra::Point3;
 
 use super::relevant_attributes::RelevantAttributes;
@@ -39,26 +39,26 @@ impl MutateMesh for Mesh {
         let uvs = vec![attr_1.uv.clone(), attr_2.uv.clone()].concat();
         let indices = vec![attr_1.ind.clone(), indices_offset].concat();
 
-        self.set_attribute("Vertex_Position", VertexAttributeValues::Float32x3(pos));
-        self.set_attribute("Vertex_Normal", VertexAttributeValues::Float32x3(norm));
-        self.set_attribute("Vertex_Uv", VertexAttributeValues::Float32x2(uvs));
+        self.insert_attribute(VERTEX_POS_ATTR, VertexAttributeValues::Float32x3(pos));
+        self.insert_attribute(VERTEX_NORM_ATTR, VertexAttributeValues::Float32x3(norm));
+        self.insert_attribute(VERTEX_UV_ATTR, VertexAttributeValues::Float32x2(uvs));
         self.set_indices(Some(Indices::U32(indices)));
 
         self
     }
 
     fn relevant_attributes(self) -> RelevantAttributes {
-        let positions = match self.attribute("Vertex_Position").unwrap() {
+        let positions = match self.attribute(VERTEX_POS_ATTR).unwrap() {
             VertexAttributeValues::Float32x3(e) => e.clone(),
             _ => panic!("WHAT"),
         };
 
-        let normals = match self.attribute("Vertex_Normal").unwrap() {
+        let normals = match self.attribute(VERTEX_POS_ATTR).unwrap() {
             VertexAttributeValues::Float32x3(e) => e.clone(),
             _ => panic!("WHAT"),
         };
 
-        let uvs = match self.attribute("Vertex_Uv").unwrap() {
+        let uvs = match self.attribute(VERTEX_UV_ATTR).unwrap() {
             VertexAttributeValues::Float32x2(e) => e.clone(),
             _ => panic!("WHAT"),
         };
@@ -91,10 +91,14 @@ impl MutateMesh for Mesh {
     }
 
     fn set_attributes(mut self, attr: RelevantAttributes) -> Mesh {
-        self.set_attribute("Vertex_Position", VertexAttributeValues::Float32x3(attr.pos));
-        self.set_attribute("Vertex_Normal", VertexAttributeValues::Float32x3(attr.norm));
-        self.set_attribute("Vertex_Uv", VertexAttributeValues::Float32x2(attr.uv));
+        self.insert_attribute(VERTEX_POS_ATTR, VertexAttributeValues::Float32x3(attr.pos));
+        self.insert_attribute(VERTEX_NORM_ATTR, VertexAttributeValues::Float32x3(attr.norm));
+        self.insert_attribute(VERTEX_UV_ATTR, VertexAttributeValues::Float32x2(attr.uv));
         self.set_indices(Some(Indices::U32(attr.ind)));
         self
     }
 }
+
+const VERTEX_POS_ATTR: MeshVertexAttribute = MeshVertexAttribute::new("Vertex_Position", 0, VertexFormat::Float32x3);
+const VERTEX_NORM_ATTR: MeshVertexAttribute = MeshVertexAttribute::new("Vertex_Normal", 1, VertexFormat::Float32x3);
+const VERTEX_UV_ATTR: MeshVertexAttribute = MeshVertexAttribute::new("Vertex_Uv", 2, VertexFormat::Float32x2);
