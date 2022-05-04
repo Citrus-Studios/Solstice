@@ -226,7 +226,7 @@ pub fn building(
                         let transform_mut = transform.as_mut();
                         *transform_mut = transform_c;
 
-                        let material = materials.get_mut(pipe_prev_mat_query.single_mut().clone()).unwrap();
+                        let mut material = pipe_prev_mat_query.single_mut();
 
                         if distance > 0.001 {
                             let mut collider_shape = pipe_prev_shape_query.single_mut();
@@ -237,9 +237,9 @@ pub fn building(
                         }
 
                         if inter {
-                            material.base_color = Color::rgba(1.0, 0.0, 0.0, 0.5);
+                            *material = bp_material_handles.obstructed.clone().unwrap();
                         } else {
-                            material.base_color = Color::rgba(0.0, 0.2, 1.0, 0.5);
+                            *material = bp_material_handles.blueprint.clone().unwrap();
                         }
                     } // If the first isn't placed and you're not clicking, do nothing
                 }
