@@ -13,7 +13,7 @@ use rand::{Rng, prelude::ThreadRng};
 
 use noise::{NoiseFn, Perlin, Seedable};
 
-use crate::{constants::SEED, RaycastSet, algorithms::distance_vec2};
+use crate::{constants::SEED, RaycastSet, algorithms::distance_vec2, terrain_generation_system::compound_collider_builder::CompoundColliderBuilder};
 
 use super::{relevant_attributes::RelevantAttributes, mutate_mesh::MutateMesh};
 
@@ -32,77 +32,6 @@ pub enum TerrainBlockType {
     Solid,
     Hollow,
     SpireHollow
-}
-
-#[derive(Clone)]
-struct CompoundColliderBuilder {
-    colliders: Vec<Collider>,
-    offset: Vec<(Quat, Vec3)>,
-}
-
-impl CompoundColliderBuilder {
-    fn new() -> Self {
-        CompoundColliderBuilder { colliders: Vec::new(), offset: Vec::new() }
-    }
-
-    fn from_vec(vec: Vec<(Vec3, Quat, Collider)>) -> Self {
-        let mut return_ccb = CompoundColliderBuilder::new();
-        for (t, q, e) in vec {
-            return_ccb.push(e, (q,t));
-        }
-        return_ccb
-    }
-
-    fn to_vec(self) -> Vec<(Vec3, Quat, Collider)> {
-        let mut return_vec = Vec::new();
-        for (c, (q, t)) in self.colliders.iter().zip(self.offset.iter()) {
-            return_vec.push((t.to_owned(), q.to_owned(), c.to_owned()));
-        }
-        return_vec
-    }
-
-    fn push(&mut self, collider: Collider, transform: (Quat, Vec3)) {
-        self.colliders.push(collider);
-        self.offset.push(transform);
-    }
-
-    fn append(&mut self, c: &mut CompoundColliderBuilder) {
-        self.colliders.append(&mut c.colliders);
-        self.offset.append(&mut c.offset);
-    }
-
-    fn transform(&mut self, transform: (Quat, Vec3)) {
-        let r_change = transform.0;
-        let t_change = transform.1;
-
-        for (r, t) in self.offset.iter_mut() {
-            *r = r.mul_quat(r_change).normalize();
-            t.add(t_change);
-        }
-    }
-
-    fn with_transform(&self, transform: (Quat, Vec3)) -> Self {
-        let r_change = transform.0;
-        let t_change = transform.1;
-
-        let mut return_ccb = self.to_owned();
-
-        for (r, t) in return_ccb.offset.iter_mut() {
-            *r = r.mul_quat(r_change).normalize();
-            t.add(t_change);
-        }
-        return_ccb
-    }
-
-    fn append_with_transform(&mut self, c: CompoundColliderBuilder, transform: (Quat, Vec3)) {
-        let mut e = c.to_owned(); 
-        e.transform(transform);
-        self.append(&mut e);
-    }
-
-    fn build(&self) -> Collider {
-        Collider::compound(self.to_owned().to_vec())
-    }
 }
 
 pub fn generate_terrain(
@@ -179,6 +108,7 @@ pub fn generate_terrain(
     let ground1_ccb = CompoundColliderBuilder::from_vec(ground1_collider_vec);
     let spires_hollow_ccb = CompoundColliderBuilder::from_vec(spires_hollow_collider_vec);
 
+    // BEEG vec
     let mut world_gen_array: Vec<Vec<Vec<Option<TerrainBlockType>>>> = vec![vec![vec![None; 100]; 100]; 100];
 
     let mut attr = RelevantAttributes::new();
@@ -279,18 +209,6 @@ impl<T> Pick<T> for ThreadRng {
         } else {
             return n2;
         }
-    }
-}
-
-pub trait Vec3Operations {
-    fn add(&mut self, e: Vec3);
-}
-
-impl Vec3Operations for Vec3 {
-    fn add(&mut self, e: Vec3) {
-        self.x += e.x;
-        self.y += e.y;
-        self.z += e.z;
     }
 }
 

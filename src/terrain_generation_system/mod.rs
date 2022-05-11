@@ -5,6 +5,7 @@ use self::generator::{GeneratorOptions, generate_terrain, TerrainGenDone};
 pub mod generator;
 pub mod relevant_attributes;
 pub mod mutate_mesh;
+pub mod compound_collider_builder;
 
 pub struct GeneratorPlugin;
 
