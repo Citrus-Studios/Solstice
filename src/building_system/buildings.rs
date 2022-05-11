@@ -1,8 +1,11 @@
 use std::marker::PhantomData;
 
 use bevy::{prelude::{Mesh, Handle, Scene, Res, Assets, AssetServer, ResMut, Image}, math::Vec3, pbr::StandardMaterial, gltf::GltfMesh};
+use bevy_rapier3d::prelude::{Collider};
 
 use crate::{constants::GLOBAL_PIPE_ID, model_loader::{combine_gltf_mesh, combine_gltf_primitives}};
+
+use lazy_static::lazy_static;
 
 pub enum BuildingType {
     Wellpump,
@@ -25,6 +28,7 @@ pub struct BuildingIridiumData {
     pub storage: Option<u32>,
     pub current: Option<u32>,
     pub generation: Option<u32>,
+    pub cost: u32,
 }
 
 pub enum BuildingIO {
@@ -39,9 +43,9 @@ pub struct BuildingShapeData {
     pub mesh: Option<Handle<Mesh>>,
     pub material: Option<Handle<StandardMaterial>>,
     pub path: String,
-    // Will be converted to a trimesh collider
-    pub collider: Option<Mesh>,
-    pub collider_handle: Option<Handle<Mesh>>,
+    pub simplified_mesh: Option<Mesh>,
+    pub simplified_mesh_handle: Option<Handle<Mesh>>,
+    pub collider: Collider,
     pub collider_offset: Vec3,
 }
 
@@ -98,8 +102,8 @@ impl BuildingShapeData {
 
         let mesh = combine_gltf_primitives(primitives.clone(), meshes);
 
-        self.collider = Some(mesh.clone());
-        self.collider_handle = Some(meshes.add(mesh));
+        self.simplified_mesh = Some(mesh.clone());
+        self.simplified_mesh_handle = Some(meshes.add(mesh));
     }
 }
 
@@ -111,12 +115,9 @@ macro_rules! Building {
         Storage: $storage:expr, 
         Current: $current:expr, 
         Generation: $generation:expr,
-        Mesh: $mesh:expr,
-        Material: $material:expr,
-        MeshPath: $meshtype:literal, 
-        Collider: $collider:expr, 
-        ColliderHandle: $colliderhandle:expr,
-        Offset: ($x:literal, $y:literal, $z:literal)
+        Cost: $cost:literal,
+        MeshPath: $meshtype:literal,
+        Collider: $coll:expr
     ) => {
         Building {
             building_id: BuildingId {
@@ -137,14 +138,16 @@ macro_rules! Building {
                     -1 => None,
                     _ => Some($generation as u32)
                 },
+                cost: $cost,
             },
             shape_data: BuildingShapeData {
-                mesh: $mesh,
-                material: $material,
+                mesh: None,
+                material: None,
                 path: $meshtype.to_string(),
-                collider: $collider,
-                collider_handle: $colliderhandle,
-                collider_offset: Vec3::new($x, $y, $z),
+                simplified_mesh: None,
+                simplified_mesh_handle: None,
+                collider: $coll.coll,
+                collider_offset: $coll.trans,
             },
         }
     }
@@ -159,12 +162,9 @@ pub fn string_to_building(name: String) -> Building {
             Storage: 50, 
             Current: 0, 
             Generation: 5, 
-            Mesh: None, 
-            Material: None,
+            Cost: 100,
             MeshPath: "models/buildings/well_pump.gltf", 
-            Collider: None, 
-            ColliderHandle: None,
-            Offset: (0.0, 0.0, 0.0)
+            Collider: WELLPUMP_COLLIDER.clone()
         ),
         "Pipe" => Building!(
             Type: Pipe, 
@@ -173,13 +173,35 @@ pub fn string_to_building(name: String) -> Building {
             Storage: 0, 
             Current: 0, 
             Generation: 0, 
-            Mesh: None, 
-            Material: None,
+            Cost: 10,
             MeshPath: "models/pipes/pipe_base.gltf", 
-            Collider: None, 
-            ColliderHandle: None,
-            Offset: (0.0, 0.0, 0.0)
+            Collider: PIPE_COLLIDER.clone()
         ),
-        _ => panic!("Could not match {} to any building", name)
+        _ => panic!("Could not match \"{}\" to any building", name)
     }
+}
+
+#[derive(Clone)]
+struct CollTransform {
+    coll: Collider,
+    trans: Vec3,
+}
+
+impl CollTransform {
+    fn from_collider(coll: Collider) -> Self {
+        CollTransform {
+            coll,
+            trans: Vec3::ZERO
+        }
+    }
+
+    fn with_translation(&mut self, trans: Vec3) -> Self {
+        self.trans = trans;
+        self.to_owned()
+    }
+}
+
+lazy_static! {
+    static ref WELLPUMP_COLLIDER: CollTransform = CollTransform::from_collider(Collider::cylinder(1.11928 / 2.0, 0.89528)).with_translation(Vec3::new(0.0, 0.569639, 0.05308));
+    static ref PIPE_COLLIDER: CollTransform = CollTransform::from_collider(Collider::cuboid(0.27 / 2.0, 0.27 / 2.0, 0.3025 / 2.0)).with_translation(Vec3::new(0.0, 0.25, 0.01625));
 }

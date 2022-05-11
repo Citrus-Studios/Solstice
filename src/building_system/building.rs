@@ -1,4 +1,4 @@
-use std::f32::consts::PI;
+use std::{f32::consts::PI, ops::Add};
 
 use bevy::{pbr::{NotShadowCaster, AlphaMode::Blend}, input::mouse::MouseWheel, gltf::GltfMesh, ecs::system::QuerySingleError};
 pub use bevy::{prelude::*};
@@ -28,9 +28,21 @@ pub struct TestComponent;
 #[derive(Component)]
 pub struct CursorBp;
 
+#[derive(Component)]
+pub struct CursorBpCollider;
+
 pub struct ChangeBuilding {
     pub b: bool
 }
+
+#[derive(Component)]
+pub struct PlacedBlueprint {
+    pub cost: u32,
+    pub current: u32,
+}
+
+#[derive(Component)]
+pub struct Moved(pub bool);
 
 trait IsColliding {
     fn is_intersecting(self, context: &Res<RapierContext>) -> bool;
@@ -67,7 +79,8 @@ pub fn building(
         ResMut<Assets<Image>>,
     ),
 
-    mut cursor_bp_query: Query<(&mut Transform, &mut Handle<StandardMaterial>, Entity), (With<CursorBp>, Without<PipePreview>)>,
+    mut cursor_bp_query: Query<(&mut Transform, Entity), (With<CursorBp>, Without<PipePreview>)>,
+    mut cursor_bp_collider_query: Query<(Entity, &mut Moved, &mut Transform), (With<CursorBpCollider>, Without<PipePreview>, Without<CursorBp>)>,
 
     (mut bc_res, mut pp_res): (ResMut<BuildCursor>, ResMut<PipePlacement>),
     mut bp_material_handles: ResMut<MaterialHandles>,
@@ -146,15 +159,19 @@ pub fn building(
 
         if selected_building.changed {
             // There shouldn't be multiple, but just in case.
-            for (_, _, e) in cursor_bp_query.iter() {
-                commands.entity(e).despawn();
+            for (_, e) in cursor_bp_query.iter() {
+                commands.entity(e).despawn_recursive();
             }
 
             let clone = building.shape_data.clone();
-            spawn_cursor_bp(&mut commands, clone.mesh.unwrap(), &bp_material_handles, clone.collider.unwrap(), transform_cache);
+            spawn_cursor_bp(&mut commands, clone.mesh.unwrap(), &bp_material_handles, clone.collider.clone(), clone.collider_offset, transform_cache);
+            selected_building.changed = false;
         } else {
-            let cursor_bp = cursor_bp_query.single_mut();
-            move_cursor_bp(cursor_bp, &bp_material_handles, transform_cache, &rapier_context);
+            let (cursor_bp_transform, _) = cursor_bp_query.single_mut();
+            let (_, mut moved, t) = cursor_bp_collider_query.single_mut();
+            if cursor_bp_transform.clone() != transform_cache {
+                move_cursor_bp(cursor_bp_transform, t, building.shape_data.collider_offset, transform_cache, &mut moved);
+            }
         }
 
         match building_id.as_str() {
@@ -235,20 +252,12 @@ pub fn building(
                         let transform_mut = transform.as_mut();
                         *transform_mut = transform_c;
 
-                        let mut material = pipe_prev_mat_query.single_mut();
-
                         if distance > 0.001 {
                             let mut collider_shape = pipe_prev_shape_query.single_mut();
                             let mut cuboid_mut = collider_shape.as_cuboid_mut().unwrap();
                             let mut half_extents = cuboid_mut.half_extents(); half_extents.y = distance / 2.0;
 
                             cuboid_mut.sed_half_extents(half_extents);
-                        }
-
-                        if inter {
-                            *material = bp_material_handles.obstructed.clone().unwrap();
-                        } else {
-                            *material = bp_material_handles.blueprint.clone().unwrap();
                         }
                     } // If the first isn't placed and you're not clicking, do nothing
                 }
@@ -261,10 +270,28 @@ pub fn building(
                 }
         
                 if mouse_input.just_pressed(MouseButton::Left) && !hovered {
-                    spawn_bp(&mut commands, building.shape_data.clone(), transform_cache);
+                    spawn_bp(&mut commands, building.shape_data.clone(), building.iridium_data.cost, transform_cache);
                     selected_building.id = None;
                 }
             }
+        }
+    }
+}
+
+pub fn check_cursor_bp_collision(
+    mut cursor_bp: Query<&mut Handle<StandardMaterial>, With<CursorBp>>,
+    mut cursor_bp_collider: Query<(Entity, &mut Moved), With<CursorBpCollider>>,
+    rapier_context: Res<RapierContext>,
+    bp_material_handles: Res<MaterialHandles>,
+) {
+    for (mut mat, (e, mut moved)) in cursor_bp.iter_mut().zip(cursor_bp_collider.iter_mut()) {
+        if moved.0 {
+            if e.is_intersecting(&rapier_context) {
+                *mat = bp_material_handles.obstructed.clone().unwrap();
+            } else {
+                *mat = bp_material_handles.blueprint.clone().unwrap();
+            }
+            moved.0 = false;
         }
     }
 }
@@ -279,48 +306,85 @@ fn check_pipe_collision(e: Entity, context: Res<RapierContext>) -> bool {
 }
 
 // TODO: collision
-fn spawn_cursor_bp(commands: &mut Commands, mesh: Handle<Mesh>, bp_materials: &ResMut<MaterialHandles>, collider_mesh: Mesh, transform: Transform) {    
+fn spawn_cursor_bp(
+    commands: &mut Commands, 
+    mesh: Handle<Mesh>, 
+    bp_materials: &ResMut<MaterialHandles>, 
+    collider: Collider, 
+    collider_offset: Vec3, 
+    transform: Transform,
+) {    
     commands.spawn_bundle(PbrBundle {
         mesh,
         material: bp_materials.blueprint.clone().unwrap(),
         transform,
         ..Default::default()
     })
-    .insert(Collider::bevy_mesh(&collider_mesh).unwrap())
-    .insert(Sensor(true))
-    .insert(ActiveCollisionTypes::all())
     .insert(NotShadowCaster)
-    .insert(CursorBp);
+    .insert(CursorBp)
+    .with_children(|parent| {
+        parent.spawn()
+            .insert(collider)
+            .insert(transform.with_add_translation(collider_offset)) // bevy-rapier issue, should be fixed later
+            .insert(Sensor(true))
+            .insert(ActiveCollisionTypes::all())
+            .insert(CursorBpCollider)
+            .insert(Moved(true))
+        ;
+    });
 }
 
+// hi lemon
 fn move_cursor_bp(
-    (mut transform, mut material, e): (Mut<Transform>, Mut<Handle<StandardMaterial>>, Entity),
-    bp_materials: &ResMut<MaterialHandles>, 
+    mut transform: Mut<Transform>,
+    mut collider_transform: Mut<Transform>,
+    collider_offset: Vec3,
     new_transform: Transform,
-    rapier_context: &Res<RapierContext>,
+    mut moved: &mut Moved,
 ) {
     let trans = transform.as_mut();
     *trans = new_transform;
 
-    let mat = material.as_mut();
-    if e.is_intersecting(rapier_context) {
-        *mat = bp_materials.obstructed.clone().unwrap()
-    } else {
-        *mat = bp_materials.blueprint.clone().unwrap()
-    }
+    let coll_trans = collider_transform.as_mut();
+    *coll_trans = new_transform.with_add_translation(collider_offset);
+
+    moved.0 = true;
 }
 
 // TODO: everything
-fn spawn_bp(commands: &mut Commands, shape_data: BuildingShapeData, transform: Transform) {
+fn spawn_bp(commands: &mut Commands, shape_data: BuildingShapeData, cost: u32, transform: Transform) {
     commands.spawn_bundle(PbrBundle {
         mesh: shape_data.mesh.unwrap(),
         material: shape_data.material.unwrap(),
         transform,
         ..Default::default()
     })
-    .insert(Collider::bevy_mesh(&shape_data.collider.unwrap()).unwrap())
     .insert(SimplifiedMesh {
-        mesh: shape_data.collider_handle.unwrap(),
+        mesh: shape_data.simplified_mesh_handle.unwrap(),
     })
-    .insert(RayCastMesh::<RaycastSet>::default());
+    .insert(RayCastMesh::<RaycastSet>::default())
+    .insert(PlacedBlueprint {
+        cost,
+        current: 0,
+    })
+    .with_children(|parent| {
+        parent.spawn()
+            .insert(shape_data.collider)
+            .insert(transform.with_add_translation(shape_data.collider_offset)) // bevy-rapier issue, should be fixed later
+        ;
+    })
+    ;
+}
+
+trait MoveTransform {
+    /// Copies `self` and returns it with the added translation (`t`), rotated by `self`'s `rotation`.
+    fn with_add_translation(&self, t: Vec3) -> Self;
+}
+
+impl MoveTransform for Transform {
+    fn with_add_translation(&self, t: Vec3) -> Self {
+        let rotated_translation = self.rotation.mul_vec3(t);
+        let return_transform = self.to_owned();
+        return_transform.with_translation(self.translation.add(rotated_translation))
+    }
 }
