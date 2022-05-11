@@ -100,8 +100,8 @@ impl CompoundColliderBuilder {
         self.append(&mut e);
     }
 
-    fn build(self) -> Collider {
-        Collider::compound(self.to_vec())
+    fn build(&self) -> Collider {
+        Collider::compound(self.to_owned().to_vec())
     }
 }
 
@@ -132,20 +132,9 @@ pub fn generate_terrain(
     let perlin = Perlin::default().set_seed(*SEED);
     let spire_perlin = Perlin::default().set_seed(*SEED / 2);
 
-    let handle_temp = match meshes.get(&hollowground_handle) {
-        Some(e) => e.clone(),
-        _ => return,
-    };
-
-    if meshes.get(&ground1_handle).is_none() { return }
-    if meshes.get(&spires_hollow_handle).is_none() { return }
-
-    let mesh_handle = meshes.add(handle_temp);
-
-    // let mut mesh = meshes.get(mesh_handle).unwrap().clone();
-    let hollowground_ref = meshes.get(&hollowground_handle).unwrap();
-    let ground1_ref = meshes.get(&ground1_handle).unwrap();
-    let spires_hollow_ref = meshes.get(&spires_hollow_handle).unwrap();
+    let hollowground_ref = match meshes.get(&hollowground_handle) { Some(e) => e, _ => return};
+    let ground1_ref = match meshes.get(&ground1_handle) { Some(e) => e, _ => return};
+    let spires_hollow_ref = match meshes.get(&spires_hollow_handle) { Some(e) => e, _ => return};
 
     let z_cuboid = Collider::cuboid(0.25, 0.25, 1.5);
     let y_cuboid = Collider::cuboid(0.25, 1.5, 0.25);
@@ -194,7 +183,6 @@ pub fn generate_terrain(
 
     let mut attr = RelevantAttributes::new();
 
-    let middle = Vec2::new(generator_options.radius as f32 / 2.0, generator_options.radius as f32 / 2.0);
     // generates terrain given a width and a length
     for i in 0..generator_options.radius {
         let i_usize = i as usize;
@@ -218,7 +206,7 @@ pub fn generate_terrain(
                             }
                         }
                     }
-                    if n > 0.5 {
+                    if spire_perlin.get([(i as f64) * 0.1, (j as f64) * 0.1]) > 0.5 {
                         let height = rng.gen_range(3..=7);
                         for y in 1..=height {
                             world_gen_array[i_usize][50 + y][j_usize] = Some(rng.random_pick(0.5, TerrainBlockType::Solid, TerrainBlockType::SpireHollow));
@@ -229,6 +217,7 @@ pub fn generate_terrain(
         }
     }
 
+    // Iterates through every single block and adds meshes and colliders accordingly
     for (z, xy_plane) in world_gen_array.into_iter().enumerate() {
         let z_pos = z as f32 * 3.0;
         for (y, row) in xy_plane.into_iter().enumerate() {
@@ -239,13 +228,14 @@ pub fn generate_terrain(
                     let translation = Vec3::new(x_pos, y_pos, z_pos);
 
                     let (mesh, collider) = match i.unwrap() {
-                        TerrainBlockType::Solid => (ground1_ref.clone(), ground1_ccb.with_transform((Quat::IDENTITY, translation)).build()),
-                        TerrainBlockType::Hollow => (hollowground_ref.clone(), hollowground_ccb.with_transform((Quat::IDENTITY, translation)).build()),
-                        TerrainBlockType::SpireHollow => (spires_hollow_ref.clone(), spires_hollow_ccb.with_transform((Quat::IDENTITY, translation)).build()),
+                        TerrainBlockType::Solid => (ground1_ref.clone(), ground1_ccb.build()),
+                        TerrainBlockType::Hollow => (hollowground_ref.clone(), hollowground_ccb.build()),
+                        TerrainBlockType::SpireHollow => (spires_hollow_ref.clone(), spires_hollow_ccb.build()),
                     };
 
                     commands.spawn()
                         .insert(collider)
+                        .insert(Transform::from_translation(translation))
                         .insert(CollisionGroups { memberships: 0b0001, filters: 0b1110 })
                         .insert(SolverGroups { memberships: 0b1110, filters: 0b0001 })
                         .insert(ActiveCollisionTypes::STATIC_STATIC)
@@ -257,10 +247,7 @@ pub fn generate_terrain(
         }
     }
 
-    // info!("{:?}", attr.pos);
     let mesh = Mesh::new(TriangleList).set_attributes(attr);
-    
-    let final_collider = mesh.clone().into_shared_shape();
     let final_mesh_handle = meshes.add(mesh);
 
     commands
@@ -273,27 +260,10 @@ pub fn generate_terrain(
             ..Default::default()
         })
         .insert(RayCastMesh::<RaycastSet>::default());
-        // .insert_bundle(ColliderBundle {
-        //     shape: final_collider.into(),
-        //     position: [0.0, 0.0, 0.0].into(),
-        //     flags: ColliderFlags {
-        //         active_collision_types: ActiveCollisionTypes::STATIC_STATIC.into(),
-        //         ..Default::default()
-        //     }.into(),
-        //     ..Default::default()
-        // });
 
     info!("Generation time: {:?}", time.elapsed());
 
     done.done = true;
-}
-
-fn spawn_terrain_block(
-    commands: Commands,
-    block_mesh: Mesh,
-    block_collider: Vec<(Vec3, Quat, Collider)>,
-) {
-
 }
 
 pub trait Pick<T> {
