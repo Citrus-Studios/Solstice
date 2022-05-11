@@ -1,13 +1,13 @@
-use std::{f32::consts::PI, ops::Add};
+use std::{f32::consts::PI};
 
 use bevy::{pbr::{NotShadowCaster, AlphaMode::Blend}, input::mouse::MouseWheel, gltf::GltfMesh};
 pub use bevy::{prelude::*};
-use bevy_mod_raycast::{SimplifiedMesh, RayCastMesh};
+
 use bevy_rapier3d::prelude::*;
 
 use crate::{algorithms::distance_vec3, player_system::gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, constants::HALF_PI};
 
-use super::{raycasting::BuildCursor, buildings::{string_to_building, BuildingShapeData}, RaycastSet, MaterialHandles, building_components::*, building_functions::*};
+use super::{raycasting::BuildCursor, buildings::{string_to_building}, MaterialHandles, building_components::*, building_functions::*};
 
 pub fn building(
     mut commands: Commands,
@@ -24,7 +24,7 @@ pub fn building(
     asset_server: Res<AssetServer>,
     mut selected_building: ResMut<SelectedBuilding>,
 
-    (mut materials, mut gltf_meshes, mut meshes, mut images): (
+    (mut materials, gltf_meshes, mut meshes, mut images): (
         ResMut<Assets<StandardMaterial>>, 
         ResMut<Assets<GltfMesh>>, 
         ResMut<Assets<Mesh>>, 
@@ -198,8 +198,7 @@ pub fn building(
 
                         let transform_c = Transform::from_translation(pipe_cyl_translation).with_rotation(pipe_cyl_rotation).with_scale(Vec3::new(1.0, distance, 1.0));
                         
-                        let (entity, mut transform) = pipe_prev_query.single_mut();
-                        let inter = check_pipe_collision(entity, rapier_context);
+                        let (_, mut transform) = pipe_prev_query.single_mut();
 
                         let transform_mut = transform.as_mut();
                         *transform_mut = transform_c;
