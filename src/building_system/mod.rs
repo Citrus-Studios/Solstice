@@ -6,11 +6,11 @@ use bevy::{
         ResMut, Transform, SystemSet, Handle, info,
     }, gltf::GltfMesh,
 };
-use bevy_mod_raycast::{RayCastMesh, RaycastSystem};
+use bevy_mod_raycast::{RayCastMesh, RaycastSystem, update_raycast};
 
 use crate::player_system::player::player_camera_system;
 
-use self::{raycasting::{raycast, update_raycast_with_cursor, RaycastCursor, BuildCursor}, building::{PipePlacement, ChangeBuilding}, load_models::{initiate_load, get_load_states, NUM_MODELS, NONE_HANDLE}};
+use self::{raycasting::{raycast, update_raycast_with_cursor, RaycastCursor, BuildCursor}, building::{PipePlacement, ChangeBuilding, check_cursor_bp_collision}, load_models::{initiate_load, get_load_states, NUM_MODELS, NONE_HANDLE}};
 
 pub mod raycasting;
 pub mod building;
@@ -41,15 +41,17 @@ impl Plugin for BuildingSystemPlugin {
             })
             .insert_resource(ChangeBuilding { b: false })
             .add_startup_system(initiate_load)
-            .add_system_to_stage(
+            .add_system_set_to_stage(
                 CoreStage::PreUpdate,
-                update_raycast_with_cursor.before(RaycastSystem::BuildRays),
-            )
-            .add_system(raycast)
-            .add_system_set(
                 SystemSet::new()
                     .with_run_criteria(get_load_states)
-                    .with_system(building)
+                    .with_system(update_raycast_with_cursor)
+                    .with_system(raycast.after(RaycastSystem::UpdateRaycast))
+                    .with_system(building.after(raycast))
+            )
+            .add_system_to_stage(
+                CoreStage::PostUpdate,
+                check_cursor_bp_collision
             )
             .add_system(player_camera_system);
     }
