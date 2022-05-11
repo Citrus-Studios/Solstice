@@ -1,61 +1,13 @@
 use std::{f32::consts::PI, ops::Add};
 
-use bevy::{pbr::{NotShadowCaster, AlphaMode::Blend}, input::mouse::MouseWheel, gltf::GltfMesh, ecs::system::QuerySingleError};
+use bevy::{pbr::{NotShadowCaster, AlphaMode::Blend}, input::mouse::MouseWheel, gltf::GltfMesh};
 pub use bevy::{prelude::*};
 use bevy_mod_raycast::{SimplifiedMesh, RayCastMesh};
 use bevy_rapier3d::prelude::*;
 
 use crate::{algorithms::distance_vec3, player_system::gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, constants::HALF_PI};
 
-use super::{raycasting::BuildCursor, buildings::{string_to_building, BuildingShapeData}, RaycastSet, MaterialHandles};
-
-
-#[derive(Component)]
-pub struct DeleteNextFrame;
-
-#[derive(Component)]
-pub struct PipePlacement {
-    pub placed: bool,
-    pub transform: Option<Transform>,
-}
-// soidhfoisd
-#[derive(Component)]
-pub struct PipePreview;
-
-#[derive(Component)]
-pub struct TestComponent;
-
-#[derive(Component)]
-pub struct CursorBp;
-
-#[derive(Component)]
-pub struct CursorBpCollider;
-
-pub struct ChangeBuilding {
-    pub b: bool
-}
-
-#[derive(Component)]
-pub struct PlacedBlueprint {
-    pub cost: u32,
-    pub current: u32,
-}
-
-#[derive(Component)]
-pub struct Moved(pub bool);
-
-trait IsColliding {
-    fn is_intersecting(self, context: &Res<RapierContext>) -> bool;
-}
-
-impl IsColliding for Entity {
-    fn is_intersecting(self, context: &Res<RapierContext>) -> bool {
-        for (_, _, c) in context.intersections_with(self) {
-            if c { return true }
-        }
-        false
-    }
-}
+use super::{raycasting::BuildCursor, buildings::{string_to_building, BuildingShapeData}, RaycastSet, MaterialHandles, building_components::*, building_functions::*};
 
 pub fn building(
     mut commands: Commands,
@@ -293,98 +245,5 @@ pub fn check_cursor_bp_collision(
             }
             moved.0 = false;
         }
-    }
-}
-
-fn check_pipe_collision(e: Entity, context: Res<RapierContext>) -> bool {
-    for (_, _, c) in context.intersections_with(e) {
-        if c {
-            return true
-        }
-    }
-    return false
-}
-
-// TODO: collision
-fn spawn_cursor_bp(
-    commands: &mut Commands, 
-    mesh: Handle<Mesh>, 
-    bp_materials: &ResMut<MaterialHandles>, 
-    collider: Collider, 
-    collider_offset: Vec3, 
-    transform: Transform,
-) {    
-    commands.spawn_bundle(PbrBundle {
-        mesh,
-        material: bp_materials.blueprint.clone().unwrap(),
-        transform,
-        ..Default::default()
-    })
-    .insert(NotShadowCaster)
-    .insert(CursorBp)
-    .with_children(|parent| {
-        parent.spawn()
-            .insert(collider)
-            .insert(transform.with_add_translation(collider_offset)) // bevy-rapier issue, should be fixed later
-            .insert(Sensor(true))
-            .insert(ActiveCollisionTypes::all())
-            .insert(CursorBpCollider)
-            .insert(Moved(true))
-        ;
-    });
-}
-
-// hi lemon
-fn move_cursor_bp(
-    mut transform: Mut<Transform>,
-    mut collider_transform: Mut<Transform>,
-    collider_offset: Vec3,
-    new_transform: Transform,
-    mut moved: &mut Moved,
-) {
-    let trans = transform.as_mut();
-    *trans = new_transform;
-
-    let coll_trans = collider_transform.as_mut();
-    *coll_trans = new_transform.with_add_translation(collider_offset);
-
-    moved.0 = true;
-}
-
-// TODO: everything
-fn spawn_bp(commands: &mut Commands, shape_data: BuildingShapeData, cost: u32, transform: Transform) {
-    commands.spawn_bundle(PbrBundle {
-        mesh: shape_data.mesh.unwrap(),
-        material: shape_data.material.unwrap(),
-        transform,
-        ..Default::default()
-    })
-    .insert(SimplifiedMesh {
-        mesh: shape_data.simplified_mesh_handle.unwrap(),
-    })
-    .insert(RayCastMesh::<RaycastSet>::default())
-    .insert(PlacedBlueprint {
-        cost,
-        current: 0,
-    })
-    .with_children(|parent| {
-        parent.spawn()
-            .insert(shape_data.collider)
-            .insert(transform.with_add_translation(shape_data.collider_offset)) // bevy-rapier issue, should be fixed later
-        ;
-    })
-    ;
-}
-
-trait MoveTransform {
-    /// Copies `self` and returns it with the added translation (`t`), rotated by `self`'s `rotation`.
-    fn with_add_translation(&self, t: Vec3) -> Self;
-}
-
-impl MoveTransform for Transform {
-    fn with_add_translation(&self, t: Vec3) -> Self {
-        let rotated_translation = self.rotation.mul_vec3(t);
-        let return_transform = self.to_owned();
-        return_transform.with_translation(self.translation.add(rotated_translation))
     }
 }

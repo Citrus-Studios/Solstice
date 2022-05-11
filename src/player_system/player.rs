@@ -1,6 +1,6 @@
 use bevy::{prelude::*, input::mouse::{MouseMotion, MouseWheel}};
 use bevy_mod_raycast::RayCastMesh;
-use bevy_rapier3d::{rapier::prelude::{ColliderShape, RigidBodyVelocity}, prelude::*};
+use bevy_rapier3d::prelude::*;
 
 use crate::{constants::{SQRT_OF_2, HALF_PI}, building_system::RaycastSet};
 

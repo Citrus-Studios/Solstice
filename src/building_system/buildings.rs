@@ -1,7 +1,7 @@
-use std::marker::PhantomData;
 
-use bevy::{prelude::{Mesh, Handle, Scene, Res, Assets, AssetServer, ResMut, Image}, math::Vec3, pbr::StandardMaterial, gltf::GltfMesh};
-use bevy_rapier3d::prelude::{Collider};
+
+use bevy::{prelude::{Mesh, Handle, Res, Assets, AssetServer, ResMut, Image}, math::Vec3, pbr::StandardMaterial, gltf::GltfMesh};
+use bevy_rapier3d::prelude::Collider;
 
 use crate::{constants::GLOBAL_PIPE_ID, model_loader::{combine_gltf_mesh, combine_gltf_primitives}};
 

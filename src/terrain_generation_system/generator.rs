@@ -1,11 +1,11 @@
-use std::time::{Instant, Duration};
+use std::time::{Instant};
 
 use bevy::{
     prelude::*,
 };
 use bevy_mod_raycast::RayCastMesh;
 use bevy_rapier3d::{
-    prelude::{ActiveCollisionTypes, InteractionGroups, Collider, CollisionGroups, RigidBody, SolverGroups}, rapier::prelude::{ColliderShape, ColliderFlags, SharedShape},
+    prelude::{ActiveCollisionTypes, Collider, CollisionGroups, SolverGroups},
 };
 use bevy::render::render_resource::PrimitiveTopology::TriangleList;
 
@@ -13,7 +13,7 @@ use rand::{Rng, prelude::ThreadRng};
 
 use noise::{NoiseFn, Perlin, Seedable};
 
-use crate::{constants::SEED, RaycastSet, algorithms::distance_vec2, terrain_generation_system::compound_collider_builder::CompoundColliderBuilder};
+use crate::{constants::SEED, RaycastSet, terrain_generation_system::compound_collider_builder::CompoundColliderBuilder};
 
 use super::{relevant_attributes::RelevantAttributes, mutate_mesh::MutateMesh};
 

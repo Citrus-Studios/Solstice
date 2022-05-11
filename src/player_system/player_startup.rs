@@ -1,9 +1,8 @@
-use bevy::{prelude::{Mesh, Commands, ResMut, Assets, shape, Color, Transform, BuildChildren, PerspectiveCameraBundle}, pbr::{StandardMaterial, PbrBundle}, math::Vec3};
+use bevy::{prelude::{Mesh, Commands, ResMut, Assets, shape, Color, Transform, BuildChildren, PerspectiveCameraBundle}, pbr::{StandardMaterial, PbrBundle}};
 use bevy_mod_picking::RayCastSource;
-use bevy_rapier3d::{prelude::*, rapier::prelude::ColliderMaterial};
-use nalgebra::Isometry3;
+use bevy_rapier3d::prelude::*;
 
-use crate::{building_system::RaycastSet};
+use crate::building_system::RaycastSet;
 
 use super::player::{Player, CameraComp};
 

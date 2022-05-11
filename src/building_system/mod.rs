@@ -6,16 +6,18 @@ use bevy::{
         ResMut, Transform, SystemSet, Handle, info,
     }, gltf::GltfMesh,
 };
-use bevy_mod_raycast::{RayCastMesh, RaycastSystem, update_raycast};
+use bevy_mod_raycast::{RayCastMesh, RaycastSystem};
 
 use crate::player_system::player::player_camera_system;
 
-use self::{raycasting::{raycast, update_raycast_with_cursor, RaycastCursor, BuildCursor}, building::{PipePlacement, ChangeBuilding, check_cursor_bp_collision}, load_models::{initiate_load, get_load_states, NUM_MODELS, NONE_HANDLE}};
+use self::{raycasting::{raycast, update_raycast_with_cursor, RaycastCursor, BuildCursor}, building::{check_cursor_bp_collision}, load_models::{initiate_load, get_load_states, NUM_MODELS, NONE_HANDLE}, building_components::*};
 
 pub mod raycasting;
 pub mod building;
 pub mod buildings;
 pub mod load_models;
+pub mod building_components;
+pub mod building_functions;
 
 pub struct RaycastSet;
 
