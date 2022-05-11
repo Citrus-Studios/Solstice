@@ -6,6 +6,7 @@ use bevy_rapier3d::{plugin::RapierContext, prelude::*};
 
 use super::{MaterialHandles, building_components::*, buildings::BuildingShapeData, RaycastSet};
 
+/// Deprecated I think
 pub fn check_pipe_collision(e: Entity, context: Res<RapierContext>) -> bool {
     for (_, _, c) in context.intersections_with(e) {
         if c {
@@ -15,6 +16,7 @@ pub fn check_pipe_collision(e: Entity, context: Res<RapierContext>) -> bool {
     return false
 }
 
+/// Spawns the cursor blueprint preview thing
 // TODO: collision
 pub fn spawn_cursor_bp(
     commands: &mut Commands, 
@@ -44,6 +46,7 @@ pub fn spawn_cursor_bp(
     });
 }
 
+/// Moves the cursor blueprint preview thing
 // hi lemon
 pub fn move_cursor_bp(
     mut transform: Mut<Transform>,
@@ -61,6 +64,7 @@ pub fn move_cursor_bp(
     moved.0 = true;
 }
 
+/// Spawns a blueprint
 // TODO: everything
 pub fn spawn_bp(commands: &mut Commands, shape_data: BuildingShapeData, cost: u32, transform: Transform) {
     commands.spawn_bundle(PbrBundle {

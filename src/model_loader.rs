@@ -2,6 +2,7 @@ use bevy::{pbr::PbrBundle, prelude::*, gltf::GltfPrimitive, render::render_resou
 
 use crate::{material_palette::MaterialPalette, terrain_generation_system::{relevant_attributes::RelevantAttributes, mutate_mesh::MutateMesh}};
 
+/// Combines a vector of `GltfPrimitive`s into a single `Mesh` and `StandardMaterial`
 pub fn combine_gltf_mesh(primitives: Vec<GltfPrimitive>, meshes: &mut ResMut<Assets<Mesh>>, materials: &mut ResMut<Assets<StandardMaterial>>, images: &mut ResMut<Assets<Image>>) -> PbrBundle {
     let mut attr_vec = Vec::new();
     let mut material_palette = MaterialPalette::new();
@@ -31,7 +32,7 @@ pub fn combine_gltf_mesh(primitives: Vec<GltfPrimitive>, meshes: &mut ResMut<Ass
     }
 }
 
-/// Ignores materials
+/// Like `combine_gltf_mesh()` but ignores materials
 pub fn combine_gltf_primitives(primitives: Vec<GltfPrimitive>, meshes: &mut ResMut<Assets<Mesh>>) -> Mesh {
     let mut attr = RelevantAttributes::new();
 

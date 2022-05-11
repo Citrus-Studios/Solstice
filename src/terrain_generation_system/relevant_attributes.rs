@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use super::mutate_mesh::MutateMesh;
 
 
-
+/// The relevant vertex attributes of a `Mesh`
 #[derive(Clone, Debug)]
 pub struct RelevantAttributes {
     pub pos: Vec<[f32; 3]>,
@@ -38,6 +38,7 @@ impl RelevantAttributes {
         self.ind = ind; self
     }
 
+    /// Sets all the UVs of `self` to the specified position
     pub fn set_all_uv(&mut self, uv_set: Vec2) {
         for uv in self.uv.iter_mut() {
             uv[0] = uv_set.x;
@@ -45,6 +46,7 @@ impl RelevantAttributes {
         }
     }
 
+    /// Appends another `RelevantAttributes` to `self` with respect to indices
     pub fn append_with_indices(&mut self, mut attr: RelevantAttributes) {
         let add = self.pos.len() as u32;
         self.pos.append(&mut attr.pos);
@@ -56,6 +58,7 @@ impl RelevantAttributes {
         self.ind.append(&mut attr.ind);
     }
 
+    /// Appends another `RelevantAttributes` to `self`
     pub fn append(mut self, mut attr: RelevantAttributes) -> Self {
         self.pos.append(&mut attr.pos);
         self.norm.append(&mut attr.norm);
@@ -64,6 +67,7 @@ impl RelevantAttributes {
         self
     }
 
+    /// Extracts `mesh`'s `RelevantAttributes` and appends them to `self`
     pub fn combine_with_mesh(self, mesh: Mesh, offset: Vec3) -> Self {
         let mut attr = mesh.relevant_attributes();
         for vertice in attr.pos.iter_mut() {

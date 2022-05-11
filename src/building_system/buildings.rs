@@ -82,6 +82,7 @@ impl<T, U, V, W> Pipe<T, U, V, W> {
 }
 
 impl BuildingShapeData {
+    /// "Loads" the GLTF from the path and replaces the default `None`s in the struct with the stuff that's supposed to go there
     pub fn load_from_path(&mut self, 
         asset_server: &Res<AssetServer>, 
         gltf_meshes: &ResMut<Assets<GltfMesh>>, 
@@ -153,6 +154,9 @@ macro_rules! Building {
     }
 }
 
+/// Tries to match `name` to a building
+/// 
+/// Panics if `name` does not match any building
 pub fn string_to_building(name: String) -> Building {
     match name.as_str() {
         "Well Pump" => Building!(

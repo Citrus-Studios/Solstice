@@ -5,9 +5,18 @@ use nalgebra::Point3;
 use super::relevant_attributes::RelevantAttributes;
 
 pub trait MutateMesh {
+    /// Combines two meshes
+    /// 
+    /// **NOTE:** slow af, use `RelevantAttributes` as a builder struct instead
     fn combine_mesh(self, mesh_2: Mesh, offset: Vec3) -> Self;
+
+    /// Extracts the `RelevantAttributes` of `self`
     fn relevant_attributes(self) -> RelevantAttributes;
+
+    /// Turns `self` into a trimesh `SharedShape` (can be used as a collider)
     fn into_shared_shape(&self) -> SharedShape;
+
+    /// Overwrites the attributes of a mesh
     fn set_attributes(self, attr: RelevantAttributes) -> Mesh;
 }
 

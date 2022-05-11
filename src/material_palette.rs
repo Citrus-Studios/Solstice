@@ -5,12 +5,14 @@ pub struct MaterialPalette {
     pub palette: Vec<FlatMaterial>
 }
 
+/// A compilation of several flat materials, represented by 3 `Image`s
 pub struct CompiledMaterials {
     pub base_color_texture: Image,
     pub emissive_texture: Image,
     pub metallic_roughness_texture: Image,
 }
 
+/// A material with no textures
 #[derive(Clone, Copy)]
 pub struct FlatMaterial {
     pub base_color: Color,
@@ -76,6 +78,7 @@ impl MaterialPalette {
         self.palette.push(material); 
     }
 
+    /// "Compiles" `self` info 3 images that represent base color, emissive color, metallic, and roughness
     pub fn compile(&self, size: Option<u32>) -> CompiledMaterials {
         let dimensions = (size.unwrap_or(self.palette.len() as u32), 1u32);
         let len = self.palette.len() as u32;
@@ -117,6 +120,7 @@ impl MaterialPalette {
 }
 
 impl CompiledMaterials {
+    /// Gets the UV position of a specific material by number
     pub fn get_uv_pos(&self, material_num: u32) -> Vec2 {
         let num_materials = self.base_color_texture.texture_descriptor.size.width;
 
@@ -129,6 +133,7 @@ impl CompiledMaterials {
         Vec2::new(x, y)
     }
 
+    /// Converts `self` into a `StandardMaterial`
     pub fn into_standard_material(self, images: &mut ResMut<Assets<Image>>) -> StandardMaterial {
         StandardMaterial {
             base_color: Color::WHITE,
@@ -146,6 +151,7 @@ impl CompiledMaterials {
 }
 
 pub trait ColorToVec {
+    /// Converts an RGBA color into a vector of `u8`s
     fn to_vec_u8(self) -> Vec<u8>;
 }
 
@@ -161,6 +167,7 @@ impl ColorToVec for Color {
 }
 
 trait WithData {
+    /// Clones the `Image`, overwrites the data with `data`, and returns the overwritten `Image`
     fn with_data(&self, data: Vec<u8>) -> Self;
 }
 
