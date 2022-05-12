@@ -1,4 +1,4 @@
-use std::{f32::consts::PI};
+use std::{f32::consts::PI, ops::Add};
 
 use bevy::{pbr::{NotShadowCaster, AlphaMode::Blend}, input::mouse::MouseWheel, gltf::GltfMesh};
 pub use bevy::{prelude::*};
@@ -84,7 +84,7 @@ pub fn building(
 
         // my brain
         let quat = Quat::from_axis_angle(normal, rot).mul_quat(Quat::from_rotation_arc(Vec3::Y, normal));
-        let mut translation = intersection.position();
+        let translation = intersection.position();
 
         let mut transform_cache = Transform::from_translation(translation).with_rotation(quat);
 
@@ -127,30 +127,28 @@ pub fn building(
         }
 
         match building_id.as_str() {
-            // 0.0675
+            // z offset for pipe cyl compared to pipe base: -0.0675
             "Pipe" => {
 
                 // All pipe shit vvvvv
-                let pipe_cyl_mesh: Handle<Mesh> = asset_server.load("models/pipes/pipe_cylinder.obj");        
-                translation += normal * 0.3;
-                transform_cache.translation = translation;
+                let pipe_cyl_mesh: Handle<Mesh> = asset_server.load("models/pipes/pipe_cylinder.obj");
+                let pipe_cyl_offset = Vec3::new(0.0, 0.25, 0.0675);
+                // Rotate the offset and add it to the translation
+                let offset_transform = transform_cache.with_translation(translation.add(quat.mul_vec3(pipe_cyl_offset)));
+
+                let trans = offset_transform.translation;
         
                 if mouse_input.just_pressed(MouseButton::Left) && !hovered {
                     // If you click, and the first point is already placed
-                    // Place the second point IF no collision
+                    // Place the second point and the pipe IF no collision
 
                     if pp_res.placed {
+                        let first_position = pp_res.transform.unwrap().translation;
                         let (entity, _) = pipe_prev_query.single();
                         let inter = check_pipe_collision(entity, rapier_context);
 
                         if !inter {
-                            let first_position = pp_res.transform.unwrap().translation;
-                            let pipe_cyl_translation = (first_position + translation) / 2.0;
-                            let pipe_cyl_rotation = Quat::from_rotation_arc(Vec3::Y, (first_position - translation).normalize());
-                            
-                            let distance = distance_vec3(first_position, translation);
-
-                            let transform_c = Transform::from_translation(pipe_cyl_translation).with_rotation(pipe_cyl_rotation).with_scale(Vec3::new(1.0, distance, 1.0));
+                            let transform_c = transform_between_points(first_position, trans);
 
                             pp_res.placed = false;
 
@@ -172,17 +170,25 @@ pub fn building(
                     // Place the first point
                     } else {
                         pp_res.placed = true;
-                        pp_res.transform = Some(transform_cache);
+                        pp_res.transform = Some(offset_transform);
 
                         commands.spawn_bundle(PbrBundle {
                             mesh: pipe_cyl_mesh,
                             material: bp_material_handles.blueprint.clone().unwrap(),
-                            transform: Transform::from_translation(translation).with_rotation(quat).with_scale(Vec3::new(1.0, 0.02, 1.0)),
+                            transform: offset_transform.with_scale(Vec3::new(1.0, 0.02, 1.0)),
                             ..Default::default()
                         })
                         .insert(Collider::cuboid(0.135, 0.01, 0.135))
                         .insert(Sensor(true))
                         .insert(PipePreview)
+                        .insert(NotShadowCaster);
+
+                        commands.spawn_bundle(PbrBundle {
+                            mesh: building.shape_data.mesh.unwrap(),
+                            material: bp_material_handles.blueprint.clone().unwrap(),
+                            transform: transform_cache,
+                            ..Default::default()
+                        })
                         .insert(NotShadowCaster);
                     }
                 // If you're not clicking
@@ -190,13 +196,9 @@ pub fn building(
                     // If the first point is placed
                     // Update the preview
                     if pp_res.placed {
-                        
                         let first_position = pp_res.transform.unwrap().translation;
-                        let pipe_cyl_translation = (first_position + translation) / 2.0;
-                        let pipe_cyl_rotation = Quat::from_rotation_arc(Vec3::Y, (first_position - translation).normalize());
-                        let distance = distance_vec3(first_position, translation);
-
-                        let transform_c = Transform::from_translation(pipe_cyl_translation).with_rotation(pipe_cyl_rotation).with_scale(Vec3::new(1.0, distance, 1.0));
+                        let transform_c = transform_between_points(first_position, trans);
+                        let distance = distance_vec3(first_position, trans);
                         
                         let (_, mut transform) = pipe_prev_query.single_mut();
 
@@ -245,4 +247,12 @@ pub fn check_cursor_bp_collision(
             moved.0 = false;
         }
     }
+}
+
+fn transform_between_points(a: Vec3, b: Vec3) -> Transform {
+    let translation = (a + b) / 2.0;
+    let rotation = Quat::from_rotation_arc(Vec3::Y, (a - b).normalize());
+    let distance = distance_vec3(a, b);
+
+    Transform::from_translation(translation).with_rotation(rotation).with_scale(Vec3::new(1.0, distance, 1.0))
 }
