@@ -24,7 +24,7 @@ pub fn player_start(
     commands.spawn_bundle(PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
         material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
-        transform: Transform::from_xyz(100.0, 100.0, 100.0),
+        transform: Transform::from_xyz(100.0, 175.0, 100.0),
         ..Default::default()
     })
     .insert(Player {
@@ -34,7 +34,6 @@ pub fn player_start(
 
     .insert(Collider::round_cuboid(0.4, 0.4, 0.4, 0.1))
         .insert(Friction { coefficient: 0.0, combine_rule: CoefficientCombineRule::Min })
-        .insert(Transform::from_xyz(100.0, 100.0, 100.0))
         .insert(Velocity::default())
         .insert(RigidBody::Dynamic)
         .insert(LockedAxes::ROTATION_LOCKED)
