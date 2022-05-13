@@ -109,7 +109,7 @@ pub fn generate_terrain(
     let spires_hollow_ccb = CompoundColliderBuilder::from_vec(spires_hollow_collider_vec);
 
     // BEEG vec
-    let mut world_gen_array: Vec<Vec<Vec<Option<TerrainBlockType>>>> = vec![vec![vec![None; 100]; 100]; 100];
+    let mut world_gen_array = vec![vec![vec![None; 100]; 100]; 100];
 
     let mut attr = RelevantAttributes::new();
 
