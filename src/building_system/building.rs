@@ -5,11 +5,12 @@ pub use bevy::{prelude::*};
 
 use bevy_rapier3d::prelude::*;
 
-use crate::{algorithms::distance_vec3, player_system::gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, constants::HALF_PI};
+use crate::{algorithms::distance_vec3, player_system::{gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, player::{CameraComp, Player}}, constants::HALF_PI};
 
 use super::{raycasting::BuildCursor, buildings::{string_to_building}, MaterialHandles, building_components::*, building_functions::*};
 
 pub fn building(
+    // so many parameters...
     mut commands: Commands,
 
     delete_query: Query<Entity, With<DeleteNextFrame>>,
@@ -31,7 +32,9 @@ pub fn building(
         ResMut<Assets<Image>>,
     ),
 
-    mut cursor_bp_query: Query<(&mut Transform, Entity), (With<CursorBp>, Without<PipePreview>)>,
+    (camera_query, player_query): (Query<Entity, With<CameraComp>>, Query<Entity, With<Player>>),
+
+    mut cursor_bp_query: Query<(&mut Transform, Entity), (With<CursorBp>, Without<PipePreview>, Without<CameraComp>)>,
     mut cursor_bp_collider_query: Query<(Entity, &mut Moved, &mut Transform), (With<CursorBpCollider>, Without<PipePreview>, Without<CursorBp>)>,
 
     (mut bc_res, mut pp_res): (ResMut<BuildCursor>, ResMut<PipePlacement>),
@@ -40,6 +43,8 @@ pub fn building(
     gui_hover_query: Query<&Interaction, With<GuiButtonId>>,
     (mouse_input, keyboard_input): (Res<Input<MouseButton>>, Res<Input<KeyCode>>),
     mut mouse_scroll_event: EventReader<MouseWheel>,
+
+    mut transform_query: Query<&mut Transform, (Without<PipePreview>, Without<CursorBp>, Without<CursorBpCollider>)>,
 ) {
     if bp_material_handles.blueprint.is_none() {
         bp_material_handles.blueprint = Some(materials.add(StandardMaterial {
@@ -72,15 +77,18 @@ pub fn building(
         bc_res.rotation += HALF_PI;
     }
 
-
-
     let intersection_op = bc_res.intersection;
 
-    let rot = bc_res.rotation;
+    let mut rot = bc_res.rotation;
     
     if intersection_op.is_some() && selected_building.id.is_some() {
         let intersection = intersection_op.unwrap();
         let normal = intersection.normal().normalize();
+
+        let camera_pos = transform_query.get(camera_query.single()).unwrap().translation;
+        let projected = camera_pos.project_onto_plane(normal);
+        let zero_vec = Quat::from_rotation_arc(Vec3::Y, normal).mul_vec3(Vec3::Z);
+        rot -= (projected.angle_between_clockwise(zero_vec, normal) / (PI/16.0)).round() * (PI/16.0);
 
         // my brain
         let quat = Quat::from_axis_angle(normal, rot).mul_quat(Quat::from_rotation_arc(Vec3::Y, normal));
@@ -116,12 +124,13 @@ pub fn building(
             }
 
             let clone = building.shape_data.clone();
+            
             spawn_cursor_bp(&mut commands, clone.mesh.unwrap(), &bp_material_handles, clone.collider.clone(), clone.collider_offset, transform_cache);
             selected_building.changed = false;
         } else {
             let (cursor_bp_transform, _) = cursor_bp_query.single_mut();
             let (_, mut moved, t) = cursor_bp_collider_query.single_mut();
-            if cursor_bp_transform.clone() != transform_cache {
+            if cursor_bp_transform.clone() != transform_cache && transform_cache != pp_res.transform.unwrap_or(Transform::from_xyz(f32::MAX, f32::MAX, f32::MAX)) {
                 move_cursor_bp(cursor_bp_transform, t, building.shape_data.collider_offset, transform_cache, &mut moved);
             }
         }
@@ -164,6 +173,7 @@ pub fn building(
                             }
 
                             selected_building.id = None;
+                            bc_res.rotation = 0.0;
                         }
                         
                     // If you click and the first point is not placed
@@ -172,6 +182,7 @@ pub fn building(
                         pp_res.placed = true;
                         pp_res.transform = Some(offset_transform);
 
+                        // spawn pipe preview
                         commands.spawn_bundle(PbrBundle {
                             mesh: pipe_cyl_mesh,
                             material: bp_material_handles.blueprint.clone().unwrap(),
@@ -190,28 +201,40 @@ pub fn building(
                             ..Default::default()
                         })
                         .insert(NotShadowCaster);
+
+                        bc_res.rotation += PI;
                     }
+                    info!("ayo");
                 // If you're not clicking
                 } else {
                     // If the first point is placed
                     // Update the preview
                     if pp_res.placed {
+                        info!("poggers");
                         let first_position = pp_res.transform.unwrap().translation;
                         let transform_c = transform_between_points(first_position, trans);
                         let distance = distance_vec3(first_position, trans);
                         
                         let (_, mut transform) = pipe_prev_query.single_mut();
 
+                        transform.scale.y = transform.scale.y.min(0.1);
+
                         let transform_mut = transform.as_mut();
                         *transform_mut = transform_c;
-
-                        if distance > 0.001 {
-                            let mut collider_shape = pipe_prev_shape_query.single_mut();
-                            let mut cuboid_mut = collider_shape.as_cuboid_mut().unwrap();
-                            let mut half_extents = cuboid_mut.half_extents(); half_extents.y = distance / 2.0;
-
-                            cuboid_mut.sed_half_extents(half_extents);
+                        
+                        let mut collider_shape = pipe_prev_shape_query.single_mut();
+                        let mut cuboid_mut = collider_shape.as_cuboid_mut().unwrap();
+                        let mut half_extents = cuboid_mut.half_extents();
+                        
+                        if distance > 0.2 {
+                            half_extents.y = distance / 2.0;
+                        } else {
+                            half_extents.y = 0.1;
                         }
+                        
+                        cuboid_mut.sed_half_extents(half_extents);
+                        info!("half extents: {}", half_extents);
+                        
                     } // If the first isn't placed and you're not clicking, do nothing
                 }
             },
@@ -234,6 +257,7 @@ pub fn building(
 pub fn check_cursor_bp_collision(
     mut cursor_bp: Query<&mut Handle<StandardMaterial>, With<CursorBp>>,
     mut cursor_bp_collider: Query<(Entity, &mut Moved), With<CursorBpCollider>>,
+    mut pipe_preview: Query<(&mut Handle<StandardMaterial>, Entity), (With<PipePreview>, Without<CursorBp>)>,
     rapier_context: Res<RapierContext>,
     bp_material_handles: Res<MaterialHandles>,
 ) {
@@ -247,6 +271,14 @@ pub fn check_cursor_bp_collision(
             moved.0 = false;
         }
     }
+
+    for (mut mat, e) in pipe_preview.iter_mut() {
+        if e.is_intersecting(&rapier_context) {
+            *mat = bp_material_handles.obstructed.clone().unwrap();
+        } else {
+            *mat = bp_material_handles.blueprint.clone().unwrap();
+        }
+    }
 }
 
 fn transform_between_points(a: Vec3, b: Vec3) -> Transform {
@@ -256,3 +288,20 @@ fn transform_between_points(a: Vec3, b: Vec3) -> Transform {
 
     Transform::from_translation(translation).with_rotation(rotation).with_scale(Vec3::new(1.0, distance, 1.0))
 }
+
+trait ProjectPlane {
+    // ((self dot normal) / (normal mag squared)) normal
+    fn project_onto_plane(self, plane_normal: Vec3) -> Vec3;
+    fn angle_between_clockwise(self, other: Vec3, norm: Vec3) -> f32;
+}
+
+impl ProjectPlane for Vec3 {
+    fn project_onto_plane(self, plane_normal: Vec3) -> Vec3 {
+        self - (self.dot(plane_normal) * plane_normal)
+    }
+
+    fn angle_between_clockwise(self, other: Vec3, norm: Vec3) -> f32 {
+        norm.dot(self.cross(other)).atan2(self.dot(other))
+    }
+}
+
