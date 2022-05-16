@@ -12,7 +12,8 @@ pub struct RaycastCursor {
 #[derive(Component)]
 pub struct BuildCursor {
     pub intersection: Option<Intersection>,
-    pub rotation: f32
+    pub rotation: f32,
+    pub entity: Option<Entity>,
 }
 
 pub fn update_raycast_with_cursor(
@@ -50,15 +51,17 @@ pub fn raycast(
     let d = d_query.get_single_mut();
 
     if !intersections.is_empty() {
-        let (_, mut closest_intersection) = intersections.pop().unwrap();
+        let (mut closest_e, mut closest_intersection) = intersections.pop().unwrap();
 
-        for (_, intersection) in intersections {
+        for (e, intersection) in intersections {
             if intersection.distance() < closest_intersection.distance() {
                 closest_intersection = intersection;
+                closest_e = e;
             }
         }
         
         bc_res.intersection = Some(closest_intersection);
+        bc_res.entity = Some(closest_e);
 
         if rcc.visible {
             if d.is_ok() {
