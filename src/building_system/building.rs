@@ -5,20 +5,43 @@ pub use bevy::{prelude::*};
 
 use bevy_rapier3d::prelude::*;
 
-use crate::{algorithms::distance_vec3, player_system::{gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, player::{CameraComp, Player}}, constants::HALF_PI};
+use crate::{algorithms::distance_vec3, player_system::{gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, player::{CameraComp, Player}}, constants::{HALF_PI, PIPE_CYLINDER_OFFSET}};
 
 use super::{raycasting::BuildCursor, buildings::string_to_building, MaterialHandles, building_components::*, building_functions::*, BlueprintFillMaterial};
+
+#[derive(Component, Clone)]
+pub struct Pipe {
+    pub pt_1: Transform,
+    pub pt_2: Transform,
+}
+
+impl Pipe {
+    pub fn new(pt_1: Transform, pt_2: Transform) -> Self {
+        Pipe { pt_1, pt_2 }
+    }
+
+    pub fn cylinder_transform(&self) -> Transform {
+        transform_between_points(
+            self.pt_1.translation.add(self.pt_1.rotation.mul_vec3(*PIPE_CYLINDER_OFFSET)), 
+            self.pt_2.translation.add(self.pt_2.rotation.mul_vec3(*PIPE_CYLINDER_OFFSET))
+        )
+    }
+}
+
+/// Query for entities with component T
+pub type EntityQuery<'a, 'b, T> = Query<'a, 'b, Entity, With<T>>;
 
 pub fn building(
     // so many parameters...
     mut commands: Commands,
 
-    delete_query: Query<Entity, With<DeleteNextFrame>>,
+    delete_query: EntityQuery<DeleteNextFrame>,
 
-    mut pipe_prev_query: Query<Entity, With<PipePreview>>, 
-    (camera_query, player_query): (Query<Entity, With<CameraComp>>, Query<Entity, With<Player>>),
-    mut cursor_bp_query: Query<Entity, With<CursorBp>>,
-    mut cursor_bp_collider_query: Query<Entity, With<CursorBpCollider>>,
+    mut pipe_prev_query: EntityQuery<PipePreview>, 
+    
+    (camera_query, player_query): (EntityQuery<CameraComp>, EntityQuery<Player>),
+    mut cursor_bp_query: EntityQuery<CursorBp>,
+    mut cursor_bp_collider_query: EntityQuery<CursorBpCollider>,
     
     rapier_context: Res<RapierContext>,
     asset_server: Res<AssetServer>,
@@ -180,7 +203,7 @@ pub fn building(
                             transform: offset_transform.with_scale(Vec3::new(1.0, 0.02, 1.0)),
                             ..Default::default()
                         })
-                        .insert(Collider::cuboid(0.135, 0.01, 0.135))
+                        .insert(Collider::cuboid(0.135, 0.5, 0.135))
                         .insert(Sensor(true))
                         .insert(PipePreview)
                         .insert(NotShadowCaster);
@@ -202,28 +225,14 @@ pub fn building(
                     if pp_res.placed {
                         let first_position = pp_res.transform.unwrap().translation;
                         let transform_c = transform_between_points(first_position, trans);
-                        let distance = distance_vec3(first_position, trans);
 
                         let entity = pipe_prev_query.single_mut();
-                        
                         let mut transform = transform_query.get_mut(entity).unwrap();
 
-                        transform.scale.y = transform.scale.y.min(0.1);
+                        transform.scale.y = transform.scale.y.min(0.01);
 
                         let transform_mut = transform.as_mut();
-                        *transform_mut = transform_c;
-                        
-                        let mut collider_shape = collider_query.get_mut(entity).unwrap();
-                        let mut cuboid_mut = collider_shape.as_cuboid_mut().unwrap();
-                        let mut half_extents = cuboid_mut.half_extents();
-                        
-                        if distance > 0.2 {
-                            half_extents.y = distance / 2.0;
-                        } else {
-                            half_extents.y = 0.1;
-                        }
-                        
-                        cuboid_mut.sed_half_extents(half_extents);                        
+                        *transform_mut = transform_c;                     
                     } // If the first isn't placed and you're not clicking, do nothing
                 }
             },
