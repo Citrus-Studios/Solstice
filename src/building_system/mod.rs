@@ -1,6 +1,8 @@
+use std::mem::size_of;
+
 use crate::building_system::building::building;
 use bevy::{
-    pbr::{PbrBundle, StandardMaterial},
+    pbr::{PbrBundle, StandardMaterial, AlphaMode},
     prelude::{
         shape, Assets, Color, Commands, CoreStage, Mesh, ParallelSystemDescriptorCoercion, Plugin,
         ResMut, Transform, SystemSet, Handle, info,
@@ -27,21 +29,20 @@ pub struct ModelHandles {
 
 #[derive(Clone)]
 pub struct MaterialHandles {
-    blueprint: Option<Handle<StandardMaterial>>,
-    obstructed: Option<Handle<StandardMaterial>>,
+    blueprint: Handle<StandardMaterial>,
+    obstructed: Handle<StandardMaterial>,
 }
+
+pub struct BlueprintFillMaterial(Vec<Handle<StandardMaterial>>);
 
 pub struct BuildingSystemPlugin;
 
 impl Plugin for BuildingSystemPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_startup_system(building_system_startup)
+        app
             .insert_resource(ModelHandles { handles: [NONE_HANDLE; NUM_MODELS] })
-            .insert_resource(MaterialHandles {
-                blueprint: None,
-                obstructed: None,
-            })
             .insert_resource(ChangeBuilding { b: false })
+            .add_startup_system(building_system_startup)
             .add_startup_system(initiate_load)
             .add_system_set_to_stage(
                 CoreStage::PreUpdate,
@@ -86,7 +87,54 @@ pub fn building_system_startup(
         })
         .insert(RaycastCursor { visible: false });
     
-    commands.insert_resource(BuildCursor { intersection: None, rotation: 0.0 });
+    commands.insert_resource(BuildCursor { intersection: None, rotation: 0.0, entity: None });
     commands.insert_resource(PipePlacement { placed: false, transform: None });
+    commands.insert_resource(BlueprintFillMaterial::generate(&mut materials, 50));
+    commands.insert_resource(MaterialHandles::generate(&mut materials));
+
     info!("building done");
+}
+
+impl BlueprintFillMaterial {
+    pub fn generate(materials: &mut ResMut<Assets<StandardMaterial>>, num: u32) -> Self {
+        let mut mat = BlueprintFillMaterial(Vec::with_capacity(50));
+
+        for i in 0..(num as usize) {
+            let ix = (i as f32) / (num as f32);
+            mat.0.push(materials.add(StandardMaterial {
+                base_color: Color::rgba((87.0/255.0) * ix, (202.0/255.0) * ix, (1.0) * ix, 0.5),
+                reflectance: 0.0,
+                alpha_mode: AlphaMode::Blend,
+                ..Default::default()
+            }));
+        }
+
+        mat
+    }
+
+    pub fn get_bp_fill_material(&self, filled: u32, cost: u32) -> Handle<StandardMaterial> {
+        self.get_fill_percent((cost as f32) / (filled as f32))
+    }
+
+    pub fn get_fill_percent(&self, pct: f32) -> Handle<StandardMaterial> {
+        let len = self.0.len() as f32;
+        self.0[(pct * len).round() as usize].clone()
+    }
+}
+
+impl MaterialHandles {
+    pub fn generate(materials: &mut ResMut<Assets<StandardMaterial>>) -> Self {
+        MaterialHandles {
+            blueprint: materials.add(StandardMaterial {
+                base_color: Color::rgba(87.0/255.0, 202.0/255.0, 1.0, 0.5),
+                alpha_mode: AlphaMode::Blend,
+                ..Default::default()
+            }),
+            obstructed: materials.add(StandardMaterial {
+                base_color: Color::rgba(1.0, 0.0, 0.0, 0.5),
+                alpha_mode: AlphaMode::Blend,
+                ..Default::default()
+            }),
+        }
+    }
 }
