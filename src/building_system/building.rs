@@ -160,39 +160,34 @@ pub fn building(
                 let offset_transform = transform_cache.with_translation(translation.add(quat.mul_vec3(pipe_cyl_offset)));
 
                 let trans = offset_transform.translation;
-        
-                if mouse_input.just_pressed(MouseButton::Left) && !hovered {
-                    // If you click, and the first point is already placed
-                    // Place the second point and the pipe IF no collision
+                let inter = check_pipe_collision(pipe_prev_query.single(), rapier_context);
 
-                    if pp_res.placed {
+                match (mouse_input.just_pressed(MouseButton::Left), hovered, pp_res.placed, inter) {
+                    // (just clicked, hovering over gui, first pipe point placed, intersecting)
+                    (true, false, true, false) => {
+                        // Place the whole pipe blueprint
                         let first_position = pp_res.transform.unwrap().translation;
-                        let entity = pipe_prev_query.single();
-                        let inter = check_pipe_collision(entity, rapier_context);
+                        let transform_c = transform_between_points(first_position, trans);
 
-                        if !inter {
-                            let transform_c = transform_between_points(first_position, trans);
+                        pp_res.placed = false;
 
-                            pp_res.placed = false;
+                        commands.spawn_bundle(PbrBundle {
+                            mesh: pipe_cyl_mesh,
+                            material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
+                            transform: transform_c,
+                            ..Default::default()
+                        });
 
-                            commands.spawn_bundle(PbrBundle {
-                                mesh: pipe_cyl_mesh,
-                                material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
-                                transform: transform_c,
-                                ..Default::default()
-                            });
-
-                            if pipe_prev_entity_op.is_some() {
-                                commands.entity(pipe_prev_entity_op.unwrap()).despawn();
-                            }
-
-                            selected_building.id = None;
-                            bc_res.rotation = 0.0;
+                        if pipe_prev_entity_op.is_some() {
+                            commands.entity(pipe_prev_entity_op.unwrap()).despawn();
                         }
-                        
-                    // If you click and the first point is not placed
-                    // Place the first point
-                    } else {
+
+                        selected_building.id = None;
+                        bc_res.rotation = 0.0;
+                    },
+                    // (just clicked, hovering over gui, first pipe point placed, _)
+                    (true, false, false, _) => {
+                        // Place the first pipe point
                         pp_res.placed = true;
                         pp_res.transform = Some(offset_transform);
 
@@ -217,12 +212,10 @@ pub fn building(
                         .insert(NotShadowCaster);
 
                         bc_res.rotation += PI;
-                    }
-                // If you're not clicking
-                } else {
-                    // If the first point is placed
-                    // Update the preview
-                    if pp_res.placed {
+                    },
+                    // (just clicked, _, first pipe point placed, _)
+                    (false, _, true, _) => {
+                        // Update the preview, change pipe cylinder transform
                         let first_position = pp_res.transform.unwrap().translation;
                         let transform_c = transform_between_points(first_position, trans);
 
@@ -232,8 +225,9 @@ pub fn building(
                         transform.scale.y = transform.scale.y.min(0.01);
 
                         let transform_mut = transform.as_mut();
-                        *transform_mut = transform_c;                     
-                    } // If the first isn't placed and you're not clicking, do nothing
+                        *transform_mut = transform_c;
+                    }
+                    _ => ()
                 }
             },
 
@@ -302,4 +296,3 @@ impl MoreVec3Methods for Vec3 {
         norm.dot(self.cross(other)).atan2(self.dot(other))
     }
 }
-
