@@ -93,7 +93,7 @@ pub fn spawn_bp(
     ;
 }
 
-trait MoveTransform {
+pub trait MoveTransform {
     /// Copies `self` and returns it with the added translation (`t`), rotated by `self`'s `rotation`.
     fn with_add_translation(&self, t: Vec3) -> Self;
 }
