@@ -4,7 +4,7 @@ use bevy::{prelude::*, pbr::NotShadowCaster};
 use bevy_mod_raycast::{SimplifiedMesh, RayCastMesh};
 use bevy_rapier3d::{plugin::RapierContext, prelude::*};
 
-use super::{MaterialHandles, building_components::*, buildings::BuildingShapeData, RaycastSet};
+use super::{MaterialHandles, building_components::*, buildings::BuildingShapeData, RaycastSet, BlueprintFillMaterial};
 
 /// Deprecated I think
 pub fn check_pipe_collision(e: Entity, context: Res<RapierContext>) -> bool {
@@ -28,7 +28,7 @@ pub fn spawn_cursor_bp(
 ) {    
     commands.spawn_bundle(PbrBundle {
         mesh,
-        material: bp_materials.blueprint.clone().unwrap(),
+        material: bp_materials.blueprint.clone(),
         transform,
         ..Default::default()
     })
@@ -49,27 +49,30 @@ pub fn spawn_cursor_bp(
 /// Moves the cursor blueprint preview thing
 // hi lemon
 pub fn move_cursor_bp(
-    mut transform: Mut<Transform>,
-    mut collider_transform: Mut<Transform>,
+    transform: &mut Transform,
+    collider_transform: &mut Transform,
     collider_offset: Vec3,
     new_transform: Transform,
     mut moved: &mut Moved,
 ) {
-    let trans = transform.as_mut();
-    *trans = new_transform;
-
-    let coll_trans = collider_transform.as_mut();
-    *coll_trans = new_transform.with_add_translation(collider_offset);
+    *transform = new_transform;
+    *collider_transform = new_transform.with_add_translation(collider_offset);
 
     moved.0 = true;
 }
 
 /// Spawns a blueprint
 // TODO: everything
-pub fn spawn_bp(commands: &mut Commands, shape_data: BuildingShapeData, cost: u32, transform: Transform) {
+pub fn spawn_bp(
+    commands: &mut Commands, 
+    shape_data: BuildingShapeData, 
+    cost: u32, 
+    transform: Transform,
+    material: Handle<StandardMaterial>,
+) {
     commands.spawn_bundle(PbrBundle {
         mesh: shape_data.mesh.unwrap(),
-        material: shape_data.material.unwrap(),
+        material,
         transform,
         ..Default::default()
     })
@@ -102,3 +105,4 @@ impl MoveTransform for Transform {
         return_transform.with_translation(self.translation.add(rotated_translation))
     }
 }
+
