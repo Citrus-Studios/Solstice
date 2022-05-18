@@ -7,7 +7,7 @@ use bevy_rapier3d::prelude::*;
 
 use crate::{algorithms::distance_vec3, player_system::{gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, player::{CameraComp, Player}}, constants::{HALF_PI, PIPE_CYLINDER_OFFSET}};
 
-use super::{raycasting::BuildCursor, buildings::string_to_building, MaterialHandles, building_components::*, building_functions::*, BlueprintFillMaterial};
+use super::{raycasting::BuildCursor, buildings::{string_to_building, Building, BuildingArcs}, MaterialHandles, building_components::*, building_functions::*, BlueprintFillMaterial};
 
 #[derive(Component, Clone)]
 pub struct Pipe {
@@ -25,6 +25,24 @@ impl Pipe {
             self.pt_1.translation.add(self.pt_1.rotation.mul_vec3(*PIPE_CYLINDER_OFFSET)), 
             self.pt_2.translation.add(self.pt_2.rotation.mul_vec3(*PIPE_CYLINDER_OFFSET))
         )
+    }
+}
+
+enum PipeBools {
+    ClickFirstPointPlacedNoIntersection,
+    ClickFirstPointNotPlacedNoIntersection,
+    NoClickFirstPointPlaced,
+    Other,
+}
+
+impl PipeBools {
+    fn match_bools(clicked: bool, hovered: bool, placed: bool, intersection: bool) -> PipeBools {
+        match (clicked, hovered, placed, intersection) {
+            (true, false, true, false) => PipeBools::ClickFirstPointPlacedNoIntersection,
+            (true, false, false, _) => PipeBools::ClickFirstPointNotPlacedNoIntersection,
+            (false, _, true, _) => PipeBools::NoClickFirstPointPlaced,
+            _ => PipeBools::Other
+        }
     }
 }
 
@@ -58,7 +76,14 @@ pub fn building(
     mut bp_material_handles: ResMut<MaterialHandles>,
 
     gui_hover_query: Query<&Interaction, With<GuiButtonId>>,
-    (mouse_input, keyboard_input, bp_fill_materials): (Res<Input<MouseButton>>, Res<Input<KeyCode>>, Res<BlueprintFillMaterial>),
+
+    (mouse_input, keyboard_input, bp_fill_materials, building_arcs): (
+        Res<Input<MouseButton>>, 
+        Res<Input<KeyCode>>, 
+        Res<BlueprintFillMaterial>,
+        Res<BuildingArcs>,
+    ),
+
     mut mouse_scroll_event: EventReader<MouseWheel>,
 
     (mut transform_query, mut material_query, mut collider_query, mut moved_query): (
@@ -162,9 +187,9 @@ pub fn building(
                 let trans = offset_transform.translation;
                 let inter = check_pipe_collision(pipe_prev_query.single(), rapier_context);
 
-                match (mouse_input.just_pressed(MouseButton::Left), hovered, pp_res.placed, inter) {
+                match PipeBools::match_bools(mouse_input.just_pressed(MouseButton::Left), hovered, pp_res.placed, inter) {
                     // (just clicked, hovering over gui, first pipe point placed, intersecting)
-                    (true, false, true, false) => {
+                    PipeBools::ClickFirstPointPlacedNoIntersection => {
                         // Place the whole pipe blueprint
                         let first_position = pp_res.transform.unwrap().translation;
                         let transform_c = transform_between_points(first_position, trans);
@@ -186,7 +211,7 @@ pub fn building(
                         bc_res.rotation = 0.0;
                     },
                     // (just clicked, hovering over gui, first pipe point placed, _)
-                    (true, false, false, _) => {
+                    PipeBools::ClickFirstPointNotPlacedNoIntersection => {
                         // Place the first pipe point
                         pp_res.placed = true;
                         pp_res.transform = Some(offset_transform);
@@ -214,7 +239,7 @@ pub fn building(
                         bc_res.rotation += PI;
                     },
                     // (just clicked, _, first pipe point placed, _)
-                    (false, _, true, _) => {
+                    PipeBools::NoClickFirstPointPlaced => {
                         // Update the preview, change pipe cylinder transform
                         let first_position = pp_res.transform.unwrap().translation;
                         let transform_c = transform_between_points(first_position, trans);
@@ -238,7 +263,15 @@ pub fn building(
                 }
         
                 if mouse_input.just_pressed(MouseButton::Left) && !hovered {
-                    spawn_bp(&mut commands, building.shape_data.clone(), building.iridium_data.cost, transform_cache, bp_fill_materials.get_fill_percent(0.0));
+                    spawn_bp(&mut commands, 
+                        building.shape_data.clone(), 
+                        building_arcs.0.get(&building.building_id.building_type).unwrap().clone(), 
+                        building.iridium_data.cost, 
+                        transform_cache, 
+                        bp_fill_materials.get_fill_percent(0.0)
+                    );
+
+                    commands.entity(cursor_bp_query.single()).despawn_recursive();
                     selected_building.id = None;
                 }
             }
