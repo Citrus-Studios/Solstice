@@ -5,14 +5,15 @@ use bevy::{
     pbr::{PbrBundle, StandardMaterial, AlphaMode},
     prelude::{
         shape, Assets, Color, Commands, CoreStage, Mesh, ParallelSystemDescriptorCoercion, Plugin,
-        ResMut, Transform, SystemSet, Handle, info,
-    }, gltf::GltfMesh,
+        ResMut, Transform, SystemSet, Handle, info, IntoChainSystem,
+    }, gltf::GltfMesh, core::FixedTimestep,
 };
 use bevy_mod_raycast::{RayCastMesh, RaycastSystem};
 
 use crate::player_system::player::player_camera_system;
+use crate::building_system::buildings::Building;
 
-use self::{raycasting::{raycast, update_raycast_with_cursor, RaycastCursor, BuildCursor}, building::{check_cursor_bp_collision}, load_models::{initiate_load, get_load_states, NUM_MODELS, NONE_HANDLE}, building_components::*};
+use self::{raycasting::{raycast, update_raycast_with_cursor, RaycastCursor, BuildCursor}, building::{check_cursor_bp_collision}, load_models::{initiate_load, get_load_states, NUM_MODELS, NONE_HANDLE}, building_components::*, blueprint::update_blueprints, buildings::{load_buildings_into_resource, load_buildings_in_resource, BuildingInitDone, building_init_done, building_init_not_done_and_get_load_states}};
 
 pub mod raycasting;
 pub mod building;
@@ -20,6 +21,7 @@ pub mod buildings;
 pub mod load_models;
 pub mod building_components;
 pub mod building_functions;
+pub mod blueprint;
 
 pub struct RaycastSet;
 
@@ -42,12 +44,20 @@ impl Plugin for BuildingSystemPlugin {
         app
             .insert_resource(ModelHandles { handles: [NONE_HANDLE; NUM_MODELS] })
             .insert_resource(ChangeBuilding { b: false })
+            .insert_resource(BuildingInitDone(false))
             .add_startup_system(building_system_startup)
             .add_startup_system(initiate_load)
+            .add_startup_system(load_buildings_into_resource)
             .add_system_set_to_stage(
                 CoreStage::PreUpdate,
                 SystemSet::new()
-                    .with_run_criteria(get_load_states)
+                    .with_run_criteria(building_init_not_done_and_get_load_states)
+                    .with_system(load_buildings_in_resource.before(building))
+            )
+            .add_system_set_to_stage(
+                CoreStage::PreUpdate,
+                SystemSet::new()
+                    .with_run_criteria(building_init_done)
                     .with_system(update_raycast_with_cursor)
                     .with_system(raycast.after(RaycastSystem::UpdateRaycast))
                     .with_system(building.after(raycast))
@@ -55,6 +65,10 @@ impl Plugin for BuildingSystemPlugin {
             .add_system_to_stage(
                 CoreStage::PostUpdate,
                 check_cursor_bp_collision
+            )
+            .add_system_set(SystemSet::new()
+                .with_run_criteria(FixedTimestep::steps_per_second(30.0))
+                .with_system(update_blueprints)
             )
             .add_system(player_camera_system);
     }
@@ -113,12 +127,12 @@ impl BlueprintFillMaterial {
     }
 
     pub fn get_bp_fill_material(&self, filled: u32, cost: u32) -> Handle<StandardMaterial> {
-        self.get_fill_percent((cost as f32) / (filled as f32))
+        self.get_fill_percent((filled as f32) / (cost as f32))
     }
 
     pub fn get_fill_percent(&self, pct: f32) -> Handle<StandardMaterial> {
         let len = self.0.len() as f32;
-        self.0[(pct * len).round() as usize].clone()
+        self.0[((pct * len).round() as usize).min(len as usize - 1)].clone()
     }
 }
 
