@@ -4,7 +4,7 @@ use bevy::{prelude::*, pbr::NotShadowCaster};
 use bevy_mod_raycast::{SimplifiedMesh, RayCastMesh};
 use bevy_rapier3d::{plugin::RapierContext, prelude::*};
 
-use super::{MaterialHandles, building_components::*, buildings::{BuildingShapeData, Building, BuildingReferenceComponent}, RaycastSet, BlueprintFillMaterial};
+use super::{MaterialHandles, building_components::*, buildings::{BuildingShapeData, Building, BuildingReferenceComponent}, RaycastSet};
 
 /// Deprecated I think
 pub fn check_pipe_collision(e: Entity, context: Res<RapierContext>) -> bool {

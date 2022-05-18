@@ -1,19 +1,16 @@
-use std::mem::size_of;
-
 use crate::building_system::building::building;
 use bevy::{
     pbr::{PbrBundle, StandardMaterial, AlphaMode},
     prelude::{
         shape, Assets, Color, Commands, CoreStage, Mesh, ParallelSystemDescriptorCoercion, Plugin,
-        ResMut, Transform, SystemSet, Handle, info, IntoChainSystem,
+        ResMut, Transform, SystemSet, Handle, info,
     }, gltf::GltfMesh, core::FixedTimestep,
 };
 use bevy_mod_raycast::{RayCastMesh, RaycastSystem};
 
 use crate::player_system::player::player_camera_system;
-use crate::building_system::buildings::Building;
 
-use self::{raycasting::{raycast, update_raycast_with_cursor, RaycastCursor, BuildCursor}, building::{check_cursor_bp_collision}, load_models::{initiate_load, get_load_states, NUM_MODELS, NONE_HANDLE}, building_components::*, blueprint::update_blueprints, buildings::{load_buildings_into_resource, load_buildings_in_resource, BuildingInitDone, building_init_done, building_init_not_done_and_get_load_states}};
+use self::{raycasting::{raycast, update_raycast_with_cursor, RaycastCursor, BuildCursor}, building::{check_cursor_bp_collision}, load_models::{initiate_load, NUM_MODELS, NONE_HANDLE}, building_components::*, blueprint::update_blueprints, buildings::{load_buildings_into_resource, load_buildings_in_resource, BuildingInitDone, building_init_done, building_init_not_done_and_get_load_states}};
 
 pub mod raycasting;
 pub mod building;
