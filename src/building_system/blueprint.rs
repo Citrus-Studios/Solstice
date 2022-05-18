@@ -25,7 +25,7 @@ pub fn update_blueprints(
             let mut clicked_blueprint = clicked_blueprint_result.unwrap();
             let mut material = material_query.get_mut(entity).unwrap();
 
-            clicked_blueprint.current += 5;
+            clicked_blueprint.current += 0_84;
             clicked_blueprint.current = clicked_blueprint.current.min(clicked_blueprint.cost);
 
             *material = bp_fill_materials.get_bp_fill_material(clicked_blueprint.current, clicked_blueprint.cost);
