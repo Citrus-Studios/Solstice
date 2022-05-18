@@ -1,10 +1,10 @@
-use std::ops::Add;
+use std::{ops::Add, sync::Arc};
 
 use bevy::{prelude::*, pbr::NotShadowCaster};
 use bevy_mod_raycast::{SimplifiedMesh, RayCastMesh};
 use bevy_rapier3d::{plugin::RapierContext, prelude::*};
 
-use super::{MaterialHandles, building_components::*, buildings::BuildingShapeData, RaycastSet, BlueprintFillMaterial};
+use super::{MaterialHandles, building_components::*, buildings::{BuildingShapeData, Building, BuildingReferenceComponent}, RaycastSet, BlueprintFillMaterial};
 
 /// Deprecated I think
 pub fn check_pipe_collision(e: Entity, context: Res<RapierContext>) -> bool {
@@ -66,6 +66,7 @@ pub fn move_cursor_bp(
 pub fn spawn_bp(
     commands: &mut Commands, 
     shape_data: BuildingShapeData, 
+    building_arc: Arc<Building>,
     cost: u32, 
     transform: Transform,
     material: Handle<StandardMaterial>,
@@ -84,10 +85,12 @@ pub fn spawn_bp(
         cost,
         current: 0,
     })
+    .insert(BuildingReferenceComponent(building_arc))
     .with_children(|parent| {
         parent.spawn()
             .insert(shape_data.collider)
             .insert(transform.with_add_translation(shape_data.collider_offset)) // bevy-rapier issue, should be fixed later
+            .insert(CollisionGroups::new(0, 0)) // No collision (yet)
         ;
     })
     ;
