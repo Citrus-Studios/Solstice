@@ -1,13 +1,13 @@
 use std::{f32::consts::PI, ops::Add};
 
-use bevy::{pbr::NotShadowCaster, input::mouse::MouseWheel, gltf::GltfMesh};
+use bevy::{pbr::NotShadowCaster, input::mouse::MouseWheel};
 pub use bevy::{prelude::*};
 
 use bevy_rapier3d::prelude::*;
 
-use crate::{algorithms::distance_vec3, player_system::{gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, player::{CameraComp, Player}}, constants::{HALF_PI, PIPE_CYLINDER_OFFSET}};
+use crate::{algorithms::distance_vec3, player_system::{gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, player::{Player}}, constants::{HALF_PI, PIPE_CYLINDER_OFFSET}};
 
-use super::{raycasting::BuildCursor, buildings::{string_to_building, Building, BuildingArcs}, MaterialHandles, building_components::*, building_functions::*, BlueprintFillMaterial};
+use super::{raycasting::BuildCursor, buildings::{string_to_building_enum, BuildingArcs, BuildingsResource}, MaterialHandles, building_components::*, building_functions::*, BlueprintFillMaterial};
 
 #[derive(Component, Clone)]
 pub struct Pipe {
@@ -57,7 +57,7 @@ pub fn building(
 
     mut pipe_prev_query: EntityQuery<PipePreview>, 
     
-    (camera_query, player_query): (EntityQuery<CameraComp>, EntityQuery<Player>),
+    camera_query: EntityQuery<Player>,
     mut cursor_bp_query: EntityQuery<CursorBp>,
     mut cursor_bp_collider_query: EntityQuery<CursorBpCollider>,
     
@@ -65,31 +65,25 @@ pub fn building(
     asset_server: Res<AssetServer>,
     mut selected_building: ResMut<SelectedBuilding>,
 
-    (mut materials, gltf_meshes, mut meshes, mut images): (
-        ResMut<Assets<StandardMaterial>>, 
-        ResMut<Assets<GltfMesh>>, 
-        ResMut<Assets<Mesh>>, 
-        ResMut<Assets<Image>>,
-    ),
+    mut materials: ResMut<Assets<StandardMaterial>>,
 
     (mut bc_res, mut pp_res): (ResMut<BuildCursor>, ResMut<PipePlacement>),
-    mut bp_material_handles: ResMut<MaterialHandles>,
+    bp_material_handles: ResMut<MaterialHandles>,
 
     gui_hover_query: Query<&Interaction, With<GuiButtonId>>,
 
-    (mouse_input, keyboard_input, bp_fill_materials, building_arcs): (
+    (mouse_input, keyboard_input, bp_fill_materials, building_arcs, buildings_res): (
         Res<Input<MouseButton>>, 
         Res<Input<KeyCode>>, 
         Res<BlueprintFillMaterial>,
         Res<BuildingArcs>,
+        Res<BuildingsResource>,
     ),
 
     mut mouse_scroll_event: EventReader<MouseWheel>,
 
-    (mut transform_query, mut material_query, mut collider_query, mut moved_query): (
+    (mut transform_query, mut moved_query): (
         Query<&mut Transform>,
-        Query<&mut Handle<StandardMaterial>>,
-        Query<&mut Collider>,
         Query<&mut Moved>,
     ),
 ) {
@@ -124,10 +118,10 @@ pub fn building(
         let quat = Quat::from_axis_angle(normal, rot).mul_quat(Quat::from_rotation_arc(Vec3::Y, normal));
         let translation = intersection.position();
 
-        let mut transform_cache = Transform::from_translation(translation).with_rotation(quat);
+        let transform_cache = Transform::from_translation(translation).with_rotation(quat);
 
         let building_id = selected_building.id.clone().unwrap();
-        let mut building = string_to_building(building_id.to_string());
+        let building = buildings_res.0.get(&string_to_building_enum(selected_building.id.clone().unwrap())).unwrap();
 
         let mut hovered = false;
         for interaction in gui_hover_query.iter() {
@@ -142,10 +136,6 @@ pub fn building(
             Ok(e) => Some(e),
             Err(_) => None,
         };
-
-        if building.shape_data.mesh.is_none() {
-            building.shape_data.load_from_path(&asset_server, &gltf_meshes, &mut meshes, &mut materials, &mut images);
-        }
 
         if selected_building.changed {
             // There shouldn't be multiple, but just in case.
@@ -229,7 +219,7 @@ pub fn building(
                         .insert(NotShadowCaster);
 
                         commands.spawn_bundle(PbrBundle {
-                            mesh: building.shape_data.mesh.unwrap(),
+                            mesh: building.shape_data.mesh.clone().unwrap(),
                             material: bp_material_handles.blueprint.clone(),
                             transform: transform_cache,
                             ..Default::default()

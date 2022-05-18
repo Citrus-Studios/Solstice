@@ -2,7 +2,7 @@ use core::hash::Hash;
 
 use std::sync::Arc;
 
-use bevy::{prelude::*, math::Vec3, pbr::StandardMaterial, gltf::{GltfMesh, Gltf}, utils::HashMap, ecs::schedule::ShouldRun};
+use bevy::{prelude::*, math::Vec3, pbr::StandardMaterial, gltf::GltfMesh, utils::HashMap, ecs::schedule::ShouldRun};
 use bevy_rapier3d::prelude::Collider;
 
 use crate::{constants::GLOBAL_PIPE_ID, model_loader::{combine_gltf_mesh, combine_gltf_primitives}};
@@ -188,10 +188,10 @@ pub fn load_buildings_into_resource(
         Type: Wellpump, 
         Name: "Well Pump", 
         Flow: InOut, 
-        Storage: 50, 
+        Storage: 50_00, 
         Current: 0, 
-        Generation: 5, 
-        Cost: 100,
+        Generation: 5_00, 
+        Cost: 100_00,
         MeshPath: "models/buildings/well_pump.gltf", 
         Collider: WELLPUMP_COLLIDER.clone()
 
@@ -202,7 +202,7 @@ pub fn load_buildings_into_resource(
         Storage: 0, 
         Current: 0, 
         Generation: 0, 
-        Cost: 10,
+        Cost: 10_00,
         MeshPath: "models/pipes/pipe_base.gltf", 
         Collider: PIPE_COLLIDER.clone()
     ));
@@ -239,30 +239,10 @@ pub fn load_buildings_in_resource(
 /// Tries to match `name` to a building
 /// 
 /// Panics if `name` does not match any building
-pub fn string_to_building(name: String) -> Building {
+pub fn string_to_building_enum(name: String) -> BuildingType {
     match name.as_str() {
-        "Well Pump" => Building!(
-            Type: Wellpump, 
-            Name: "Well Pump", 
-            Flow: InOut, 
-            Storage: 50, 
-            Current: 0, 
-            Generation: 5, 
-            Cost: 100,
-            MeshPath: "models/buildings/well_pump.gltf", 
-            Collider: WELLPUMP_COLLIDER.clone()
-        ),
-        "Pipe" => Building!(
-            Type: Pipe, 
-            Name: "Pipe", 
-            Flow: InOut, 
-            Storage: 0, 
-            Current: 0, 
-            Generation: 0, 
-            Cost: 10,
-            MeshPath: "models/pipes/pipe_base.gltf", 
-            Collider: PIPE_COLLIDER.clone()
-        ),
+        "Well Pump" => BuildingType::Wellpump,
+        "Pipe" => BuildingType::Pipe,
         _ => panic!("Could not match \"{}\" to any building", name)
     }
 }
