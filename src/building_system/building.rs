@@ -5,7 +5,7 @@ pub use bevy::{prelude::*};
 
 use bevy_rapier3d::prelude::*;
 
-use crate::{algorithms::distance_vec3, player_system::{gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, player::{Player}}, constants::{HALF_PI, PIPE_CYLINDER_OFFSET}};
+use crate::{algorithms::distance_vec3, player_system::{gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, player::CameraComp}, constants::{HALF_PI, PIPE_CYLINDER_OFFSET}};
 
 use super::{raycasting::BuildCursor, buildings::{string_to_building_enum, BuildingArcs, BuildingsResource}, MaterialHandles, building_components::*, building_functions::*, BlueprintFillMaterial};
 
@@ -57,7 +57,7 @@ pub fn building(
 
     mut pipe_prev_query: EntityQuery<PipePreview>, 
     
-    camera_query: EntityQuery<Player>,
+    camera_query: EntityQuery<CameraComp>,
     mut cursor_bp_query: EntityQuery<CursorBp>,
     mut cursor_bp_collider_query: EntityQuery<CursorBpCollider>,
     
