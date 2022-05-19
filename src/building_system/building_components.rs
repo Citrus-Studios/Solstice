@@ -42,6 +42,9 @@ pub struct PlacedBlueprint {
 #[derive(Component)]
 pub struct Moved(pub bool);
 
+#[derive(Component)]
+pub struct TryPlace;
+
 pub trait IsColliding {
     /// Checks if `self` is intersecting in the given `RapierContext`
     fn is_intersecting(self, context: &Res<RapierContext>) -> bool;

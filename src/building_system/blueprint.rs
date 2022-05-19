@@ -1,11 +1,11 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, pbr::NotShadowCaster};
 use bevy_rapier3d::prelude::CollisionGroups;
 
 use crate::{player_system::gui_system::gui_startup::SelectedBuilding, constants::FABRICATOR_SPEED};
 
 use super::{raycasting::BuildCursor, building_components::PlacedBlueprint, BlueprintFillMaterial, buildings::BuildingReferenceComponent};
 
-const FABRICATOR_PER_SEC: u32 = (FABRICATOR_SPEED * 100) / 30;
+const FABRICATOR_PER_UPDATE: u32 = (FABRICATOR_SPEED * 100) / 30;
 
 pub fn update_blueprints(
     mut commands: Commands,
@@ -28,7 +28,7 @@ pub fn update_blueprints(
             let mut clicked_blueprint = clicked_blueprint_result.unwrap();
             let mut material = material_query.get_mut(entity).unwrap();
 
-            clicked_blueprint.current += FABRICATOR_PER_SEC;
+            clicked_blueprint.current += FABRICATOR_PER_UPDATE;
 
             if clicked_blueprint.current >= clicked_blueprint.cost {
                 *material = building_ref_query.get(entity).unwrap().0.shape_data.material.clone().unwrap();
@@ -36,7 +36,7 @@ pub fn update_blueprints(
                 let mut collision_groups = groups_query.get_mut(children_query.get(entity).unwrap()[0]).unwrap();
                 *collision_groups = CollisionGroups::default();
 
-                commands.entity(entity).remove::<PlacedBlueprint>();
+                commands.entity(entity).remove_bundle::<(PlacedBlueprint, NotShadowCaster)>();
             } else {
                 *material = bp_fill_materials.get_bp_fill_material(clicked_blueprint.current, clicked_blueprint.cost);
             }

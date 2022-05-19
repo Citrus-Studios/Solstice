@@ -3,11 +3,12 @@ use std::{f32::consts::PI, ops::Add};
 use bevy::{pbr::NotShadowCaster, input::mouse::MouseWheel};
 pub use bevy::{prelude::*};
 
-use bevy_rapier3d::prelude::*;
+use bevy_mod_raycast::{SimplifiedMesh, RayCastMesh};
+use bevy_rapier3d::{prelude::*, rapier::crossbeam::channel::Select};
 
 use crate::{algorithms::distance_vec3, player_system::{gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, player::CameraComp}, constants::{HALF_PI, PIPE_CYLINDER_OFFSET}};
 
-use super::{raycasting::BuildCursor, buildings::{string_to_building_enum, BuildingArcs, BuildingsResource}, MaterialHandles, building_components::*, building_functions::*, BlueprintFillMaterial};
+use super::{raycasting::BuildCursor, buildings::{string_to_building_enum, BuildingArcs, BuildingsResource, BuildingReferenceComponent}, MaterialHandles, building_components::*, building_functions::*, BlueprintFillMaterial, RaycastSet};
 
 #[derive(Component, Clone)]
 pub struct Pipe {
@@ -137,6 +138,8 @@ pub fn building(
             Err(_) => None,
         };
 
+        let cbp_entity;
+
         if selected_building.changed {
             // There shouldn't be multiple, but just in case.
             for e in cursor_bp_query.iter() {
@@ -145,10 +148,21 @@ pub fn building(
 
             let clone = building.shape_data.clone();
             
-            spawn_cursor_bp(&mut commands, clone.mesh.unwrap(), &bp_material_handles, clone.collider.clone(), clone.collider_offset, transform_cache);
+            cbp_entity = spawn_cursor_bp(
+                &mut commands, 
+                building_arcs.0.get(&building.building_id.building_type).unwrap().clone(), 
+                clone.mesh.unwrap(), 
+                &bp_material_handles, 
+                clone.collider.clone(), 
+                clone.collider_offset, 
+                transform_cache
+            );
+
             selected_building.changed = false;
         } else {
             let cursor_bp_entity = cursor_bp_query.single_mut();
+            cbp_entity = cursor_bp_entity;
+
             let cursor_bp_collider_entity = cursor_bp_collider_query.single_mut();
 
             let mut e = transform_query.many_mut([cursor_bp_entity, cursor_bp_collider_entity]);
@@ -253,16 +267,7 @@ pub fn building(
                 }
         
                 if mouse_input.just_pressed(MouseButton::Left) && !hovered {
-                    spawn_bp(&mut commands, 
-                        building.shape_data.clone(), 
-                        building_arcs.0.get(&building.building_id.building_type).unwrap().clone(), 
-                        building.iridium_data.cost, 
-                        transform_cache, 
-                        bp_fill_materials.get_fill_percent(0.0)
-                    );
-
-                    commands.entity(cursor_bp_query.single()).despawn_recursive();
-                    selected_building.id = None;
+                    commands.entity(cbp_entity).insert(TryPlace);
                 }
             }
         }
@@ -270,24 +275,73 @@ pub fn building(
 }
 
 pub fn check_cursor_bp_collision(
-    mut cursor_bp: Query<&mut Handle<StandardMaterial>, With<CursorBp>>,
-    mut cursor_bp_collider: Query<(Entity, &mut Moved), With<CursorBpCollider>>,
-    mut pipe_preview: Query<(&mut Handle<StandardMaterial>, Entity), (With<PipePreview>, Without<CursorBp>)>,
+    mut commands: Commands,
+
+    cursor_bp: EntityQuery<CursorBp>,
+    cursor_bp_collider: EntityQuery<CursorBpCollider>,
+    pipe_preview: EntityQuery<PipePreview>,
+
     rapier_context: Res<RapierContext>,
     bp_material_handles: Res<MaterialHandles>,
+    mut selected_building: ResMut<SelectedBuilding>,
+
+    mut moved_query: Query<&mut Moved>,
+    mut material_query: Query<&mut Handle<StandardMaterial>>,
+    building_ref_query: Query<&BuildingReferenceComponent>,
+    try_place_query: Query<&TryPlace>,
 ) {
-    for (mut mat, (e, mut moved)) in cursor_bp.iter_mut().zip(cursor_bp_collider.iter_mut()) {
+    for (cbp_entity, cbp_collider_entity) in cursor_bp.iter().zip(cursor_bp_collider.iter()) {
+        let mut moved = moved_query.get_mut(cbp_collider_entity).unwrap();
+        let mut intersecting = None;
+        let try_place = try_place_query.get(cbp_entity);
+
+        if moved.0 || try_place.is_ok() {
+            intersecting = Some(cbp_collider_entity.is_intersecting(&rapier_context));
+        }
+
         if moved.0 {
-            if e.is_intersecting(&rapier_context) {
+            let mut mat = material_query.get_mut(cbp_entity).unwrap();
+
+            if intersecting.unwrap() {
                 *mat = bp_material_handles.obstructed.clone();
             } else {
                 *mat = bp_material_handles.blueprint.clone();
             }
+
             moved.0 = false;
+        }
+
+        if try_place.is_ok() {
+            commands.entity(cbp_entity).remove::<TryPlace>();
+            if !intersecting.unwrap() {
+                commands.entity(cbp_collider_entity)
+                    .remove_bundle::<(Moved, CursorBpCollider)>()
+                    .insert_bundle((
+                        CollisionGroups { memberships: 0, filters: 0 }, 
+                        Sensor(false)
+                    ))
+                ;
+
+                let building = &building_ref_query.get(cbp_entity).unwrap().0;
+
+                commands.entity(cbp_entity)
+                    .remove::<CursorBp>()
+                    .insert_bundle((
+                        RayCastMesh::<RaycastSet>::default(),
+                        SimplifiedMesh { mesh: building.shape_data.simplified_mesh_handle.clone().unwrap() },
+                        PlacedBlueprint {
+                            cost: building.iridium_data.cost,
+                            current: 0,
+                        }
+                    ))
+                ;
+                selected_building.id = None;
+            }
         }
     }
 
-    for (mut mat, e) in pipe_preview.iter_mut() {
+    for e in pipe_preview.iter() {
+        let mut mat = material_query.get_mut(e).unwrap();
         if e.is_intersecting(&rapier_context) {
             *mat = bp_material_handles.obstructed.clone();
         } else {

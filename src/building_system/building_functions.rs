@@ -19,13 +19,14 @@ pub fn check_pipe_collision(e: Entity, context: Res<RapierContext>) -> bool {
 /// Spawns the cursor blueprint preview thing
 // TODO: collision
 pub fn spawn_cursor_bp(
-    commands: &mut Commands, 
+    commands: &mut Commands,
+    building_arc: Arc<Building>,
     mesh: Handle<Mesh>, 
     bp_materials: &ResMut<MaterialHandles>, 
     collider: Collider, 
     collider_offset: Vec3, 
     transform: Transform,
-) {    
+) -> Entity {    
     commands.spawn_bundle(PbrBundle {
         mesh,
         material: bp_materials.blueprint.clone(),
@@ -34,6 +35,7 @@ pub fn spawn_cursor_bp(
     })
     .insert(NotShadowCaster)
     .insert(CursorBp)
+    .insert(BuildingReferenceComponent(building_arc))
     .with_children(|parent| {
         parent.spawn()
             .insert(collider)
@@ -43,7 +45,7 @@ pub fn spawn_cursor_bp(
             .insert(CursorBpCollider)
             .insert(Moved(true))
         ;
-    });
+    }).id()
 }
 
 /// Moves the cursor blueprint preview thing
@@ -59,41 +61,6 @@ pub fn move_cursor_bp(
     *collider_transform = new_transform.with_add_translation(collider_offset);
 
     moved.0 = true;
-}
-
-/// Spawns a blueprint
-// TODO: everything
-pub fn spawn_bp(
-    commands: &mut Commands, 
-    shape_data: BuildingShapeData, 
-    building_arc: Arc<Building>,
-    cost: u32, 
-    transform: Transform,
-    material: Handle<StandardMaterial>,
-) {
-    commands.spawn_bundle(PbrBundle {
-        mesh: shape_data.mesh.unwrap(),
-        material,
-        transform,
-        ..Default::default()
-    })
-    .insert(SimplifiedMesh {
-        mesh: shape_data.simplified_mesh_handle.unwrap(),
-    })
-    .insert(RayCastMesh::<RaycastSet>::default())
-    .insert(PlacedBlueprint {
-        cost,
-        current: 0,
-    })
-    .insert(BuildingReferenceComponent(building_arc))
-    .with_children(|parent| {
-        parent.spawn()
-            .insert(shape_data.collider)
-            .insert(transform.with_add_translation(shape_data.collider_offset)) // bevy-rapier issue, should be fixed later
-            .insert(CollisionGroups::new(0, 0)) // No collision (yet)
-        ;
-    })
-    ;
 }
 
 pub trait MoveTransform {
