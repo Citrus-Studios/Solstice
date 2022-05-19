@@ -8,6 +8,8 @@ use super::{raycasting::BuildCursor, building_components::PlacedBlueprint, Bluep
 const FABRICATOR_PER_SEC: u32 = (FABRICATOR_SPEED * 100) / 30;
 
 pub fn update_blueprints(
+    mut commands: Commands,
+
     children_query: Query<&Children>,
     mut groups_query: Query<&mut CollisionGroups>,
     mut material_query: Query<&mut Handle<StandardMaterial>>,
@@ -33,6 +35,8 @@ pub fn update_blueprints(
 
                 let mut collision_groups = groups_query.get_mut(children_query.get(entity).unwrap()[0]).unwrap();
                 *collision_groups = CollisionGroups::default();
+
+                commands.entity(entity).remove::<PlacedBlueprint>();
             } else {
                 *material = bp_fill_materials.get_bp_fill_material(clicked_blueprint.current, clicked_blueprint.cost);
             }
