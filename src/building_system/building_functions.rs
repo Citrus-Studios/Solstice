@@ -33,17 +33,21 @@ pub fn spawn_cursor_bp(
         transform,
         ..Default::default()
     })
-    .insert(NotShadowCaster)
-    .insert(CursorBp)
-    .insert(BuildingReferenceComponent(building_arc))
+    .insert_bundle((
+        NotShadowCaster,
+        CursorBp,
+        BuildingReferenceComponent(building_arc)
+    ))
     .with_children(|parent| {
         parent.spawn()
-            .insert(collider)
-            .insert(transform.with_add_translation(collider_offset)) // bevy-rapier issue, should be fixed later
-            .insert(Sensor(true))
-            .insert(ActiveCollisionTypes::all())
-            .insert(CursorBpCollider)
-            .insert(Moved(true))
+            .insert_bundle((
+                collider,
+                transform.with_add_translation(collider_offset),
+                Sensor(true),
+                ActiveCollisionTypes::all(),
+                CursorBpCollider,
+                Moved(true)
+            ))
         ;
     }).id()
 }

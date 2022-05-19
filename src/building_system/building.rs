@@ -227,10 +227,12 @@ pub fn building(
                             transform: offset_transform.with_scale(Vec3::new(1.0, 0.02, 1.0)),
                             ..Default::default()
                         })
-                        .insert(Collider::cuboid(0.135, 0.5, 0.135))
-                        .insert(Sensor(true))
-                        .insert(PipePreview)
-                        .insert(NotShadowCaster);
+                        .insert_bundle((
+                            Collider::cuboid(0.135, 0.5, 0.135),
+                            Sensor(true),
+                            PipePreview,
+                            NotShadowCaster
+                        ));
 
                         commands.spawn_bundle(PbrBundle {
                             mesh: building.shape_data.mesh.clone().unwrap(),
