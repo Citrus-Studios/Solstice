@@ -13,6 +13,9 @@ pub static mut GLOBAL_PIPE_ID: u32 = 0;
 pub const HALF_PI: f32 = PI / 2.0;
 pub const HALF_SIZE: f32 = 10.0;
 
+// the portafab fab speed in i/s
+pub const FABRICATOR_SPEED: u32 = 100;
+
 macro_rules! GUIBranch {
     ($name:literal - $x0:literal $y0:literal, $x1:literal $y1:literal, $x2:literal $y2:literal, $x3:literal $y3:literal) => {
         (
