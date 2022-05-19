@@ -1,16 +1,17 @@
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::ActiveCollisionTypes;
+use bevy_rapier3d::prelude::CollisionGroups;
 
-use crate::player_system::gui_system::gui_startup::SelectedBuilding;
+use crate::{player_system::gui_system::gui_startup::SelectedBuilding, constants::FABRICATOR_SPEED};
 
-use super::{raycasting::BuildCursor, building_components::PlacedBlueprint, building::EntityQuery, BlueprintFillMaterial};
+use super::{raycasting::BuildCursor, building_components::PlacedBlueprint, BlueprintFillMaterial, buildings::BuildingReferenceComponent};
+
+const FABRICATOR_PER_SEC: u32 = (FABRICATOR_SPEED * 100) / 30;
 
 pub fn update_blueprints(
-    blueprint_query: EntityQuery<PlacedBlueprint>,
-
     children_query: Query<&Children>,
-    mut act_query: Query<&mut ActiveCollisionTypes>,
+    mut groups_query: Query<&mut CollisionGroups>,
     mut material_query: Query<&mut Handle<StandardMaterial>>,
+    building_ref_query: Query<&BuildingReferenceComponent>,
     mut pb_query: Query<&mut PlacedBlueprint>,
 
     build_cursor_res: Res<BuildCursor>,
@@ -25,10 +26,16 @@ pub fn update_blueprints(
             let mut clicked_blueprint = clicked_blueprint_result.unwrap();
             let mut material = material_query.get_mut(entity).unwrap();
 
-            clicked_blueprint.current += 0_84;
-            clicked_blueprint.current = clicked_blueprint.current.min(clicked_blueprint.cost);
+            clicked_blueprint.current += FABRICATOR_PER_SEC;
 
-            *material = bp_fill_materials.get_bp_fill_material(clicked_blueprint.current, clicked_blueprint.cost);
+            if clicked_blueprint.current >= clicked_blueprint.cost {
+                *material = building_ref_query.get(entity).unwrap().0.shape_data.material.clone().unwrap();
+
+                let mut collision_groups = groups_query.get_mut(children_query.get(entity).unwrap()[0]).unwrap();
+                *collision_groups = CollisionGroups::default();
+            } else {
+                *material = bp_fill_materials.get_bp_fill_material(clicked_blueprint.current, clicked_blueprint.cost);
+            }
         }
     }
 }
