@@ -4,7 +4,7 @@ use bevy_rapier3d::prelude::*;
 
 use crate::{player_system::gui_system::gui_startup::SelectedBuilding, constants::NO_COLLISION};
 
-use super::{building_components::*, buildings::BuildingReferenceComponent, building::EntityQuery, MaterialHandles, GlobalPipeId, RaycastSet, building_functions::MoveTransform, BlueprintFillMaterial};
+use super::{building_components::*, buildings::BuildingReferenceComponent, building::EntityQuery, MaterialHandles, GlobalPipeId, RaycastSet, BlueprintFillMaterial};
 
 pub fn check_cursor_bp_collision(
     mut commands: Commands,
@@ -22,7 +22,7 @@ pub fn check_cursor_bp_collision(
     mut global_pipe_id: ResMut<GlobalPipeId>,
     mut meshes: ResMut<Assets<Mesh>>,
 
-    (mut moved_query, children_query, parent_query, mut material_query, transform_query, building_ref_query, try_place_query): (
+    (mut moved_query, children_query, _parent_query, mut material_query, _transform_query, building_ref_query, try_place_query): (
         Query<&mut Moved>,
         Query<&Children>,
         Query<&Parent>,

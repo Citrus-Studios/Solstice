@@ -1,4 +1,4 @@
-use bevy::{prelude::*, pbr::NotShadowCaster, ecs::query::QueryEntityError};
+use bevy::{prelude::*, pbr::NotShadowCaster};
 use bevy_rapier3d::prelude::CollisionGroups;
 
 use crate::{player_system::gui_system::gui_startup::SelectedBuilding, constants::FABRICATOR_SPEED};

@@ -1,14 +1,14 @@
 use std::{f32::consts::PI, ops::Add};
 
-use bevy::{pbr::NotShadowCaster, input::mouse::MouseWheel, render::mesh::PrimitiveTopology};
+use bevy::{pbr::NotShadowCaster, input::mouse::MouseWheel};
 pub use bevy::{prelude::*};
 
-use bevy_mod_raycast::{SimplifiedMesh, RayCastMesh};
-use bevy_rapier3d::{prelude::*, rapier::crossbeam::channel::Select};
+
+use bevy_rapier3d::{prelude::*};
 
 use crate::{algorithms::distance_vec3, player_system::{gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, player::CameraComp}, constants::{HALF_PI, PIPE_CYLINDER_OFFSET}};
 
-use super::{raycasting::BuildCursor, buildings::{string_to_building_enum, BuildingArcs, BuildingsResource, BuildingReferenceComponent}, MaterialHandles, building_components::*, building_functions::*, BlueprintFillMaterial, RaycastSet, GlobalPipeId};
+use super::{raycasting::BuildCursor, buildings::{string_to_building_enum, BuildingArcs, BuildingsResource, BuildingReferenceComponent}, MaterialHandles, building_components::*, building_functions::*, BlueprintFillMaterial};
 
 #[derive(Component, Clone)]
 pub struct Pipe {
@@ -69,7 +69,7 @@ pub fn building(
     asset_server: Res<AssetServer>,
     mut selected_building: ResMut<SelectedBuilding>,
 
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    _materials: ResMut<Assets<StandardMaterial>>,
 
     mut bc_res: ResMut<BuildCursor>,
     bp_material_handles: ResMut<MaterialHandles>,
@@ -87,7 +87,7 @@ pub fn building(
 
     mut mouse_scroll_event: EventReader<MouseWheel>,
 
-    (mut transform_query, mut moved_query, global_transform_query): (
+    (mut transform_query, mut moved_query, _global_transform_query): (
         Query<&mut Transform>,
         Query<&mut Moved>,
         Query<&GlobalTransform>,
