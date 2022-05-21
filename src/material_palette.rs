@@ -1,6 +1,6 @@
 use bevy::{prelude::{Color, Image, Assets, ResMut}, render::render_resource::{Extent3d, TextureDimension, TextureFormat}, math::Vec2, pbr::StandardMaterial};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MaterialPalette {
     pub palette: Vec<FlatMaterial>
 }
@@ -13,7 +13,7 @@ pub struct CompiledMaterials {
 }
 
 /// A material with no textures
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct FlatMaterial {
     pub base_color: Color,
     pub emissive: Color,
