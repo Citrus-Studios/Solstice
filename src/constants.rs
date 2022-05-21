@@ -6,6 +6,7 @@ use rand::{thread_rng, Rng};
 use crate::{player_system::gui_system::gui::GuiOr};
 
 use bevy::math::Vec3;
+use bevy_rapier3d::prelude::CollisionGroups;
 
 pub const DELTA_TIME: f32 = 1.0 / 60.0;
 pub const SQRT_OF_2: f32 = 1.41421356237f32 / 2.0;
@@ -146,6 +147,7 @@ lazy_static! {
     ]);
     
     pub static ref PIPE_CYLINDER_OFFSET: Vec3 = Vec3::new(0.0, 0.25, 0.0675);
+    pub static ref NO_COLLISION: CollisionGroups = CollisionGroups::new(0, 0);
 }
 // Shorten the .to_string() method by several characters, just for looks
 pub trait ShortToString {
