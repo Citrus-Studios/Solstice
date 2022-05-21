@@ -14,6 +14,13 @@ pub struct PipePlacement {
 
 /// The entity with this component is the pipe cylinder between the two endpoints **before** it is placed
 #[derive(Component)]
+pub struct PipePreviewCylinder;
+
+#[derive(Component)]
+pub struct PipePreviewPlacement;
+
+
+#[derive(Component)]
 pub struct PipePreview;
 
 #[derive(Component)]
@@ -37,6 +44,22 @@ pub struct PlacedBlueprint {
     pub cost: u32,
     pub current: u32,
 }
+
+#[derive(Component)]
+pub struct PipeBlueprint {
+    pub cost: u32,
+    pub current: u32,
+    // connections.. will add later
+}
+
+#[derive(Component)]
+pub struct PipeFirst;
+
+#[derive(Component)]
+pub struct PipeSecond;
+
+#[derive(Component)]
+pub struct PipeCylinder;
 
 /// Entities with this component have `true` when they are moved
 #[derive(Component)]

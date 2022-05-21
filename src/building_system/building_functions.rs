@@ -17,7 +17,8 @@ pub fn check_pipe_collision(e: Entity, context: Res<RapierContext>) -> bool {
 }
 
 /// Spawns the cursor blueprint preview thing
-// TODO: collision
+/// 
+/// Returns the entity it just spawned
 pub fn spawn_cursor_bp(
     commands: &mut Commands,
     building_arc: Arc<Building>,
@@ -42,6 +43,7 @@ pub fn spawn_cursor_bp(
         parent.spawn()
             .insert_bundle((
                 collider,
+                CollisionGroups { memberships: 0b00010000, filters: 0b11110111 },
                 transform.with_add_translation(collider_offset),
                 Sensor(true),
                 ActiveCollisionTypes::all(),
@@ -79,4 +81,3 @@ impl MoveTransform for Transform {
         return_transform.with_translation(self.translation.add(rotated_translation))
     }
 }
-

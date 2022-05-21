@@ -3,14 +3,14 @@ use bevy::{
     pbr::{PbrBundle, StandardMaterial, AlphaMode},
     prelude::{
         shape, Assets, Color, Commands, CoreStage, Mesh, ParallelSystemDescriptorCoercion, Plugin,
-        ResMut, Transform, SystemSet, Handle, info,
+        ResMut, Transform, SystemSet, Handle, info, default,
     }, gltf::GltfMesh, core::FixedTimestep,
 };
 use bevy_mod_raycast::{RayCastMesh, RaycastSystem};
 
 use crate::player_system::player::player_camera_system;
 
-use self::{raycasting::{raycast, update_raycast_with_cursor, RaycastCursor, BuildCursor}, building::{check_cursor_bp_collision}, load_models::{initiate_load, NUM_MODELS, NONE_HANDLE}, building_components::*, blueprint::update_blueprints, buildings::{load_buildings_into_resource, load_buildings_in_resource, BuildingInitDone, building_init_done, building_init_not_done_and_get_load_states}};
+use self::{raycasting::{raycast, update_raycast_with_cursor, RaycastCursor, BuildCursor}, placement::check_cursor_bp_collision, load_models::{initiate_load, NUM_MODELS, NONE_HANDLE}, building_components::*, blueprint::update_blueprints, buildings::{load_buildings_into_resource, load_buildings_in_resource, BuildingInitDone, building_init_done, building_init_not_done_and_get_load_states}};
 
 pub mod raycasting;
 pub mod building;
@@ -19,6 +19,7 @@ pub mod load_models;
 pub mod building_components;
 pub mod building_functions;
 pub mod blueprint;
+pub mod placement;
 
 pub struct RaycastSet;
 
@@ -36,12 +37,17 @@ pub struct BlueprintFillMaterial(Vec<Handle<StandardMaterial>>);
 
 pub struct BuildingSystemPlugin;
 
+pub struct GlobalPipeId(pub u32);
+
+pub struct PipeCylinderMaterial(pub Handle<StandardMaterial>);
+
 impl Plugin for BuildingSystemPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
             .insert_resource(ModelHandles { handles: [NONE_HANDLE; NUM_MODELS] })
             .insert_resource(ChangeBuilding { b: false })
             .insert_resource(BuildingInitDone(false))
+            .insert_resource(GlobalPipeId(0))
             .add_startup_system(building_system_startup)
             .add_startup_system(initiate_load)
             .add_startup_system(load_buildings_into_resource)
@@ -102,6 +108,14 @@ pub fn building_system_startup(
     commands.insert_resource(PipePlacement { placed: false, transform: None });
     commands.insert_resource(BlueprintFillMaterial::generate(&mut materials, 50));
     commands.insert_resource(MaterialHandles::generate(&mut materials));
+    commands.insert_resource(PipeCylinderMaterial(materials.add(
+        StandardMaterial {
+            base_color: Color::rgb(0.5913826, 0.5913826, 0.5913826),
+            metallic: 0.0,
+            perceptual_roughness: 0.5,
+            ..default()
+        }
+    )));
 
     info!("building done");
 }

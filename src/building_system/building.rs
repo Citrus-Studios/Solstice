@@ -1,6 +1,6 @@
 use std::{f32::consts::PI, ops::Add};
 
-use bevy::{pbr::NotShadowCaster, input::mouse::MouseWheel};
+use bevy::{pbr::NotShadowCaster, input::mouse::MouseWheel, render::mesh::PrimitiveTopology};
 pub use bevy::{prelude::*};
 
 use bevy_mod_raycast::{SimplifiedMesh, RayCastMesh};
@@ -8,7 +8,7 @@ use bevy_rapier3d::{prelude::*, rapier::crossbeam::channel::Select};
 
 use crate::{algorithms::distance_vec3, player_system::{gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, player::CameraComp}, constants::{HALF_PI, PIPE_CYLINDER_OFFSET}};
 
-use super::{raycasting::BuildCursor, buildings::{string_to_building_enum, BuildingArcs, BuildingsResource, BuildingReferenceComponent}, MaterialHandles, building_components::*, building_functions::*, BlueprintFillMaterial, RaycastSet};
+use super::{raycasting::BuildCursor, buildings::{string_to_building_enum, BuildingArcs, BuildingsResource, BuildingReferenceComponent}, MaterialHandles, building_components::*, building_functions::*, BlueprintFillMaterial, RaycastSet, GlobalPipeId};
 
 #[derive(Component, Clone)]
 pub struct Pipe {
@@ -30,18 +30,18 @@ impl Pipe {
 }
 
 enum PipeBools {
-    ClickFirstPointPlacedNoIntersection,
-    ClickFirstPointNotPlacedNoIntersection,
+    ClickFirstPointPlaced,
+    ClickFirstPointNotPlaced,
     NoClickFirstPointPlaced,
     Other,
 }
 
 impl PipeBools {
-    fn match_bools(clicked: bool, hovered: bool, placed: bool, intersection: bool) -> PipeBools {
-        match (clicked, hovered, placed, intersection) {
-            (true, false, true, false) => PipeBools::ClickFirstPointPlacedNoIntersection,
-            (true, false, false, _) => PipeBools::ClickFirstPointNotPlacedNoIntersection,
-            (false, _, true, _) => PipeBools::NoClickFirstPointPlaced,
+    fn match_bools(clicked: bool, hovered: bool, placed: bool) -> PipeBools {
+        match (clicked, hovered, placed) {
+            (true, false, true) => PipeBools::ClickFirstPointPlaced,
+            (true, false, false) => PipeBools::ClickFirstPointNotPlaced,
+            (false, _, true) => PipeBools::NoClickFirstPointPlaced,
             _ => PipeBools::Other
         }
     }
@@ -56,36 +56,41 @@ pub fn building(
 
     delete_query: EntityQuery<DeleteNextFrame>,
 
-    mut pipe_prev_query: EntityQuery<PipePreview>, 
+    (pipe_prev_cylinder_query, pipe_prev_placement_query, pipe_prev_query): (
+        EntityQuery<PipePreviewCylinder>, 
+        EntityQuery<PipePreviewPlacement>,
+        EntityQuery<PipePreview>,
+    ), 
     
     camera_query: EntityQuery<CameraComp>,
     mut cursor_bp_query: EntityQuery<CursorBp>,
     mut cursor_bp_collider_query: EntityQuery<CursorBpCollider>,
     
-    rapier_context: Res<RapierContext>,
     asset_server: Res<AssetServer>,
     mut selected_building: ResMut<SelectedBuilding>,
 
     mut materials: ResMut<Assets<StandardMaterial>>,
 
-    (mut bc_res, mut pp_res): (ResMut<BuildCursor>, ResMut<PipePlacement>),
+    mut bc_res: ResMut<BuildCursor>,
     bp_material_handles: ResMut<MaterialHandles>,
 
     gui_hover_query: Query<&Interaction, With<GuiButtonId>>,
 
-    (mouse_input, keyboard_input, bp_fill_materials, building_arcs, buildings_res): (
+    (mouse_input, keyboard_input, bp_fill_materials, building_arcs, buildings_res, rapier_context): (
         Res<Input<MouseButton>>, 
         Res<Input<KeyCode>>, 
         Res<BlueprintFillMaterial>,
         Res<BuildingArcs>,
         Res<BuildingsResource>,
+        Res<RapierContext>,
     ),
 
     mut mouse_scroll_event: EventReader<MouseWheel>,
 
-    (mut transform_query, mut moved_query): (
+    (mut transform_query, mut moved_query, global_transform_query): (
         Query<&mut Transform>,
         Query<&mut Moved>,
+        Query<&GlobalTransform>,
     ),
 ) {
     for entity in delete_query.iter() {
@@ -107,6 +112,7 @@ pub fn building(
     let mut rot = bc_res.rotation;
     
     if intersection_op.is_some() && selected_building.id.is_some() {
+        // math...
         let intersection = intersection_op.unwrap();
         let normal = intersection.normal().normalize();
 
@@ -115,7 +121,6 @@ pub fn building(
         let zero_vec = Quat::from_rotation_arc(Vec3::Y, normal).mul_vec3(Vec3::Z);
         rot -= (projected.angle_between_clockwise(zero_vec, normal) / (PI/16.0)).round() * (PI/16.0);
 
-        // my brain
         let quat = Quat::from_axis_angle(normal, rot).mul_quat(Quat::from_rotation_arc(Vec3::Y, normal));
         let translation = intersection.position();
 
@@ -124,6 +129,9 @@ pub fn building(
         let building_id = selected_building.id.clone().unwrap();
         let building = buildings_res.0.get(&string_to_building_enum(selected_building.id.clone().unwrap())).unwrap();
 
+        let building_arc = building_arcs.0.get(&building.building_id.building_type).unwrap().clone();
+
+        // check if we're hovering over the gui
         let mut hovered = false;
         for interaction in gui_hover_query.iter() {
             match interaction {
@@ -131,12 +139,6 @@ pub fn building(
                 _ => { hovered = true; break }
             }
         }
-
-        let entity_op = pipe_prev_query.get_single();
-        let pipe_prev_entity_op = match entity_op {
-            Ok(e) => Some(e),
-            Err(_) => None,
-        };
 
         let cbp_entity;
 
@@ -150,7 +152,7 @@ pub fn building(
             
             cbp_entity = spawn_cursor_bp(
                 &mut commands, 
-                building_arcs.0.get(&building.building_id.building_type).unwrap().clone(), 
+                building_arc.clone(), 
                 clone.mesh.unwrap(), 
                 &bp_material_handles, 
                 clone.collider.clone(), 
@@ -173,7 +175,7 @@ pub fn building(
 
             let mut moved = moved_query.get_mut(cursor_bp_collider_entity).unwrap();
 
-            if cursor_bp_transform.clone() != transform_cache && transform_cache != pp_res.transform.unwrap_or(Transform::from_xyz(f32::MAX, f32::MAX, f32::MAX)) {
+            if cursor_bp_transform.clone() != transform_cache {
                 move_cursor_bp(cursor_bp_transform, cursor_bp_collider_transform, building.shape_data.collider_offset, transform_cache, &mut moved);
             }
         }
@@ -186,88 +188,83 @@ pub fn building(
                 let pipe_cyl_mesh: Handle<Mesh> = asset_server.load("models/pipes/pipe_cylinder.obj");
                 let pipe_cyl_offset = Vec3::new(0.0, 0.25, 0.0675);
                 // Rotate the offset and add it to the translation
-                let offset_transform = transform_cache.with_translation(translation.add(quat.mul_vec3(pipe_cyl_offset)));
+                let offset_transform = transform_cache.with_add_translation(pipe_cyl_offset);
 
                 let trans = offset_transform.translation;
-                let inter = check_pipe_collision(pipe_prev_query.single(), rapier_context);
 
-                match PipeBools::match_bools(mouse_input.just_pressed(MouseButton::Left), hovered, pp_res.placed, inter) {
+                match PipeBools::match_bools(mouse_input.just_pressed(MouseButton::Left), hovered, !pipe_prev_placement_query.is_empty()) {
                     // (just clicked, hovering over gui, first pipe point placed, intersecting)
-                    PipeBools::ClickFirstPointPlacedNoIntersection => {
+                    PipeBools::ClickFirstPointPlaced => {
                         // Place the whole pipe blueprint
-                        let first_position = pp_res.transform.unwrap().translation;
-                        let transform_c = transform_between_points(first_position, trans);
+                        let first_position = transform_query.get(pipe_prev_placement_query.single()).unwrap().with_add_translation(pipe_cyl_offset).translation;
+                        let mut transform = transform_query.get_mut(pipe_prev_cylinder_query.single()).unwrap();
+                        update_pipe_cylinder_transform(transform.as_mut(), first_position, trans);
 
-                        pp_res.placed = false;
-
-                        commands.spawn_bundle(PbrBundle {
-                            mesh: pipe_cyl_mesh,
-                            material: materials.add(Color::rgb(0.4, 0.4, 0.4).into()),
-                            transform: transform_c,
-                            ..Default::default()
-                        });
-
-                        if pipe_prev_entity_op.is_some() {
-                            commands.entity(pipe_prev_entity_op.unwrap()).despawn();
-                        }
-
-                        selected_building.id = None;
-                        bc_res.rotation = 0.0;
+                        commands.entity(pipe_prev_query.single())
+                            .insert(TryPlace)
+                        ;
                     },
-                    // (just clicked, hovering over gui, first pipe point placed, _)
-                    PipeBools::ClickFirstPointNotPlacedNoIntersection => {
-                        // Place the first pipe point
-                        pp_res.placed = true;
-                        pp_res.transform = Some(offset_transform);
+
+                    PipeBools::ClickFirstPointNotPlaced => {
 
                         // spawn pipe preview
-                        commands.spawn_bundle(PbrBundle {
-                            mesh: pipe_cyl_mesh,
-                            material: bp_material_handles.blueprint.clone(),
-                            transform: offset_transform.with_scale(Vec3::new(1.0, 0.02, 1.0)),
-                            ..Default::default()
-                        })
-                        .insert_bundle((
-                            Collider::cuboid(0.135, 0.5, 0.135),
-                            Sensor(true),
-                            PipePreview,
-                            NotShadowCaster
-                        ));
+                        commands.spawn()
+                            .insert_bundle((
+                                GlobalTransform::identity(),
+                                Transform::default(),
+                                PipePreview,
+                                BuildingReferenceComponent(building_arc.clone())
+                            ))
+                            .with_children(|parent| {
+                                parent.spawn_bundle(PbrBundle {
+                                    mesh: pipe_cyl_mesh,
+                                    material: bp_material_handles.blueprint.clone(),
+                                    transform: offset_transform.with_scale(Vec3::new(1.0, 0.001, 1.0)),
+                                    ..Default::default()
+                                })
+                                .insert_bundle((
+                                    Collider::cuboid(0.135, 0.5, 0.135),
+                                    CollisionGroups { memberships: 0b00001000, filters: 0b11101111 },
+                                    Sensor(true),
+                                    PipePreviewCylinder,
+                                    NotShadowCaster
+                                ));
 
-                        commands.spawn_bundle(PbrBundle {
-                            mesh: building.shape_data.mesh.clone().unwrap(),
-                            material: bp_material_handles.blueprint.clone(),
-                            transform: transform_cache,
-                            ..Default::default()
-                        })
-                        .insert(NotShadowCaster);
+                                parent.spawn_bundle(PbrBundle {
+                                    mesh: building.shape_data.mesh.clone().unwrap(),
+                                    material: bp_material_handles.blueprint.clone(),
+                                    transform: transform_cache,
+                                    ..Default::default()
+                                })
+                                .insert_bundle((
+                                    PipePreviewPlacement,
+                                    NotShadowCaster
+                                ))
+                                .with_children(|parent| {
+                                    parent.spawn_bundle((
+                                        building.shape_data.collider.clone(),
+                                        transform_cache.with_add_translation(building.shape_data.collider_offset),
+                                        Sensor(true),
+                                    ));
+                                });
+                            })
+                            .add_child(cbp_entity)
+                        ;
 
                         bc_res.rotation += PI;
                     },
-                    // (just clicked, _, first pipe point placed, _)
                     PipeBools::NoClickFirstPointPlaced => {
                         // Update the preview, change pipe cylinder transform
-                        let first_position = pp_res.transform.unwrap().translation;
-                        let transform_c = transform_between_points(first_position, trans);
-
-                        let entity = pipe_prev_query.single_mut();
-                        let mut transform = transform_query.get_mut(entity).unwrap();
-
-                        transform.scale.y = transform.scale.y.min(0.01);
-
-                        let transform_mut = transform.as_mut();
-                        *transform_mut = transform_c;
+                        let first_position = transform_query.get(pipe_prev_placement_query.single()).unwrap().with_add_translation(pipe_cyl_offset).translation;
+                        let mut transform = transform_query.get_mut(pipe_prev_cylinder_query.single()).unwrap();
+                        update_pipe_cylinder_transform(transform.as_mut(), first_position, trans);
                     }
                     _ => ()
                 }
             },
 
             // every other building
-            _ => {
-                if pipe_prev_entity_op.is_some() {
-                    commands.entity(pipe_prev_entity_op.unwrap()).despawn();
-                }
-        
+            _ => {        
                 if mouse_input.just_pressed(MouseButton::Left) && !hovered {
                     commands.entity(cbp_entity).insert(TryPlace);
                 }
@@ -276,80 +273,16 @@ pub fn building(
     }
 }
 
-pub fn check_cursor_bp_collision(
-    mut commands: Commands,
+fn update_pipe_cylinder_transform(
+    pipe_prev_cylinder_transform: &mut Transform,
 
-    cursor_bp: EntityQuery<CursorBp>,
-    cursor_bp_collider: EntityQuery<CursorBpCollider>,
-    pipe_preview: EntityQuery<PipePreview>,
-
-    rapier_context: Res<RapierContext>,
-    bp_material_handles: Res<MaterialHandles>,
-    mut selected_building: ResMut<SelectedBuilding>,
-
-    mut moved_query: Query<&mut Moved>,
-    mut material_query: Query<&mut Handle<StandardMaterial>>,
-    building_ref_query: Query<&BuildingReferenceComponent>,
-    try_place_query: Query<&TryPlace>,
+    first_pos: Vec3,
+    second_pos: Vec3,
 ) {
-    for (cbp_entity, cbp_collider_entity) in cursor_bp.iter().zip(cursor_bp_collider.iter()) {
-        let mut moved = moved_query.get_mut(cbp_collider_entity).unwrap();
-        let mut intersecting = None;
-        let try_place = try_place_query.get(cbp_entity);
+    let mut transform = transform_between_points(first_pos, second_pos);
+    transform.scale.y = transform.scale.y.max(0.001);
 
-        if moved.0 || try_place.is_ok() {
-            intersecting = Some(cbp_collider_entity.is_intersecting(&rapier_context));
-        }
-
-        if moved.0 {
-            let mut mat = material_query.get_mut(cbp_entity).unwrap();
-
-            if intersecting.unwrap() {
-                *mat = bp_material_handles.obstructed.clone();
-            } else {
-                *mat = bp_material_handles.blueprint.clone();
-            }
-
-            moved.0 = false;
-        }
-
-        if try_place.is_ok() {
-            commands.entity(cbp_entity).remove::<TryPlace>();
-            if !intersecting.unwrap() {
-                commands.entity(cbp_collider_entity)
-                    .remove_bundle::<(Moved, CursorBpCollider)>()
-                    .insert_bundle((
-                        CollisionGroups { memberships: 0, filters: 0 }, 
-                        Sensor(false)
-                    ))
-                ;
-
-                let building = &building_ref_query.get(cbp_entity).unwrap().0;
-
-                commands.entity(cbp_entity)
-                    .remove::<CursorBp>()
-                    .insert_bundle((
-                        RayCastMesh::<RaycastSet>::default(),
-                        SimplifiedMesh { mesh: building.shape_data.simplified_mesh_handle.clone().unwrap() },
-                        PlacedBlueprint {
-                            cost: building.iridium_data.cost,
-                            current: 0,
-                        }
-                    ))
-                ;
-                selected_building.id = None;
-            }
-        }
-    }
-
-    for e in pipe_preview.iter() {
-        let mut mat = material_query.get_mut(e).unwrap();
-        if e.is_intersecting(&rapier_context) {
-            *mat = bp_material_handles.obstructed.clone();
-        } else {
-            *mat = bp_material_handles.blueprint.clone();
-        }
-    }
+    *pipe_prev_cylinder_transform = transform;
 }
 
 fn transform_between_points(a: Vec3, b: Vec3) -> Transform {
@@ -362,7 +295,12 @@ fn transform_between_points(a: Vec3, b: Vec3) -> Transform {
 
 trait MoreVec3Methods {
     // ((self dot normal) / (normal mag squared)) normal
+    /// Returns the projection of `self` onto the plane defined by its `normal`
     fn project_onto_plane(self, plane_normal: Vec3) -> Vec3;
+
+    /// Returns the clockwise angle between `self` and `other` 
+    /// 
+    /// Both must be contained in the plane defined by its normal, `norm`
     fn angle_between_clockwise(self, other: Vec3, norm: Vec3) -> f32;
 }
 
