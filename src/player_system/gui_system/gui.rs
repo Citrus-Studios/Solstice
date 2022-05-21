@@ -4,18 +4,18 @@ use super::gui_startup::*;
 use bevy::{prelude::*, ecs::query::{QueryIter, WriteFetch, EntityFetch, ReadFetch}};
 
 pub fn gui(
-    commands: Commands,
     mut interaction_query: Query<
         (&Interaction, &mut UiColor, &GuiButtonId),
         Changed<Interaction>
     >,
-    mut button_query: QuerySet<(QueryState<(&mut GuiButtons, Entity, &Children)>, QueryState<&GuiButtons>)>,
+    mut button_query: ParamSet<(Query<(&mut GuiButtons, Entity, &Children)>, Query<&GuiButtons>)>,
     mut text_query: Query<(&mut Text, &GuiTextId, Entity)>,
     mut visibility_query: Query<&mut Visibility>,
     mut selected_branch: ResMut<GuiSelectedBranch>,
 
     mut prev_q: ResMut<PrevQPress>,
     keyboard_input: Res<Input<KeyCode>>,
+    mut selected_building: ResMut<SelectedBuilding>,
 ) {
     let mut clicked = false;
     for (interaction, mut color, button_id) in interaction_query.iter_mut() {
@@ -23,19 +23,10 @@ pub fn gui(
         match *interaction {
             Interaction::Clicked => {
                 clicked = true;
-                let clicked_button_content = &button_query.q1().iter().nth(button_id.id as usize).unwrap().content.clone();
-                match clicked_button_content {
-                    GuiOr::Id(e) => {
-                        selected_branch.id = e.to_string();
-                        let mut button_query_q0 = button_query.q0();
-                        let mut button_iter = button_query_q0.iter_mut();
-                        change_buttons(&e.to_string(), &mut button_iter, &mut text_query, &mut visibility_query);
-                    }
-                    GuiOr::Item(e) => {
-                        info!("you selected {:?}!", e);
-                    }
-                    _ => (),
-                }
+                let clicked_button_content = &button_query.p1().iter().nth(button_id.id as usize).unwrap().content.clone();
+                let mut button_query_q0 = button_query.p0();
+                let mut button_iter = button_query_q0.iter_mut();
+                click_button(clicked_button_content, &mut selected_branch, &mut text_query, &mut button_iter, &mut visibility_query, &mut selected_building);
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();
@@ -59,24 +50,15 @@ pub fn gui(
         }
 
         if pressed_id >= 0 {
-            let clicked_button_content = &button_query.q1().iter().nth(pressed_id as usize).unwrap().content.clone();
-            match clicked_button_content {
-                GuiOr::Id(e) => {
-                    selected_branch.id = e.to_string();
-                    let mut button_query_q0 = button_query.q0();
-                    let mut button_iter = button_query_q0.iter_mut();
-                    change_buttons(&e.to_string(), &mut button_iter, &mut text_query, &mut visibility_query);
-                }
-                GuiOr::Item(e) => {
-                    info!("you selected {:?}!", e);
-                }
-                _ => (),
-            }
+            let clicked_button_content = &button_query.p1().iter().nth(pressed_id as usize).unwrap().content.clone();
+            let mut button_query_q0 = button_query.p0();
+            let mut button_iter = button_query_q0.iter_mut();
+            click_button(clicked_button_content, &mut selected_branch, &mut text_query, &mut button_iter, &mut visibility_query, &mut selected_building);
         }
     }
 
     if keyboard_input.pressed(KeyCode::Q) && !prev_q.pressed {
-        let mut button_query_q0 = button_query.q0();
+        let mut button_query_q0 = button_query.p0();
         let mut button_iter = button_query_q0.iter_mut();
         selected_branch.id = GUI_BACK_LOOKUP.get(&selected_branch.id).unwrap().to_string();
         change_buttons(&selected_branch.id, &mut button_iter, &mut text_query, &mut visibility_query);
@@ -119,5 +101,27 @@ fn change_buttons(
             },
         };
         cur_button_content.content = button_content.clone();
+    }
+}
+
+fn click_button(
+    clicked_button_content: &GuiOr<String>,
+    selected_branch: &mut ResMut<GuiSelectedBranch>,
+    text_query: &mut Query<(&mut Text, &GuiTextId, Entity)>,
+    button_iter: &mut QueryIter<(&mut GuiButtons, Entity, &Children), (WriteFetch<GuiButtons>, EntityFetch, ReadFetch<Children>), ()>,
+    visibility_query: &mut Query<&mut Visibility>,
+    selected_building: &mut ResMut<SelectedBuilding>,
+) {
+    match clicked_button_content {
+        GuiOr::Id(e) => {
+            selected_branch.id = e.to_string();
+            change_buttons(&e.to_string(), button_iter, text_query, visibility_query);
+        }
+        GuiOr::Item(e) => {
+            selected_building.id = Some(e.to_string());
+            selected_building.changed = true;
+            info!("you selected {:?}!", e);
+        }
+        _ => (),
     }
 }

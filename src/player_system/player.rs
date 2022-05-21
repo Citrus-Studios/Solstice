@@ -1,8 +1,8 @@
 use bevy::{prelude::*, input::mouse::{MouseMotion, MouseWheel}};
-use bevy_rapier3d::{prelude::{RigidBodyVelocityComponent, RigidBodyPosition, RigidBodyPositionComponent, RigidBodyForcesComponent}};
-use nalgebra::{Translation, Translation3, Matrix, Matrix3, Const, ArrayStorage, Matrix3x1};
+use bevy_mod_raycast::RayCastMesh;
+use bevy_rapier3d::prelude::*;
 
-use crate::constants::{SQRT_OF_2, HALF_PI};
+use crate::{constants::{SQRT_OF_2, HALF_PI}, building_system::RaycastSet};
 
 #[derive(Component)]
 pub struct Player {
@@ -28,8 +28,7 @@ pub fn player_movement_system(
     delta_time: Res<Time>,
 
     c_query: Query<&mut CameraComp>,
-    mut r_query: Query<&mut RigidBodyVelocityComponent, (Without<CameraComp>, With<Player>)>,
-    mut f_query: Query<&mut RigidBodyForcesComponent, (Without<CameraComp>, With<Player>)>,
+    mut r_query: Query<&mut Velocity, (Without<CameraComp>, With<Player>)>,
     p_query: Query<&Player, Without<CameraComp>>,
 ) {
     let r_option = r_query.get_single_mut();
@@ -37,7 +36,6 @@ pub fn player_movement_system(
         Ok(e) => e,
         Err(_) => return,
     };
-    let mut player_forces = f_query.single_mut();
     let player = p_query.single();
     let camera = c_query.single();
 
@@ -141,6 +139,7 @@ pub fn player_camera_system(
     gamepad_axes: Res<Axis<GamepadAxis>>,
 
     mut c_query: Query<(&mut CameraComp, &mut Transform)>,
+    keyboard_input: Res<Input<KeyCode>>,
 ) {
     let c_option = c_query.get_single_mut();
 
@@ -153,10 +152,13 @@ pub fn player_camera_system(
 
     let last_camera_zoom = camera.zoom;
 
-    for event in mouse_scroll_event.iter() {
-        camera.zoom -= (event.y / 3.0) * camera.zoom.sqrt();
-        camera.zoom = camera.zoom.max(0.1).min(100.0);
+    if !keyboard_input.pressed(KeyCode::LShift) {
+        for event in mouse_scroll_event.iter() {
+            camera.zoom -= (event.y / 3.0) * camera.zoom.sqrt();
+            camera.zoom = camera.zoom.max(0.1).min(100.0);
+        }
     }
+    
 
     let rmb_pressed = mouse_input.pressed(MouseButton::Right);
 
@@ -235,3 +237,26 @@ pub fn player_camera_system(
 // Point on the circle is x = cos(roll) * cos(yaw)
 //                        y = sin(roll)
 //                        z = cos(roll) * sin(yaw)
+
+pub fn player_collider_debug(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+
+    transform_query: Query<&Transform, With<Player>>,
+    keyboard_input: Res<Input<KeyCode>>,
+) {
+    if keyboard_input.just_pressed(KeyCode::B) {
+        let mut transform = transform_query.single().clone();
+        transform.translation.y += 10.0;
+
+        commands.spawn_bundle(PbrBundle {
+            mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
+            material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
+            ..Default::default()
+        })
+        .insert(RayCastMesh::<RaycastSet>::default())
+        .insert(Collider::cuboid(0.4, 0.4, 0.4))
+        .insert(RigidBody::Dynamic);
+    }
+}

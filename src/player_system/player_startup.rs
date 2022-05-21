@@ -1,8 +1,8 @@
-use bevy::{prelude::{Mesh, Commands, ResMut, Assets, shape, Color, Transform, BuildChildren, PerspectiveCameraBundle, AssetServer, Res, Handle}, pbr::{StandardMaterial, PbrBundle}};
+use bevy::{prelude::{Mesh, Commands, ResMut, Assets, shape, Color, Transform, BuildChildren, PerspectiveCameraBundle}, pbr::{StandardMaterial, PbrBundle}};
 use bevy_mod_picking::RayCastSource;
-use bevy_rapier3d::{prelude::{RigidBodyType, ColliderShape, RigidBodyMassPropsFlags, ColliderMaterial, CoefficientCombineRule}, physics::{RigidBodyBundle, ColliderPositionSync, ColliderBundle}};
+use bevy_rapier3d::prelude::*;
 
-use crate::{building_system::RaycastSet, terrain_generation_system::generator::MutateMesh};
+use crate::building_system::RaycastSet;
 
 use super::player::{Player, CameraComp};
 
@@ -19,38 +19,27 @@ pub fn player_start(
     if done.done {
         return
     }
-
-    let lock_xyz_rotation = RigidBodyMassPropsFlags::ROTATION_LOCKED_Y
-        | RigidBodyMassPropsFlags::ROTATION_LOCKED_Z
-        | RigidBodyMassPropsFlags::ROTATION_LOCKED_X;
-
+    
     // player 
     commands.spawn_bundle(PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
         material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
-        transform: Transform::from_xyz(0.0, 0.5, 0.0),
+        transform: Transform::from_xyz(100.0, 175.0, 100.0),
         ..Default::default()
     })
     .insert(Player {
         name: "None".to_string(),
-        speed: 2000.0
+        speed: 200.0
     })
-    .insert_bundle(ColliderBundle {
-        shape: ColliderShape::round_cuboid(0.4, 0.4, 0.4, 0.1).into(),
-        position: [100.0, 20.0, 100.0].into(),
-        material: ColliderMaterial { 
-            friction: 0.0,
-            friction_combine_rule: CoefficientCombineRule::Min,
-            ..Default::default() 
-        }.into(),
-        ..Default::default()
-    })
-    .insert_bundle(RigidBodyBundle {
-        body_type: RigidBodyType::Dynamic.into(),
-        mass_properties: lock_xyz_rotation.into(),
-        ..Default::default()
-    })
-    .insert(ColliderPositionSync::Discrete)
+
+    .insert(Collider::round_cuboid(0.4, 0.4, 0.4, 0.1))
+        .insert(Friction { coefficient: 0.0, combine_rule: CoefficientCombineRule::Min })
+        .insert(Velocity::default())
+        .insert(RigidBody::Dynamic)
+        .insert(LockedAxes::ROTATION_LOCKED)
+        .insert(CollisionGroups { memberships: 0b1110, filters: 0b1111 })
+        .insert(SolverGroups { memberships: 0b1111, filters: 0b1110 })
+
     .with_children(|child| {
         // camera
         child.spawn_bundle(PerspectiveCameraBundle {
