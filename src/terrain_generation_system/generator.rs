@@ -155,7 +155,7 @@ pub fn generate_terrain(
 
                     if well_decider {
                         let big_well = rng.gen_ratio(1, 5) && 
-                            (i_usize > 0 && i_usize < 100 && j_usize > 0 && j_usize < 100);
+                            (i_usize > 0 && i_usize < 99 && j_usize > 0 && j_usize < 99);
                         
                         if big_well {
                             generate_well_cluster(&mut world_gen_array, i_usize, j_usize);
