@@ -17,6 +17,9 @@ pub struct PipePlacement {
 pub struct PipePreviewCylinder;
 
 #[derive(Component)]
+pub struct PipePreviewCylinderCollider;
+
+#[derive(Component)]
 pub struct PipePreviewPlacement;
 
 

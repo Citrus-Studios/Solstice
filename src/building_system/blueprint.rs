@@ -58,7 +58,7 @@ pub fn update_blueprints(
             }
         }
 
-        let pipe_bp_result = parent_query.get(entity);
+        let pipe_bp_result = parent_query.get(parent);
 
         let clicked_pipe_result = match pipe_bp_result {
             Ok(e) => pipe_bp_query.get_mut(e.0),
@@ -83,6 +83,10 @@ pub fn update_blueprints(
 
                         commands.entity(*part)
                             .remove::<PipeCylinder>()
+                            .insert(CollisionGroups::default())
+                        ;
+
+                        commands.entity(children_query.get(*part).unwrap()[0])
                             .insert(CollisionGroups::default())
                         ;
                     } else {

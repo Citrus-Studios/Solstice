@@ -85,7 +85,7 @@ pub fn check_cursor_bp_collision(
         let mut intersecting = false;
 
         for entity in [pipe_cylinder, first, second] {
-            if entity.is_intersecting(&rapier_context) {
+            if children_query.get(entity).unwrap()[0].is_intersecting(&rapier_context) {
                 intersecting = true;
                 break
             }
@@ -153,11 +153,16 @@ pub fn check_cursor_bp_collision(
                 .remove::<PipePreviewCylinder>()
                 .insert_bundle((
                     PipeCylinder,
-                    place_mat.clone(),
+                    place_mat.clone()
+                ))
+            ;
+
+            // Pipe cylinder collider
+            commands.entity(children_query.get(pipe_cylinder).unwrap()[0])
+                .remove::<PipePreviewCylinderCollider>()
+                .insert_bundle((
                     BLUEPRINT_COLLISION.clone(),
                     Sensor(false),
-                    RayCastMesh::<RaycastSet>::default(),
-                    SimplifiedMesh { mesh: meshes.add(Mesh::from(shape::Box::new(0.27, 1.0, 0.27))) }
                 ))
             ;
 

@@ -52,8 +52,8 @@ pub fn raycast(
         Real::MAX, 
         true, 
         InteractionGroups {
-            memberships: 0b1111000,
-            filter: 0b1111101101,
+            memberships: 0b111111000,
+            filter: 0b1111100101,
         }, 
         None
     );

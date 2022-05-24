@@ -56,8 +56,9 @@ pub fn building(
 
     delete_query: EntityQuery<DeleteNextFrame>,
 
-    (pipe_prev_cylinder_query, pipe_prev_placement_query, pipe_prev_query): (
+    (pipe_prev_cylinder_query, pipe_prev_cylinder_collider_query, pipe_prev_placement_query, pipe_prev_query): (
         EntityQuery<PipePreviewCylinder>, 
+        EntityQuery<PipePreviewCylinderCollider>,
         EntityQuery<PipePreviewPlacement>,
         EntityQuery<PipePreview>,
     ), 
@@ -197,8 +198,8 @@ pub fn building(
                     PipeBools::ClickFirstPointPlaced => {
                         // Place the whole pipe blueprint
                         let first_position = transform_query.get(pipe_prev_placement_query.single()).unwrap().with_add_translation(pipe_cyl_offset).translation;
-                        let mut transform = transform_query.get_mut(pipe_prev_cylinder_query.single()).unwrap();
-                        update_pipe_cylinder_transform(transform.as_mut(), first_position, trans);
+                        let transform = transform_query.get_many_mut([pipe_prev_cylinder_query.single(), pipe_prev_cylinder_collider_query.single()]).unwrap();
+                        update_pipe_cylinder_transform(transform, first_position, trans);
 
                         // try to place
                         commands.entity(pipe_prev_query.single())
@@ -223,13 +224,17 @@ pub fn building(
                                     transform: offset_transform.with_scale(Vec3::new(1.0, 0.001, 1.0)),
                                     ..Default::default()
                                 })
-                                .insert_bundle((
-                                    Collider::cuboid(0.135, 0.5, 0.135),
-                                    CollisionGroups { memberships: 0b00001000, filters: 0b11101111 },
-                                    Sensor(true),
-                                    PipePreviewCylinder,
-                                    NotShadowCaster
-                                ));
+                                .insert(PipePreviewCylinder)
+                                .with_children(|parent| {
+                                    parent.spawn_bundle((
+                                        offset_transform.with_scale(Vec3::new(1.0, 0.001, 1.0)),
+                                        Collider::cuboid(0.135, 0.5, 0.135),
+                                        CollisionGroups { memberships: 0b00001000, filters: 0b11101111 },
+                                        Sensor(true),
+                                        PipePreviewCylinderCollider,
+                                        NotShadowCaster
+                                    ));
+                                });
 
                                 parent.spawn_bundle(PbrBundle {
                                     mesh: building.shape_data.mesh.clone().unwrap(),
@@ -257,8 +262,8 @@ pub fn building(
                     PipeBools::NoClickFirstPointPlaced => {
                         // Update the preview, change pipe cylinder transform
                         let first_position = transform_query.get(pipe_prev_placement_query.single()).unwrap().with_add_translation(pipe_cyl_offset).translation;
-                        let mut transform = transform_query.get_mut(pipe_prev_cylinder_query.single()).unwrap();
-                        update_pipe_cylinder_transform(transform.as_mut(), first_position, trans);
+                        let transform = transform_query.get_many_mut([pipe_prev_cylinder_query.single(), pipe_prev_cylinder_collider_query.single()]).unwrap();
+                        update_pipe_cylinder_transform(transform, first_position, trans);
                     }
                     _ => ()
                 }
@@ -275,15 +280,18 @@ pub fn building(
 }
 
 fn update_pipe_cylinder_transform(
-    pipe_prev_cylinder_transform: &mut Transform,
+    mut transform: [Mut<Transform>; 2],
 
     first_pos: Vec3,
     second_pos: Vec3,
 ) {
-    let mut transform = transform_between_points(first_pos, second_pos);
-    transform.scale.y = transform.scale.y.max(0.001);
+    let mut set_transform = transform_between_points(first_pos, second_pos);
+    set_transform.scale.y = set_transform.scale.y.max(0.001);
 
-    *pipe_prev_cylinder_transform = transform;
+    let (cylinder, collider) = transform.split_at_mut(1);
+
+    *cylinder[0] = set_transform;
+    *collider[0] = set_transform;
 }
 
 fn transform_between_points(a: Vec3, b: Vec3) -> Transform {
