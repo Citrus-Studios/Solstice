@@ -37,8 +37,7 @@ pub fn player_start(
         .insert(Velocity::default())
         .insert(RigidBody::Dynamic)
         .insert(LockedAxes::ROTATION_LOCKED)
-        .insert(CollisionGroups { memberships: 0b1110, filters: 0b1111 })
-        .insert(SolverGroups { memberships: 0b1111, filters: 0b1110 })
+        .insert(CollisionGroups { memberships: 0b0010, filters: 0b1111 })
 
     .with_children(|child| {
         // camera

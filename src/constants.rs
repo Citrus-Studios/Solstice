@@ -17,6 +17,8 @@ pub const HALF_SIZE: f32 = 10.0;
 // the portafab fab speed in i/s
 pub const FABRICATOR_SPEED: u32 = 100;
 
+pub const MAX_BUILD_DISTANCE: f32 = 30.0;
+
 macro_rules! GUIBranch {
     ($name:literal - $x0:literal $y0:literal, $x1:literal $y1:literal, $x2:literal $y2:literal, $x3:literal $y3:literal) => {
         (
@@ -148,6 +150,7 @@ lazy_static! {
     
     pub static ref PIPE_CYLINDER_OFFSET: Vec3 = Vec3::new(0.0, 0.25, 0.0675);
     pub static ref NO_COLLISION: CollisionGroups = CollisionGroups::new(0, 0);
+    pub static ref BLUEPRINT_COLLISION: CollisionGroups = CollisionGroups { memberships: 0b100000, filters: 0b1111111 };
 }
 // Shorten the .to_string() method by several characters, just for looks
 pub trait ShortToString {

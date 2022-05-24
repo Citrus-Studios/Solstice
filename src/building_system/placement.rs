@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_mod_raycast::{RayCastMesh, SimplifiedMesh};
 use bevy_rapier3d::prelude::*;
 
-use crate::{player_system::gui_system::gui_startup::SelectedBuilding, constants::NO_COLLISION};
+use crate::{player_system::gui_system::gui_startup::SelectedBuilding, constants::{NO_COLLISION, BLUEPRINT_COLLISION}};
 
 use super::{building_components::*, buildings::BuildingReferenceComponent, building::EntityQuery, MaterialHandles, GlobalPipeId, RaycastSet, BlueprintFillMaterial};
 
@@ -56,7 +56,7 @@ pub fn check_cursor_bp_collision(
                 commands.entity(cbp_collider_entity)
                     .remove_bundle::<(Moved, CursorBpCollider)>()
                     .insert_bundle((
-                        CollisionGroups { memberships: 0, filters: 0 }, 
+                        BLUEPRINT_COLLISION.clone(), 
                         Sensor(false)
                     ))
                 ;
@@ -65,14 +65,12 @@ pub fn check_cursor_bp_collision(
 
                 commands.entity(cbp_entity)
                     .remove::<CursorBp>()
-                    .insert_bundle((
-                        RayCastMesh::<RaycastSet>::default(),
-                        SimplifiedMesh { mesh: building.shape_data.simplified_mesh_handle.clone().unwrap() },
+                    .insert(
                         PlacedBlueprint {
                             cost: building.iridium_data.cost,
                             current: 0,
                         }
-                    ))
+                    )
                 ;
                 selected_building.id = None;
             }
@@ -111,6 +109,7 @@ pub fn check_cursor_bp_collision(
                 .insert(PipeBlueprint { cost: building_ref.iridium_data.cost, current: 0 })
             ;
 
+            // First base of the pipe
             commands.entity(first)
                 .remove::<PipePreviewPlacement>()
                 .insert_bundle((
@@ -121,13 +120,15 @@ pub fn check_cursor_bp_collision(
                 ))
             ;
 
+            // First base of the pipe's collider
             commands.entity(children_query.get(first).unwrap()[0])
                 .insert_bundle((
-                    NO_COLLISION.clone(),
+                    BLUEPRINT_COLLISION.clone(),
                     Sensor(false),
                 ))
             ;
 
+            // Second base of the pipe
             commands.entity(second)
                 .remove::<CursorBp>()
                 .insert_bundle((
@@ -138,20 +139,22 @@ pub fn check_cursor_bp_collision(
                 ))
             ;
 
+            // Second base of the pipe's collider
             commands.entity(children_query.get(second).unwrap()[0])
                 .remove::<CursorBpCollider>()
                 .insert_bundle((
-                    NO_COLLISION.clone(),
+                    BLUEPRINT_COLLISION.clone(),
                     Sensor(false),
                 ))
             ;
 
+            // Pipe cylinder in between both
             commands.entity(pipe_cylinder)
                 .remove::<PipePreviewCylinder>()
                 .insert_bundle((
                     PipeCylinder,
                     place_mat.clone(),
-                    NO_COLLISION.clone(),
+                    BLUEPRINT_COLLISION.clone(),
                     Sensor(false),
                     RayCastMesh::<RaycastSet>::default(),
                     SimplifiedMesh { mesh: meshes.add(Mesh::from(shape::Box::new(0.27, 1.0, 0.27))) }

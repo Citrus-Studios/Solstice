@@ -6,11 +6,12 @@ use bevy::{
         ResMut, Transform, SystemSet, Handle, info, default,
     }, gltf::GltfMesh, core::FixedTimestep,
 };
+use bevy_rapier3d::prelude::*;
 use bevy_mod_raycast::{RayCastMesh, RaycastSystem};
 
 use crate::player_system::player::player_camera_system;
 
-use self::{raycasting::{raycast, update_raycast_with_cursor, RaycastCursor, BuildCursor}, placement::check_cursor_bp_collision, load_models::{initiate_load, NUM_MODELS, NONE_HANDLE}, building_components::*, blueprint::update_blueprints, buildings::{load_buildings_into_resource, load_buildings_in_resource, BuildingInitDone, building_init_done, building_init_not_done_and_get_load_states}};
+use self::{raycasting::{raycast, RaycastCursor, BuildCursor, LatestCursorPosition}, placement::check_cursor_bp_collision, load_models::{initiate_load, NUM_MODELS, NONE_HANDLE}, building_components::*, blueprint::update_blueprints, buildings::{load_buildings_into_resource, load_buildings_in_resource, BuildingInitDone, building_init_done, building_init_not_done_and_get_load_states}};
 
 pub mod raycasting;
 pub mod building;
@@ -48,6 +49,7 @@ impl Plugin for BuildingSystemPlugin {
             .insert_resource(ChangeBuilding { b: false })
             .insert_resource(BuildingInitDone(false))
             .insert_resource(GlobalPipeId(0))
+            .insert_resource(LatestCursorPosition(None))
             .add_startup_system(building_system_startup)
             .add_startup_system(initiate_load)
             .add_startup_system(load_buildings_into_resource)
@@ -58,16 +60,12 @@ impl Plugin for BuildingSystemPlugin {
                     .with_system(load_buildings_in_resource.before(building))
             )
             .add_system_set_to_stage(
-                CoreStage::PreUpdate,
+                CoreStage::PostUpdate,
                 SystemSet::new()
                     .with_run_criteria(building_init_done)
-                    .with_system(update_raycast_with_cursor)
-                    .with_system(raycast.after(RaycastSystem::UpdateRaycast))
+                    .with_system(raycast)
                     .with_system(building.after(raycast))
-            )
-            .add_system_to_stage(
-                CoreStage::PostUpdate,
-                check_cursor_bp_collision
+                    .with_system(check_cursor_bp_collision.after(building))
             )
             .add_system_set(SystemSet::new()
                 .with_run_criteria(FixedTimestep::steps_per_second(30.0))
@@ -104,7 +102,7 @@ pub fn building_system_startup(
         })
         .insert(RaycastCursor { visible: false });
     
-    commands.insert_resource(BuildCursor { intersection: None, rotation: 0.0, entity: None });
+    commands.insert_resource(BuildCursor { intersection: None, rotation: 0.0 });
     commands.insert_resource(PipePlacement { placed: false, transform: None });
     commands.insert_resource(BlueprintFillMaterial::generate(&mut materials, 50));
     commands.insert_resource(MaterialHandles::generate(&mut materials));

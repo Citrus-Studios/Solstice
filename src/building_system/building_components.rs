@@ -39,7 +39,7 @@ pub struct ChangeBuilding {
 }
 
 /// Entities with this component are blueprints that have yet to be filled
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct PlacedBlueprint {
     pub cost: u32,
     pub current: u32,
@@ -65,6 +65,7 @@ pub struct PipeCylinder;
 #[derive(Component)]
 pub struct Moved(pub bool);
 
+/// Adding this component to the cursor blueprint will mark it for trying to place it after collisions are calculated and checked
 #[derive(Component)]
 pub struct TryPlace;
 

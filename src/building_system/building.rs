@@ -113,8 +113,8 @@ pub fn building(
     
     if intersection_op.is_some() && selected_building.id.is_some() {
         // math...
-        let intersection = intersection_op.unwrap();
-        let normal = intersection.normal().normalize();
+        let (e, intersection) = intersection_op.unwrap();
+        let normal = intersection.normal.normalize();
 
         let camera_pos = transform_query.get(camera_query.single()).unwrap().translation;
         let projected = camera_pos.project_onto_plane(normal);
@@ -122,7 +122,7 @@ pub fn building(
         rot -= (projected.angle_between_clockwise(zero_vec, normal) / (PI/16.0)).round() * (PI/16.0);
 
         let quat = Quat::from_axis_angle(normal, rot).mul_quat(Quat::from_rotation_arc(Vec3::Y, normal));
-        let translation = intersection.position();
+        let translation = intersection.point;
 
         let transform_cache = Transform::from_translation(translation).with_rotation(quat);
 
@@ -200,6 +200,7 @@ pub fn building(
                         let mut transform = transform_query.get_mut(pipe_prev_cylinder_query.single()).unwrap();
                         update_pipe_cylinder_transform(transform.as_mut(), first_position, trans);
 
+                        // try to place
                         commands.entity(pipe_prev_query.single())
                             .insert(TryPlace)
                         ;

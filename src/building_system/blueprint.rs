@@ -27,21 +27,32 @@ pub fn update_blueprints(
     pipe_cylinder_material: Res<PipeCylinderMaterial>,
 ) {
     if build_cursor_res.intersection.is_some() && selected_building.id.is_none() && mouse_input.pressed(MouseButton::Left) { // Add portafab selected bool
-        let entity = build_cursor_res.entity.unwrap();
-        let clicked_blueprint_result = pb_query.get_mut(entity);
+        let entity = build_cursor_res.intersection.unwrap().0;
+
+        // The collider is a child of the actual entity with a mesh
+        let parent_op = parent_query.get(entity);
+        let parent = match parent_op {
+            Ok(e) => e.0,
+            Err(e) => { info!("{:?}", e); return },
+        };
+
+        let clicked_blueprint_result = pb_query.get_mut(parent);
+
+        info!("{:?}", clicked_blueprint_result);
+
         if clicked_blueprint_result.is_ok() {
             let mut clicked_blueprint = clicked_blueprint_result.unwrap();
-            let mut material = material_query.get_mut(entity).unwrap();
+            let mut material = material_query.get_mut(parent).unwrap();
 
             clicked_blueprint.current += FABRICATOR_PER_UPDATE;
 
             if clicked_blueprint.current >= clicked_blueprint.cost {
-                *material = building_ref_query.get(entity).unwrap().0.shape_data.material.clone().unwrap();
+                *material = building_ref_query.get(parent).unwrap().0.shape_data.material.clone().unwrap();
 
-                let mut collision_groups = groups_query.get_mut(children_query.get(entity).unwrap()[0]).unwrap();
+                let mut collision_groups = groups_query.get_mut(entity).unwrap();
                 *collision_groups = CollisionGroups::default();
 
-                commands.entity(entity).remove_bundle::<(PlacedBlueprint, NotShadowCaster)>();
+                commands.entity(parent).remove_bundle::<(PlacedBlueprint, NotShadowCaster)>();
             } else {
                 *material = bp_fill_materials.get_bp_fill_material(clicked_blueprint.current, clicked_blueprint.cost);
             }

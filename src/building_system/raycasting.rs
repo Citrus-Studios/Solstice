@@ -1,8 +1,9 @@
-use bevy::{prelude::*};
-use bevy_mod_raycast::{RayCastMethod, RayCastSource, Intersection};
+use bevy::prelude::*;
+use bevy_mod_raycast::{RayCastMethod, RayCastSource, Intersection, Ray3d};
+use bevy_rapier3d::{plugin::RapierContext, prelude::{InteractionGroups, RayIntersection}, math::Real};
 
 
-use crate::{RaycastSet};
+use crate::{RaycastSet, player_system::player::CameraComp, constants::MAX_BUILD_DISTANCE};
 
 #[derive(Component)]
 pub struct RaycastCursor {
@@ -11,79 +12,51 @@ pub struct RaycastCursor {
 
 #[derive(Component)]
 pub struct BuildCursor {
-    pub intersection: Option<Intersection>,
+    pub intersection: Option<(Entity, RayIntersection)>,
     pub rotation: f32,
-    pub entity: Option<Entity>,
 }
 
-pub fn update_raycast_with_cursor(
-    mut cursor: EventReader<CursorMoved>,
-    mut query: Query<&mut RayCastSource<RaycastSet>>,
-) {
-    for mut pick_source in &mut query.iter_mut() {
-        if let Some(cursor_latest) = cursor.iter().last() {
-            pick_source.cast_method = RayCastMethod::Screenspace(cursor_latest.position);
-        }
-    }
-}
+pub struct LatestCursorPosition(pub Option<Vec2>);
 
 pub fn raycast(
-    mut r_query: Query<&mut RayCastSource<RaycastSet>>,
-    mut d_query: Query<(&mut Transform, &mut Visibility), With<RaycastCursor>>,
-    mut rc_query: Query<&mut RaycastCursor>,
     mut bc_res: ResMut<BuildCursor>,
 
-    keyboard_input: Res<Input<KeyCode>>
+    mut cursor: EventReader<CursorMoved>,
+    camera_transform_q: Query<&GlobalTransform, With<CameraComp>>,
+    camera_q: Query<&Camera, With<CameraComp>>,
+    rapier_context: Res<RapierContext>,
+
+    windows: Res<Windows>,
+    images: Res<Assets<Image>>,
+    mut latest: ResMut<LatestCursorPosition>,
 ) {
-    let mut intersections = Vec::new();
-
-    for mut e in &mut r_query.iter_mut() {
-        let f: &mut Vec<(Entity, Intersection)> = e.intersections_mut();
-        intersections.append(f);
+    let cursor_pos_op = cursor.iter().last();
+    match cursor_pos_op {
+        Some(e) => latest.0 = Some(e.position),
+        None => (),
     }
 
-    let mut rcc = rc_query.single_mut();
+    let cursor_pos = match latest.0 { Some(e) => e, _ => return };
 
-    if keyboard_input.just_pressed(KeyCode::K) {
-        rcc.visible = (1 - rcc.visible as i8) != 0 ;
-    }
+    let ray = Ray3d::from_screenspace(
+        cursor_pos,
+        &windows,
+        &images,
+        camera_q.single(),
+        camera_transform_q.single()
+    ).unwrap();
 
-    let d = d_query.get_single_mut();
+    let intersection = rapier_context.cast_ray_and_get_normal(
+        ray.origin(), 
+        ray.direction(), 
+        Real::MAX, 
+        true, 
+        InteractionGroups {
+            memberships: 0b1111000,
+            filter: 0b1111101101,
+        }, 
+        None
+    );
 
-    if !intersections.is_empty() {
-        let (mut closest_e, mut closest_intersection) = intersections.pop().unwrap();
-
-        for (e, intersection) in intersections {
-            if intersection.distance() < closest_intersection.distance() {
-                closest_intersection = intersection;
-                closest_e = e;
-            }
-        }
-        
-        bc_res.intersection = Some(closest_intersection);
-        bc_res.entity = Some(closest_e);
-
-        if rcc.visible {
-            if d.is_ok() {
-                let (mut rc_cursor_transform, mut rc_cursor_visible) = d.unwrap();
-
-                rc_cursor_transform.translation = closest_intersection.position();
-                rc_cursor_visible.is_visible = true;
-            }
-        } else {
-            if d.is_ok() {
-                let (_, mut rc_cursor_visible) = d.unwrap();
-
-                rc_cursor_visible.is_visible = false;
-            }
-        }
-    } else {
-        bc_res.intersection = None;
-        
-        if d.is_ok() {
-            let (_, mut rc_cursor_visible) = d.unwrap();
-
-            rc_cursor_visible.is_visible = false;
-        }
-    }
+    bc_res.intersection = intersection;
 }
