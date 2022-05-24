@@ -78,6 +78,10 @@ impl CompoundColliderBuilder {
         self.append(&mut e);
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.colliders.is_empty()
+    }
+
     /// Creates a compound collider from the builder
     pub fn build(&self) -> Collider {
         Collider::compound(self.to_owned().to_vec())
