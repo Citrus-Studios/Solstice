@@ -1,4 +1,4 @@
-use bevy::{prelude::{App, Msaa, Commands, OrthographicProjection, Transform, Color, info}, DefaultPlugins, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, pbr::{DirectionalLightBundle, DirectionalLight}, math::{Vec3, Quat}, core_pipeline::ClearColor};
+use bevy::{prelude::*, DefaultPlugins, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, pbr::{DirectionalLightBundle, DirectionalLight, PbrBundle}, math::{Vec3, Quat}, core_pipeline::ClearColor};
 use bevy_obj::ObjPlugin;
 use bevy_rapier3d::{prelude::{RapierPhysicsPlugin, NoUserData, RapierConfiguration}, plugin::TimestepMode};
 use building_system::{RaycastSet, BuildingSystemPlugin};
@@ -46,6 +46,9 @@ fn main() {
 
 fn startup(
     mut commands: Commands,
+
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
 ) {
     info!("startup start");
     commands.spawn_bundle(DirectionalLightBundle {
@@ -70,6 +73,17 @@ fn startup(
             ..Default::default()
         },
         ..Default::default()
+    });
+    commands.spawn_bundle(PbrBundle {
+        mesh: meshes.add(Mesh::from(shape::Plane { size: 500.0 })),
+        material: materials.add(StandardMaterial { 
+            base_color: Color::BLACK, 
+            perceptual_roughness: 1.0,
+            emissive: Color::rgb(0.0 / 255.0, 255.0 / 255.0, 251.0 / 255.0),
+            ..default() 
+        }),
+        transform: Transform::from_xyz(100.0, 112.2, 100.0),
+        ..default()
     });
     info!("startup done");
 }

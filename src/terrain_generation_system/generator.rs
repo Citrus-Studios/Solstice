@@ -27,7 +27,7 @@ pub struct TerrainGenDone {
     pub done: bool,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Component, Copy, Clone)]
 pub enum TerrainBlockType {
     Solid,
     Hollow,
@@ -151,7 +151,7 @@ pub fn generate_terrain(
                         }
                     }
 
-                    let well_decider = rng.gen_ratio(1, 50);
+                    let well_decider = rng.gen_ratio(1, 100);
 
                     if well_decider {
                         let big_well = rng.gen_ratio(1, 5) && 
@@ -180,7 +180,6 @@ pub fn generate_terrain(
     // Iterates through every single block and adds meshes and colliders accordingly
     for (z, xy_plane) in world_gen_array.into_iter().enumerate() {
         let z_pos = z as f32 * 3.0;
-        let mut plane_ccb = CompoundColliderBuilder::new();
         for (y, row) in xy_plane.into_iter().enumerate() {
             let y_pos = y as f32 * 3.0;
             for (x, i) in row.into_iter().enumerate() {
@@ -195,20 +194,18 @@ pub fn generate_terrain(
                         TerrainBlockType::Well => { num_shapes += 15; (well_ref.clone(), well_ccb.clone()) },
                     };
 
-                    plane_ccb.append_with_transform(collider, (Quat::IDENTITY, translation));
                     attr = attr.combine_with_mesh(mesh, translation);
+                    commands.spawn()
+                        .insert_bundle((
+                            collider.build(),
+                            Transform::from_translation(translation),
+                            CollisionGroups { memberships: 0b00000001, filters: 0b11111110 },
+                            ActiveCollisionTypes::STATIC_STATIC,
+                            i.unwrap(),
+                        ))
+                    ;
                 }
             }
-        }
-        if !plane_ccb.is_empty() {
-            commands.spawn()
-                .insert_bundle((
-                    plane_ccb.build(),
-                    Transform::default(),
-                    CollisionGroups { memberships: 0b00000001, filters: 0b11111110 },
-                    ActiveCollisionTypes::STATIC_STATIC
-                ))
-            ;
         }
     }
 
@@ -247,7 +244,7 @@ fn generate_well_cluster(world: &mut Vec<Vec<Vec<Option<TerrainBlockType>>>>, x:
 }
 
 fn generate_well_column(world: &mut Vec<Vec<Vec<Option<TerrainBlockType>>>>, x: usize, z: usize) {
-    for y in 25..=50 {
+    for y in 35..=50 {
         world[x][y][z] = Some(TerrainBlockType::Well);
     }
 }
