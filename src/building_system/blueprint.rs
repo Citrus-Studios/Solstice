@@ -33,12 +33,10 @@ pub fn update_blueprints(
         let parent_op = parent_query.get(entity);
         let parent = match parent_op {
             Ok(e) => e.0,
-            Err(e) => { info!("{:?}", e); return },
+            Err(_) => { return },
         };
 
         let clicked_blueprint_result = pb_query.get_mut(parent);
-
-        info!("{:?}", clicked_blueprint_result);
 
         if clicked_blueprint_result.is_ok() {
             let mut clicked_blueprint = clicked_blueprint_result.unwrap();
@@ -95,6 +93,9 @@ pub fn update_blueprints(
                         // Remove useless marker components and activate collision
                         commands.entity(*part)
                             .remove_bundle::<(PipeFirst, PipeSecond)>()
+                        ;
+
+                        commands.entity(children_query.get(*part).unwrap()[0])
                             .insert(CollisionGroups::default())
                         ;
                     }
