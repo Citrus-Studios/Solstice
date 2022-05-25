@@ -29,7 +29,7 @@ pub fn player_start(
     })
     .insert(Player {
         name: "None".to_string(),
-        speed: 200.0
+        speed: 5.0
     })
 
     .insert(Collider::round_cuboid(0.4, 0.4, 0.4, 0.1))

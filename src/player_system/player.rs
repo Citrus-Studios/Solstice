@@ -2,7 +2,7 @@ use bevy::{prelude::*, input::mouse::{MouseMotion, MouseWheel}};
 use bevy_mod_raycast::RayCastMesh;
 use bevy_rapier3d::prelude::*;
 
-use crate::{constants::{SQRT_OF_2, HALF_PI}, building_system::RaycastSet};
+use crate::{constants::HALF_PI, building_system::RaycastSet};
 
 #[derive(Component)]
 pub struct Player {
@@ -25,8 +25,6 @@ pub fn player_movement_system(
     gamepad_input: Res<Input<GamepadButton>>,
     gamepad_axes: Res<Axis<GamepadAxis>>,
 
-    delta_time: Res<Time>,
-
     c_query: Query<&mut CameraComp>,
     mut r_query: Query<&mut Velocity, (Without<CameraComp>, With<Player>)>,
     p_query: Query<&Player, Without<CameraComp>>,
@@ -39,8 +37,8 @@ pub fn player_movement_system(
     let player = p_query.single();
     let camera = c_query.single();
 
-    let mut x_mov = 0f32;
-    let mut z_mov = 0f32;
+    // .y is actually in the Z direction
+    let mut mov = Vec2::ZERO;
 
     let yaw = camera.yaw.to_radians();
 
@@ -60,62 +58,44 @@ pub fn player_movement_system(
         };
 
         if button_pressed(GamepadButtonType::DPadUp) || axes_moved(GamepadAxisType::LeftStickY) > 0.05 {
-            x_mov -= cos_yaw;
-            z_mov -= sin_yaw;
+            mov.x -= cos_yaw;
+            mov.y -= sin_yaw;
         }
         if button_pressed(GamepadButtonType::DPadDown) || axes_moved(GamepadAxisType::LeftStickY) < -0.05 {
-            x_mov += cos_yaw;
-            z_mov += sin_yaw;
+            mov.x += cos_yaw;
+            mov.y += sin_yaw;
         }
         if button_pressed(GamepadButtonType::DPadLeft) || axes_moved(GamepadAxisType::LeftStickX) > 0.05 {
-            x_mov += cos_yaw_half;
-            z_mov += sin_yaw_half;
+            mov.x += cos_yaw_half;
+            mov.y += sin_yaw_half;
         }
         if button_pressed(GamepadButtonType::DPadRight) || axes_moved(GamepadAxisType::LeftStickX) < -0.05 {
-            x_mov -= cos_yaw_half;
-            z_mov -= sin_yaw_half;
+            mov.x -= cos_yaw_half;
+            mov.y -= sin_yaw_half;
         }
     }
     // Get keyboard inputs
     if keyboard_input.pressed(KeyCode::W) {
-        x_mov -= cos_yaw;
-        z_mov -= sin_yaw;
+        mov.x -= cos_yaw;
+        mov.y -= sin_yaw;
     }
     if keyboard_input.pressed(KeyCode::S) {
-        x_mov += cos_yaw;
-        z_mov += sin_yaw;
+        mov.x += cos_yaw;
+        mov.y += sin_yaw;
     }
     if keyboard_input.pressed(KeyCode::A) {
-        x_mov += cos_yaw_half;
-        z_mov += sin_yaw_half;
+        mov.x += cos_yaw_half;
+        mov.y += sin_yaw_half;
     }
     if keyboard_input.pressed(KeyCode::D) {
-        x_mov -= cos_yaw_half;
-        z_mov -= sin_yaw_half;
+        mov.x -= cos_yaw_half;
+        mov.y -= sin_yaw_half;
     }
 
-    // Clamp x and z to -1.0 and 1.0
-    if x_mov > 1.0 {
-        x_mov = 1.0
-    } else if x_mov < -1.0 {
-        x_mov = -1.0
-    } 
-
-    if z_mov > 1.0 {
-        z_mov = 1.0
-    } else if z_mov < -1.0 {
-        z_mov = -1.0
+    // Normalize movement
+    if mov.length() > 0.0 {
+        mov = mov.normalize();
     }
-
-    if x_mov.abs() + z_mov.abs() == 2.0 {
-        x_mov = SQRT_OF_2 * x_mov;
-        z_mov = SQRT_OF_2 * z_mov;
-    }
-
-    // if keyboard_input.just_pressed(KeyCode::Space) && player_rigidbody.linvel.y.abs() < 0.05 {
-    //     player_rigidbody.linvel.y += 10.0;
-    // }
-    // info!("{:?} {}", player_rigidbody.linvel.y.abs(), match player_rigidbody.linvel.y.abs() < 0.05 { true => "AAAAAAAAAAAAAAAAAA", _ => "nu" });
 
     if keyboard_input.pressed(KeyCode::Space) {
         player_rigidbody.linvel.y = 10.0;
@@ -125,8 +105,8 @@ pub fn player_movement_system(
         player_rigidbody.linvel.y = -10.0;
     }
 
-    player_rigidbody.linvel.x = x_mov * player.speed * delta_time.delta_seconds();
-    player_rigidbody.linvel.z = z_mov * player.speed * delta_time.delta_seconds();
+    player_rigidbody.linvel.x = mov.x * player.speed;
+    player_rigidbody.linvel.z = mov.y * player.speed;
 }
 
 pub fn player_camera_system(
