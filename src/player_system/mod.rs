@@ -1,4 +1,3 @@
-use crate::constants::DELTA_TIME;
 use bevy::{
     core::FixedTimestep,
     prelude::{Plugin, SystemSet},
@@ -19,7 +18,7 @@ impl Plugin for PlayerSystemPlugin {
         app.add_system(player_startup::player_start)
             .add_system_set(
                 SystemSet::new()
-                    .with_run_criteria(FixedTimestep::step(DELTA_TIME as f64))
+                    .with_run_criteria(FixedTimestep::steps_per_second(60.0))
                     .with_system(player_movement_system),
             )
             .add_system(player_collider_debug)
