@@ -1,9 +1,9 @@
 use bevy::prelude::*;
-use bevy_mod_raycast::{RayCastMethod, RayCastSource, Intersection, Ray3d};
+use bevy_mod_raycast::Ray3d;
 use bevy_rapier3d::{plugin::RapierContext, prelude::{InteractionGroups, RayIntersection}, math::Real};
 
 
-use crate::{RaycastSet, player_system::player::CameraComp, constants::MAX_BUILD_DISTANCE};
+use crate::player_system::player::CameraComp;
 
 #[derive(Component)]
 pub struct RaycastCursor {

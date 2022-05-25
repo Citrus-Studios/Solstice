@@ -77,13 +77,11 @@ pub fn building(
 
     gui_hover_query: Query<&Interaction, With<GuiButtonId>>,
 
-    (mouse_input, keyboard_input, bp_fill_materials, building_arcs, buildings_res, rapier_context): (
+    (mouse_input, keyboard_input, building_arcs, buildings_res): (
         Res<Input<MouseButton>>, 
         Res<Input<KeyCode>>, 
-        Res<BlueprintFillMaterial>,
         Res<BuildingArcs>,
         Res<BuildingsResource>,
-        Res<RapierContext>,
     ),
 
     mut mouse_scroll_event: EventReader<MouseWheel>,

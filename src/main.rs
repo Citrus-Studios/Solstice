@@ -1,5 +1,4 @@
 use bevy::{prelude::{App, Msaa, Commands, OrthographicProjection, Transform, Color, info}, DefaultPlugins, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, pbr::{DirectionalLightBundle, DirectionalLight}, math::{Vec3, Quat}, core_pipeline::ClearColor};
-use bevy_mod_raycast::DefaultRaycastingPlugin;
 use bevy_obj::ObjPlugin;
 use bevy_rapier3d::{prelude::{RapierPhysicsPlugin, NoUserData, RapierConfiguration}, plugin::TimestepMode};
 use building_system::{RaycastSet, BuildingSystemPlugin};

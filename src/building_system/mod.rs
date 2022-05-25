@@ -6,8 +6,7 @@ use bevy::{
         ResMut, Transform, SystemSet, Handle, info, default,
     }, gltf::GltfMesh, core::FixedTimestep,
 };
-use bevy_rapier3d::prelude::*;
-use bevy_mod_raycast::{RayCastMesh, RaycastSystem};
+use bevy_mod_raycast::RayCastMesh;
 
 use crate::player_system::player::player_camera_system;
 

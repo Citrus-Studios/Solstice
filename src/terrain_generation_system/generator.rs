@@ -5,7 +5,7 @@ use bevy::{
 };
 use bevy_mod_raycast::RayCastMesh;
 use bevy_rapier3d::{
-    prelude::{ActiveCollisionTypes, Collider, CollisionGroups, SolverGroups},
+    prelude::{ActiveCollisionTypes, Collider, CollisionGroups},
 };
 use bevy::render::render_resource::PrimitiveTopology::TriangleList;
 

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_mod_raycast::{RayCastMesh, SimplifiedMesh};
 use bevy_rapier3d::prelude::*;
 
-use crate::{player_system::gui_system::gui_startup::SelectedBuilding, constants::{NO_COLLISION, BLUEPRINT_COLLISION}};
+use crate::{player_system::gui_system::gui_startup::SelectedBuilding, constants::BLUEPRINT_COLLISION};
 
 use super::{building_components::*, buildings::BuildingReferenceComponent, building::EntityQuery, MaterialHandles, GlobalPipeId, RaycastSet, BlueprintFillMaterial};
 
