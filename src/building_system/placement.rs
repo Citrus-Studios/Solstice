@@ -50,6 +50,8 @@ pub fn check_cursor_bp_collision(
             moved.0 = false;
         }
 
+        // Tries to place the blueprint if it is not intersecting.
+        // Removes all components that associate it with the cursor and replaces them with PlacedBlueprint.
         if try_place {
             commands.entity(cbp_entity).remove::<TryPlace>();
             if !intersecting {
