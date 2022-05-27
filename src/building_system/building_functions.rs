@@ -37,7 +37,8 @@ pub fn spawn_cursor_bp(
     .insert_bundle((
         NotShadowCaster,
         CursorBp,
-        BuildingReferenceComponent(building_arc)
+        BuildingReferenceComponent(building_arc),
+        Visibility::default()
     ))
     .with_children(|parent| {
         parent.spawn()

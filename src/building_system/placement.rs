@@ -4,7 +4,7 @@ use bevy_rapier3d::prelude::*;
 
 use crate::{player_system::gui_system::gui_startup::SelectedBuilding, constants::BLUEPRINT_COLLISION};
 
-use super::{building_components::*, buildings::BuildingReferenceComponent, building::EntityQuery, MaterialHandles, GlobalPipeId, RaycastSet, BlueprintFillMaterial};
+use super::{building_components::*, buildings::{BuildingReferenceComponent, BuildingType}, building::EntityQuery, MaterialHandles, GlobalPipeId, RaycastSet, BlueprintFillMaterial};
 
 pub fn check_cursor_bp_collision(
     mut commands: Commands,
@@ -22,7 +22,7 @@ pub fn check_cursor_bp_collision(
     mut global_pipe_id: ResMut<GlobalPipeId>,
     mut meshes: ResMut<Assets<Mesh>>,
 
-    (mut moved_query, children_query, _parent_query, mut material_query, _transform_query, building_ref_query, try_place_query): (
+    (mut moved_query, children_query, _parent_query, mut material_query, _transform_query, building_ref_query, try_place_query, placeable_query): (
         Query<&mut Moved>,
         Query<&Children>,
         Query<&Parent>,
@@ -30,6 +30,7 @@ pub fn check_cursor_bp_collision(
         Query<&Transform>,
         Query<&BuildingReferenceComponent>,
         Query<&TryPlace>,
+        Query<&Placeable>,
     ),
 ) {
     for (cbp_entity, cbp_collider_entity) in cursor_bp.iter().zip(cursor_bp_collider.iter()) {
@@ -37,11 +38,12 @@ pub fn check_cursor_bp_collision(
         let try_place = try_place_query.contains(cbp_entity);
 
         let intersecting = cbp_collider_entity.is_intersecting(&rapier_context);
+        let placeable = placeable_query.get(cbp_entity).unwrap_or(&Placeable(false)).0;
 
         if moved.0 {
             let mut mat = material_query.get_mut(cbp_entity).unwrap();
 
-            if intersecting {
+            if intersecting || !placeable {
                 *mat = bp_material_handles.obstructed.clone();
             } else {
                 *mat = bp_material_handles.blueprint.clone();
@@ -54,7 +56,7 @@ pub fn check_cursor_bp_collision(
         // Removes all components that associate it with the cursor and replaces them with PlacedBlueprint.
         if try_place {
             commands.entity(cbp_entity).remove::<TryPlace>();
-            if !intersecting {
+            if !intersecting && placeable {
                 commands.entity(cbp_collider_entity)
                     .remove_bundle::<(Moved, CursorBpCollider)>()
                     .insert_bundle((
@@ -117,8 +119,6 @@ pub fn check_cursor_bp_collision(
                 .insert_bundle((
                     PipeFirst,
                     place_mat.clone(),
-                    RayCastMesh::<RaycastSet>::default(),
-                    SimplifiedMesh { mesh: building_ref.shape_data.simplified_mesh_handle.clone().unwrap() }
                 ))
             ;
 
@@ -136,8 +136,6 @@ pub fn check_cursor_bp_collision(
                 .insert_bundle((
                     PipeSecond,
                     place_mat.clone(),
-                    RayCastMesh::<RaycastSet>::default(),
-                    SimplifiedMesh { mesh: building_ref.shape_data.simplified_mesh_handle.clone().unwrap() }
                 ))
             ;
 

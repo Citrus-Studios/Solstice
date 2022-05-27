@@ -68,9 +68,15 @@ pub struct PipeCylinder;
 #[derive(Component)]
 pub struct Moved(pub bool);
 
+#[derive(Component)]
+pub struct Placeable(pub bool);
+
 /// Adding this component to the cursor blueprint will mark it for trying to place it after collisions are calculated and checked
 #[derive(Component)]
 pub struct TryPlace;
+
+#[derive(Component)]
+pub struct BuiltPipeEnd;
 
 pub trait IsColliding {
     /// Checks if `self` is intersecting in the given `RapierContext`

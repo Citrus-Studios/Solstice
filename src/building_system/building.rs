@@ -6,9 +6,9 @@ pub use bevy::{prelude::*};
 
 use bevy_rapier3d::{prelude::*};
 
-use crate::{algorithms::distance_vec3, player_system::{gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, player::CameraComp}, constants::{HALF_PI, PIPE_CYLINDER_OFFSET}};
+use crate::{algorithms::distance_vec3, player_system::{gui_system::gui_startup::{GuiButtonId, SelectedBuilding}, player::CameraComp}, constants::{HALF_PI, PIPE_CYLINDER_OFFSET, SNAP_DISTANCE}, terrain_generation_system::generator::TerrainBlockType};
 
-use super::{raycasting::BuildCursor, buildings::{string_to_building_enum, BuildingArcs, BuildingsResource, BuildingReferenceComponent}, MaterialHandles, building_components::*, building_functions::*, BlueprintFillMaterial};
+use super::{raycasting::BuildCursor, buildings::{string_to_building_enum, BuildingArcs, BuildingsResource, BuildingReferenceComponent, BuildingType}, MaterialHandles, building_components::*, building_functions::*, BlueprintFillMaterial};
 
 #[derive(Component, Clone)]
 pub struct Pipe {
@@ -56,7 +56,12 @@ pub fn building(
 
     delete_query: EntityQuery<DeleteNextFrame>,
 
-    (pipe_prev_cylinder_query, pipe_prev_cylinder_collider_query, pipe_prev_placement_query, pipe_prev_query): (
+    (
+        pipe_prev_cylinder_query, 
+        pipe_prev_cylinder_collider_query, 
+        pipe_prev_placement_query, 
+        pipe_prev_query,
+    ): (
         EntityQuery<PipePreviewCylinder>, 
         EntityQuery<PipePreviewCylinderCollider>,
         EntityQuery<PipePreviewPlacement>,
@@ -86,10 +91,13 @@ pub fn building(
 
     mut mouse_scroll_event: EventReader<MouseWheel>,
 
-    (mut transform_query, mut moved_query, _global_transform_query): (
+    (mut transform_query, mut moved_query, mut visibility_query, _global_transform_query, children_query, well_query): (
         Query<&mut Transform>,
         Query<&mut Moved>,
+        Query<&mut Visibility>,
         Query<&GlobalTransform>,
+        Query<&Children>,
+        Query<&TerrainBlockType>,
     ),
 ) {
     for entity in delete_query.iter() {
@@ -112,7 +120,7 @@ pub fn building(
     
     if intersection_op.is_some() && selected_building.id.is_some() {
         // math...
-        let (e, intersection) = intersection_op.unwrap();
+        let (intersected_entity, intersection) = intersection_op.unwrap();
         let normal = intersection.normal.normalize();
 
         let camera_pos = transform_query.get(camera_query.single()).unwrap().translation;
@@ -161,21 +169,26 @@ pub fn building(
 
             selected_building.changed = false;
         } else {
-            let cursor_bp_entity = cursor_bp_query.single_mut();
+            let cursor_bp_entity = cursor_bp_query.single();
             cbp_entity = cursor_bp_entity;
 
-            let cursor_bp_collider_entity = cursor_bp_collider_query.single_mut();
+            let cursor_bp_collider_entity = cursor_bp_collider_query.single();
 
-            let mut e = transform_query.many_mut([cursor_bp_entity, cursor_bp_collider_entity]);
-            let cbp = e.split_at_mut(1);
-
-            let cursor_bp_transform = cbp.0[0].as_mut();
-            let cursor_bp_collider_transform = cbp.1[0].as_mut();
+            let [mut cursor_bp_transform, mut cursor_bp_collider_transform] = 
+                transform_query.many_mut([cursor_bp_entity, cursor_bp_collider_entity]);
 
             let mut moved = moved_query.get_mut(cursor_bp_collider_entity).unwrap();
+            
+            visibility_query.get_mut(cbp_entity).unwrap().is_visible = true;
 
             if cursor_bp_transform.clone() != transform_cache {
-                move_cursor_bp(cursor_bp_transform, cursor_bp_collider_transform, building.shape_data.collider_offset, transform_cache, &mut moved);
+                move_cursor_bp(
+                    &mut cursor_bp_transform, 
+                    &mut cursor_bp_collider_transform, 
+                    building.shape_data.collider_offset, 
+                    transform_cache, 
+                    &mut moved
+                );
             }
         }
 
@@ -268,11 +281,53 @@ pub fn building(
             },
 
             // every other building
-            _ => {        
+            _ => {
+                match building_arc.building_id.building_type {
+                    BuildingType::Wellpump => {
+                        commands.entity(cbp_entity).insert(Placeable(false));
+                        if well_query.get(intersected_entity).unwrap_or(&TerrainBlockType::Solid).clone() == TerrainBlockType::Well {
+                            let goal_translation = 
+                            transform_query.get(intersected_entity).unwrap()
+                                .translation.add(Vec3::new(0.0, 1.5, 0.0));
+
+                            if distance_vec3(goal_translation, transform_cache.translation) <= SNAP_DISTANCE {
+                                let goal_transform = Transform::from_translation(goal_translation)
+                                    .with_rotation(Quat::from_axis_angle(Vec3::Y, rot));
+
+                                let cbp_collider_entity = children_query.get(cbp_entity).unwrap()[0];
+
+                                let [mut cursor_bp_transform, mut cursor_bp_collider_transform] = 
+                                    transform_query.many_mut([cbp_entity, cbp_collider_entity]);
+
+                                let mut moved = moved_query.get_mut(cbp_collider_entity).unwrap();
+
+                                move_cursor_bp(
+                                    &mut cursor_bp_transform, 
+                                    &mut cursor_bp_collider_transform, 
+                                    building.shape_data.collider_offset, 
+                                    goal_transform, 
+                                    &mut moved
+                                );
+
+                                commands.entity(cbp_entity).insert(Placeable(true));
+                            }
+                        }
+                    },
+                    _ => {
+                        commands.entity(cbp_entity).insert(Placeable(true));
+                    }
+                }
                 if mouse_input.just_pressed(MouseButton::Left) && !hovered {
                     commands.entity(cbp_entity).insert(TryPlace);
                 }
             }
+        }
+    } else if selected_building.id.is_some() {
+        match cursor_bp_query.get_single() {
+            Ok(e) => {
+                visibility_query.get_mut(e).unwrap().is_visible = false;
+            },
+            Err(_) => (),
         }
     }
 }

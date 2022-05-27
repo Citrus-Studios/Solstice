@@ -27,7 +27,7 @@ pub struct TerrainGenDone {
     pub done: bool,
 }
 
-#[derive(Component, Copy, Clone)]
+#[derive(Component, Copy, Clone, PartialEq)]
 pub enum TerrainBlockType {
     Solid,
     Hollow,
@@ -221,7 +221,7 @@ pub fn generate_terrain(
             }),
             ..Default::default()
         })
-        .insert(RayCastMesh::<RaycastSet>::default());
+    ;
 
     info!("Generation time: {:?}", time.elapsed());
     info!("Number of shapes: {}", num_shapes);

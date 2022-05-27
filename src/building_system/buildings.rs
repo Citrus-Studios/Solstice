@@ -1,6 +1,6 @@
 use core::hash::Hash;
 
-use std::sync::Arc;
+use std::{sync::Arc, clone};
 
 use bevy::{prelude::*, math::Vec3, pbr::StandardMaterial, gltf::GltfMesh, utils::HashMap, ecs::schedule::ShouldRun};
 use bevy_rapier3d::prelude::Collider;
@@ -22,6 +22,7 @@ pub struct Building {
     pub building_id: BuildingId,
     pub iridium_data: BuildingIridiumData,
     pub shape_data: BuildingShapeData,
+    pub snap_data: BuildingSnapData,
 }
 
 #[derive(Clone)]
@@ -56,10 +57,19 @@ pub struct BuildingShapeData {
     pub mesh: Option<Handle<Mesh>>,
     pub material: Option<Handle<StandardMaterial>>,
     pub path: String,
-    pub simplified_mesh: Option<Mesh>,
-    pub simplified_mesh_handle: Option<Handle<Mesh>>,
     pub collider: Collider,
     pub collider_offset: Vec3,
+}
+
+#[derive(Clone)]
+pub struct BuildingSnapData {
+    /// Buildings that can snap to this building
+    pub buildings: Vec<BuildingType>,
+
+    /// Where those buildings can snap, can have multiple per snappable building
+    /// 
+    /// (translation, axes of rotation)
+    pub transform: Vec<Vec<(Vec3, Vec3)>>,
 }
 
 /// Contains all of the buildings in a hashmap
@@ -140,11 +150,78 @@ macro_rules! Building {
                 mesh: None,
                 material: None,
                 path: $meshtype.to_string(),
-                simplified_mesh: None,
-                simplified_mesh_handle: None,
                 collider: $coll.coll,
                 collider_offset: $coll.trans,
             },
+            // todo
+            snap_data: BuildingSnapData {
+                buildings: Vec::new(),
+                transform: Vec::new(),
+            }
+        }
+    };
+
+    (
+        Type: $buildingtype:ident, 
+        Name: $name:literal, 
+        Flow: $flow:ident, 
+        Storage: $storage:expr, 
+        Current: $current:expr, 
+        Generation: $generation:expr,
+        Cost: $cost:literal,
+        MeshPath: $meshtype:literal,
+        Collider: $coll:expr,
+        Snapping: 
+        $((
+            Building: $snap_building:expr,
+            Positions: $($snap_position:expr),+;
+            Axis: $($snap_axis:expr),+;
+        )),+
+    ) => {
+        Building {
+            building_id: BuildingId {
+                building_type: BuildingType::$buildingtype,
+                building_name: $name.to_string(),
+            },
+            iridium_data: BuildingIridiumData {
+                io: BuildingIO::$flow,
+                storage: match $storage {
+                    -1 => None,
+                    _ => Some($storage as u32)
+                },
+                current:  match $current {
+                    -1 => None,
+                    _ => Some($current as u32)
+                },
+                generation:  match $generation {
+                    -1 => None,
+                    _ => Some($generation as u32)
+                },
+                cost: $cost,
+            },
+            shape_data: BuildingShapeData {
+                mesh: None,
+                material: None,
+                path: $meshtype.to_string(),
+                collider: $coll.coll,
+                collider_offset: $coll.trans,
+            },
+            // todo
+            snap_data: BuildingSnapData {
+                buildings: vec![$($snap_building),+],
+                transform: {
+                    let pos = vec![$(vec![$($snap_position),+]);+];
+                    let axis = vec![$(vec![$($snap_axis),+]);+];
+
+                    let mut return_vec = Vec::new();
+
+                    for (a, b) in pos.iter().zip(axis.iter()) {
+                        return_vec.push(a.iter().copied().zip(b.iter().copied()).collect());
+                    }
+
+                    return_vec
+                },
+            }
         }
     }
 }
@@ -167,14 +244,6 @@ impl BuildingShapeData {
 
         self.mesh = Some(bundle.mesh);
         self.material = Some(bundle.material);
-
-        let gltf_mesh: Handle<GltfMesh> = asset_server.load(&format!("{}{}", &self.path.clone(), "#Mesh1").to_string());
-        let primitives = &gltf_meshes.get(gltf_mesh).unwrap().primitives;
-
-        let mesh = combine_gltf_primitives(primitives.clone(), meshes);
-
-        self.simplified_mesh = Some(mesh.clone());
-        self.simplified_mesh_handle = Some(meshes.add(mesh));
     }
 }
 
@@ -300,6 +369,6 @@ where K: Eq + Hash,
 }
 
 lazy_static! {
-    static ref WELLPUMP_COLLIDER: CollTransform = CollTransform::from_collider(Collider::cylinder(1.11928 / 2.0, 0.89528)).with_translation(Vec3::new(0.0, 0.569639, 0.05308));
+    static ref WELLPUMP_COLLIDER: CollTransform = CollTransform::from_collider(Collider::cylinder(1.11928 / 2.0, 0.89528)).with_translation(Vec3::new(0.0, 0.569639, -0.05));
     static ref PIPE_COLLIDER: CollTransform = CollTransform::from_collider(Collider::cuboid(0.27 / 2.0, 0.27 / 2.0, 0.3025 / 2.0)).with_translation(Vec3::new(0.0, 0.25, 0.01625));
 }

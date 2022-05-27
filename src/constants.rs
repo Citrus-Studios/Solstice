@@ -18,6 +18,7 @@ pub const HALF_SIZE: f32 = 10.0;
 pub const FABRICATOR_SPEED: u32 = 100;
 
 pub const MAX_BUILD_DISTANCE: f32 = 30.0;
+pub const SNAP_DISTANCE: f32 = 0.5;
 
 macro_rules! GUIBranch {
     ($name:literal - $x0:literal $y0:literal, $x1:literal $y1:literal, $x2:literal $y2:literal, $x3:literal $y3:literal) => {

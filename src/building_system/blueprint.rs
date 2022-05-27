@@ -93,6 +93,7 @@ pub fn update_blueprints(
                         // Remove useless marker components and activate collision
                         commands.entity(*part)
                             .remove_bundle::<(PipeFirst, PipeSecond)>()
+                            .insert(BuiltPipeEnd)
                         ;
 
                         commands.entity(children_query.get(*part).unwrap()[0])
