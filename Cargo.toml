@@ -40,3 +40,5 @@ nalgebra = { version = "0.31.0" }
 noise = "0.7.0"
 lazy_static = "1.4.0"
 tokio = { version = "1.17.0", features = [ "full" ] }
+
+enet = "0.3.0"
