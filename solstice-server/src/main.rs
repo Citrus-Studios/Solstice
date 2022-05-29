@@ -1,38 +1,51 @@
-use std::net::Ipv4Addr;
+use std::{
+    net::{IpAddr, Ipv4Addr},
+    thread,
+};
 
-use anyhow::Context;
-use enet::*;
+use laminar::{ErrorKind, Packet, Socket, SocketEvent};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize)]
+enum DataType {
+    Coords { x: f32, y: f32, z: f32 },
+}
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    let enet = Enet::new().context("could not initialize ENet")?;
-
-    let local_addr = Address::new(Ipv4Addr::LOCALHOST, 9001);
-
-    let mut host = enet
-        .create_host::<()>(
-            Some(&local_addr),
-            10,
-            ChannelLimit::Maximum,
-            BandwidthLimit::Unlimited,
-            BandwidthLimit::Unlimited,
-        )
-        .context("could not create host")?;
+async fn main() -> Result<(), ErrorKind> {
+    let mut socket = Socket::bind(format!("{}:42069", Ipv4Addr::LOCALHOST))?;
+    let (sender, receiver) = (socket.get_packet_sender(), socket.get_event_receiver());
+    let _thread = thread::spawn(move || socket.start_polling());
 
     loop {
-        match host.service(1000).context("service failed")? {
-            Some(Event::Connect(_)) => println!("new connection!"),
-            Some(Event::Disconnect(..)) => println!("disconnect!"),
-            Some(Event::Receive {
-                channel_id,
-                ref packet,
-                ..
-            }) => println!(
-                "got packet on channel {}, content: '{}'",
-                channel_id,
-                std::str::from_utf8(packet.data()).unwrap()
-            ),
-            _ => (),
+        if let Ok(event) = receiver.recv() {
+            match event {
+                SocketEvent::Packet(packet) => {
+                    let msg = packet.payload();
+
+                    if msg == b"Bye!" {
+                        break;
+                    }
+
+                    let msg = String::from_utf8_lossy(msg);
+                    let ip = packet.addr().ip();
+
+                    println!("Received {:?} from {:?}", msg, ip);
+
+                    sender
+                        .send(Packet::reliable_unordered(
+                            packet.addr(),
+                            "Copy that!".as_bytes().to_vec(),
+                        ))
+                        .expect("This should send");
+                }
+                SocketEvent::Timeout(address) => {
+                    println!("Client timed out: {}", address);
+                }
+                _ => {}
+            }
         }
     }
+
+    Ok(())
 }
