@@ -1,17 +1,23 @@
 use core::hash::Hash;
 
-use std::{sync::Arc, clone};
+use std::{clone, ops::Range, sync::Arc};
 
-use bevy::{prelude::*, math::Vec3, pbr::StandardMaterial, gltf::GltfMesh, utils::HashMap, ecs::schedule::ShouldRun};
+use bevy::{
+    ecs::schedule::ShouldRun, gltf::GltfMesh, math::Vec3, pbr::StandardMaterial, prelude::*,
+    utils::HashMap,
+};
 use bevy_rapier3d::prelude::Collider;
 
-use crate::{constants::GLOBAL_PIPE_ID, model_loader::{combine_gltf_mesh, combine_gltf_primitives}};
+use crate::{
+    constants::{MoreVec3Constants, GLOBAL_PIPE_ID},
+    model_loader::{combine_gltf_mesh, combine_gltf_primitives},
+};
 
 use lazy_static::lazy_static;
 
-use super::{ModelHandles, load_models::get_load_states};
+use super::{load_models::get_load_states, ModelHandles};
 
-#[derive(Hash, PartialEq, Eq, Clone)]
+#[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub enum BuildingType {
     Wellpump,
     Pipe,
@@ -67,9 +73,11 @@ pub struct BuildingSnapData {
     pub buildings: Vec<BuildingType>,
 
     /// Where those buildings can snap, can have multiple per snappable building
-    /// 
+    ///
     /// (translation, axes of rotation)
     pub transform: Vec<Vec<(Vec3, Vec3)>>,
+
+    pub rotation_allowed: Vec<Vec<Range<f32>>>,
 }
 
 /// Contains all of the buildings in a hashmap
@@ -102,7 +110,9 @@ impl<T, U, V, W> Pipe<T, U, V, W> {
         c3: Or<V, Building>,
         c4: Or<W, Building>,
     ) -> Self {
-        unsafe { GLOBAL_PIPE_ID += 1; }
+        unsafe {
+            GLOBAL_PIPE_ID += 1;
+        }
         Self {
             c1,
             c2,
@@ -115,11 +125,11 @@ impl<T, U, V, W> Pipe<T, U, V, W> {
 
 macro_rules! Building {
     (
-        Type: $buildingtype:ident, 
-        Name: $name:literal, 
-        Flow: $flow:ident, 
-        Storage: $storage:expr, 
-        Current: $current:expr, 
+        Type: $buildingtype:ident,
+        Name: $name:literal,
+        Flow: $flow:ident,
+        Storage: $storage:expr,
+        Current: $current:expr,
         Generation: $generation:expr,
         Cost: $cost:literal,
         MeshPath: $meshtype:literal,
@@ -153,29 +163,30 @@ macro_rules! Building {
                 collider: $coll.coll,
                 collider_offset: $coll.trans,
             },
-            // todo
             snap_data: BuildingSnapData {
                 buildings: Vec::new(),
                 transform: Vec::new(),
+                rotation_allowed: Vec::new(),
             }
         }
     };
 
     (
-        Type: $buildingtype:ident, 
-        Name: $name:literal, 
-        Flow: $flow:ident, 
-        Storage: $storage:expr, 
-        Current: $current:expr, 
+        Type: $buildingtype:ident,
+        Name: $name:literal,
+        Flow: $flow:ident,
+        Storage: $storage:expr,
+        Current: $current:expr,
         Generation: $generation:expr,
         Cost: $cost:literal,
         MeshPath: $meshtype:literal,
         Collider: $coll:expr,
-        Snapping: 
+        Snapping:
         $((
             Building: $snap_building:expr,
             Positions: $($snap_position:expr),+;
             Axis: $($snap_axis:expr),+;
+            RotationAllowed: $($snap_rotation:expr),+;
         )),+
     ) => {
         Building {
@@ -206,7 +217,6 @@ macro_rules! Building {
                 collider: $coll.coll,
                 collider_offset: $coll.trans,
             },
-            // todo
             snap_data: BuildingSnapData {
                 buildings: vec![$($snap_building),+],
                 transform: {
@@ -215,12 +225,13 @@ macro_rules! Building {
 
                     let mut return_vec = Vec::new();
 
-                    for (a, b) in pos.iter().zip(axis.iter()) {
-                        return_vec.push(a.iter().copied().zip(b.iter().copied()).collect());
+                    for (p, a) in pos.iter().zip(axis.iter()) {
+                        return_vec.push(p.iter().copied().zip(a.iter().copied()).collect());
                     }
 
                     return_vec
                 },
+                rotation_allowed: vec![$(vec![$($snap_rotation),+]);+],
             }
         }
     }
@@ -228,16 +239,18 @@ macro_rules! Building {
 
 impl BuildingShapeData {
     /// "Loads" the GLTF from the path and replaces the default `None`s in the struct with the stuff that's supposed to go there
-    /// 
+    ///
     /// Assumes the path in .path is loaded and is NOT asynchronous
-    pub fn load_from_path(&mut self, 
-        asset_server: &Res<AssetServer>, 
-        gltf_meshes: &ResMut<Assets<GltfMesh>>, 
+    pub fn load_from_path(
+        &mut self,
+        asset_server: &Res<AssetServer>,
+        gltf_meshes: &ResMut<Assets<GltfMesh>>,
         meshes: &mut ResMut<Assets<Mesh>>,
         materials: &mut ResMut<Assets<StandardMaterial>>,
         images: &mut ResMut<Assets<Image>>,
     ) {
-        let gltf_mesh: Handle<GltfMesh> = asset_server.load(&format!("{}{}", &self.path.clone(), "#Mesh0").to_string());
+        let gltf_mesh: Handle<GltfMesh> =
+            asset_server.load(&format!("{}{}", &self.path.clone(), "#Mesh0").to_string());
         let primitives = &gltf_meshes.get(gltf_mesh).unwrap().primitives;
 
         let bundle = combine_gltf_mesh(primitives.clone(), meshes, materials, images);
@@ -247,34 +260,45 @@ impl BuildingShapeData {
     }
 }
 
-pub fn load_buildings_into_resource(
-    mut commands: Commands,
-) {
+pub fn load_buildings_into_resource(mut commands: Commands) {
     info!("into resource start");
     let mut hash = HashMap::with_capacity(2);
 
-    hash.insert_no_return(BuildingType::Wellpump, Building!(
-        Type: Wellpump, 
-        Name: "Well Pump", 
-        Flow: InOut, 
-        Storage: 50_00, 
-        Current: 0, 
-        Generation: 5_00, 
-        Cost: 100_00,
-        MeshPath: "models/buildings/well_pump.gltf", 
-        Collider: WELLPUMP_COLLIDER.clone()
+    hash.insert_no_return(
+        BuildingType::Wellpump,
+        Building!(
+            Type: Wellpump,
+            Name: "Well Pump",
+            Flow: InOut,
+            Storage: 50_00,
+            Current: 0,
+            Generation: 5_00,
+            Cost: 100_00,
+            MeshPath: "models/buildings/well_pump.gltf",
+            Collider: WELLPUMP_COLLIDER.clone(),
+            Snapping: (
+                Building: BuildingType::Pipe,
+                Positions: Vec3::new(0.0, 0.453448, 0.747605);
+                Axis: Vec3::Y;
+                RotationAllowed: 0.0..0.0;
+            )
 
-    )).insert_no_return(BuildingType::Pipe, Building!(
-        Type: Pipe, 
-        Name: "Pipe", 
-        Flow: InOut, 
-        Storage: 0, 
-        Current: 0, 
-        Generation: 0, 
-        Cost: 10_00,
-        MeshPath: "models/pipes/pipe_base.gltf", 
-        Collider: PIPE_COLLIDER.clone()
-    ));
+        ),
+    )
+    .insert_no_return(
+        BuildingType::Pipe,
+        Building!(
+            Type: Pipe,
+            Name: "Pipe",
+            Flow: InOut,
+            Storage: 0,
+            Current: 0,
+            Generation: 0,
+            Cost: 10_00,
+            MeshPath: "models/pipes/pipe_base.gltf",
+            Collider: PIPE_COLLIDER.clone()
+        ),
+    );
 
     commands.insert_resource(BuildingsResource(hash));
     info!("into resource done");
@@ -292,12 +316,20 @@ pub fn load_buildings_in_resource(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
 ) {
-    if building_init_done.0 { return }
+    if building_init_done.0 {
+        return;
+    }
 
     let mut hash = HashMap::with_capacity(2);
 
     for (typ, building) in buildings_res.0.iter_mut() {
-        building.shape_data.load_from_path(&asset_server, &gltf_meshes, &mut meshes, &mut materials, &mut images);
+        building.shape_data.load_from_path(
+            &asset_server,
+            &gltf_meshes,
+            &mut meshes,
+            &mut materials,
+            &mut images,
+        );
         hash.insert_no_return(typ.clone(), Arc::new(building.clone()));
     }
 
@@ -306,13 +338,13 @@ pub fn load_buildings_in_resource(
 }
 
 /// Tries to match `name` to a building
-/// 
+///
 /// Panics if `name` does not match any building
 pub fn string_to_building_enum(name: String) -> BuildingType {
     match name.as_str() {
         "Well Pump" => BuildingType::Wellpump,
         "Pipe" => BuildingType::Pipe,
-        _ => panic!("Could not match \"{}\" to any building", name)
+        _ => panic!("Could not match \"{}\" to any building", name),
     }
 }
 
@@ -324,7 +356,11 @@ pub fn building_init_done(b: Res<BuildingInitDone>) -> ShouldRun {
     }
 }
 
-pub fn building_init_not_done_and_get_load_states(b: Res<BuildingInitDone>, asset_server: Res<AssetServer>, model_handles: Res<ModelHandles>) -> ShouldRun {
+pub fn building_init_not_done_and_get_load_states(
+    b: Res<BuildingInitDone>,
+    asset_server: Res<AssetServer>,
+    model_handles: Res<ModelHandles>,
+) -> ShouldRun {
     let load_state = get_load_states(asset_server, model_handles);
     if load_state == ShouldRun::NoAndCheckAgain {
         ShouldRun::NoAndCheckAgain
@@ -345,7 +381,7 @@ impl CollTransform {
     fn from_collider(coll: Collider) -> Self {
         CollTransform {
             coll,
-            trans: Vec3::ZERO
+            trans: Vec3::ZERO,
         }
     }
 
@@ -359,8 +395,9 @@ trait InsertNoReturn<K, V> {
     fn insert_no_return(&mut self, k: K, v: V) -> &mut Self;
 }
 
-impl<K, V> InsertNoReturn<K, V> for HashMap<K, V> 
-where K: Eq + Hash,
+impl<K, V> InsertNoReturn<K, V> for HashMap<K, V>
+where
+    K: Eq + Hash,
 {
     fn insert_no_return(&mut self, k: K, v: V) -> &mut Self {
         self.insert(k, v);
@@ -369,6 +406,10 @@ where K: Eq + Hash,
 }
 
 lazy_static! {
-    static ref WELLPUMP_COLLIDER: CollTransform = CollTransform::from_collider(Collider::cylinder(1.11928 / 2.0, 0.89528)).with_translation(Vec3::new(0.0, 0.569639, -0.05));
-    static ref PIPE_COLLIDER: CollTransform = CollTransform::from_collider(Collider::cuboid(0.27 / 2.0, 0.27 / 2.0, 0.3025 / 2.0)).with_translation(Vec3::new(0.0, 0.25, 0.01625));
+    static ref WELLPUMP_COLLIDER: CollTransform =
+        CollTransform::from_collider(Collider::cylinder(1.11928 / 2.0, 0.89528))
+            .with_translation(Vec3::new(0.0, 0.569639, -0.05));
+    static ref PIPE_COLLIDER: CollTransform =
+        CollTransform::from_collider(Collider::cuboid(0.27 / 2.0, 0.27 / 2.0, 0.3025 / 2.0))
+            .with_translation(Vec3::new(0.0, 0.25, 0.01625));
 }

@@ -1,5 +1,9 @@
-use bevy::prelude::{Component, Transform, Res, Entity};
+use bevy::prelude::{Component, Entity, Res, Transform};
 use bevy_rapier3d::plugin::RapierContext;
+
+use std::fmt::Debug;
+
+use super::buildings::BuildingReferenceComponent;
 
 /// Entities with this component will be deleted next frame
 #[derive(Component)]
@@ -22,7 +26,6 @@ pub struct PipePreviewCylinderCollider;
 #[derive(Component)]
 pub struct PipePreviewPlacement;
 
-
 #[derive(Component)]
 pub struct PipePreview;
 
@@ -38,7 +41,7 @@ pub struct CursorBp;
 pub struct CursorBpCollider;
 
 pub struct ChangeBuilding {
-    pub b: bool
+    pub b: bool,
 }
 
 /// Entities with this component are blueprints that have yet to be filled
@@ -78,6 +81,17 @@ pub struct TryPlace;
 #[derive(Component)]
 pub struct BuiltPipeEnd;
 
+#[derive(Component)]
+pub struct BuildingRotation(pub f32);
+
+impl Debug for BuildingReferenceComponent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("BuildingReferenceComponent")
+            .field(&self.0.building_id.building_type)
+            .finish()
+    }
+}
+
 pub trait IsColliding {
     /// Checks if `self` is intersecting in the given `RapierContext`
     fn is_intersecting(self, context: &Res<RapierContext>) -> bool;
@@ -86,7 +100,9 @@ pub trait IsColliding {
 impl IsColliding for Entity {
     fn is_intersecting(self, context: &Res<RapierContext>) -> bool {
         for (_, _, c) in context.intersections_with(self) {
-            if c { return true }
+            if c {
+                return true;
+            }
         }
         false
     }

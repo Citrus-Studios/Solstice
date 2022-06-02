@@ -2,9 +2,16 @@ use bevy::prelude::*;
 use bevy_mod_raycast::{RayCastMesh, SimplifiedMesh};
 use bevy_rapier3d::prelude::*;
 
-use crate::{player_system::gui_system::gui_startup::SelectedBuilding, constants::BLUEPRINT_COLLISION};
+use crate::{
+    constants::BLUEPRINT_COLLISION, player_system::gui_system::gui_startup::SelectedBuilding,
+};
 
-use super::{building_components::*, buildings::{BuildingReferenceComponent, BuildingType}, building::EntityQuery, MaterialHandles, GlobalPipeId, RaycastSet, BlueprintFillMaterial};
+use super::{
+    building::EntityQuery,
+    building_components::*,
+    buildings::{BuildingReferenceComponent, BuildingType},
+    BlueprintFillMaterial, GlobalPipeId, MaterialHandles, RaycastSet,
+};
 
 pub fn check_cursor_bp_collision(
     mut commands: Commands,
@@ -22,7 +29,16 @@ pub fn check_cursor_bp_collision(
     mut global_pipe_id: ResMut<GlobalPipeId>,
     mut meshes: ResMut<Assets<Mesh>>,
 
-    (mut moved_query, children_query, _parent_query, mut material_query, _transform_query, building_ref_query, try_place_query, placeable_query): (
+    (
+        mut moved_query,
+        children_query,
+        _parent_query,
+        mut material_query,
+        _transform_query,
+        building_ref_query,
+        try_place_query,
+        placeable_query,
+    ): (
         Query<&mut Moved>,
         Query<&Children>,
         Query<&Parent>,
@@ -38,7 +54,10 @@ pub fn check_cursor_bp_collision(
         let try_place = try_place_query.contains(cbp_entity);
 
         let intersecting = cbp_collider_entity.is_intersecting(&rapier_context);
-        let placeable = placeable_query.get(cbp_entity).unwrap_or(&Placeable(false)).0;
+        let placeable = placeable_query
+            .get(cbp_entity)
+            .unwrap_or(&Placeable(false))
+            .0;
 
         if moved.0 {
             let mut mat = material_query.get_mut(cbp_entity).unwrap();
@@ -57,25 +76,20 @@ pub fn check_cursor_bp_collision(
         if try_place {
             commands.entity(cbp_entity).remove::<TryPlace>();
             if !intersecting && placeable {
-                commands.entity(cbp_collider_entity)
+                commands
+                    .entity(cbp_collider_entity)
                     .remove_bundle::<(Moved, CursorBpCollider)>()
-                    .insert_bundle((
-                        BLUEPRINT_COLLISION.clone(), 
-                        Sensor(false)
-                    ))
-                ;
+                    .insert_bundle((BLUEPRINT_COLLISION.clone(), Sensor(false)));
 
                 let building = &building_ref_query.get(cbp_entity).unwrap().0;
 
-                commands.entity(cbp_entity)
+                commands
+                    .entity(cbp_entity)
                     .remove::<CursorBp>()
-                    .insert(
-                        PlacedBlueprint {
-                            cost: building.iridium_data.cost,
-                            current: 0,
-                        }
-                    )
-                ;
+                    .insert(PlacedBlueprint {
+                        cost: building.iridium_data.cost,
+                        current: 0,
+                    });
                 selected_building.id = None;
             }
         }
@@ -91,7 +105,7 @@ pub fn check_cursor_bp_collision(
         for entity in [pipe_cylinder, first, second] {
             if children_query.get(entity).unwrap()[0].is_intersecting(&rapier_context) {
                 intersecting = true;
-                break
+                break;
             }
         }
 
@@ -100,7 +114,10 @@ pub fn check_cursor_bp_collision(
             false => bp_material_handles.blueprint.clone(),
         };
 
-        material_query.get_many_mut([pipe_cylinder, first, second]).unwrap().map(|mut material| *material = set_material.clone());
+        material_query
+            .get_many_mut([pipe_cylinder, first, second])
+            .unwrap()
+            .map(|mut material| *material = set_material.clone());
 
         let pipe_preview_entity = pipe_preview.single();
 
@@ -108,63 +125,48 @@ pub fn check_cursor_bp_collision(
             let place_mat = bp_fill_materials.get_fill_percent(0.0);
             let building_ref = &building_ref_query.get(pipe_preview_entity).unwrap().0;
 
-            commands.entity(pipe_preview_entity)
+            commands
+                .entity(pipe_preview_entity)
                 .remove::<PipePreview>()
-                .insert(PipeBlueprint { cost: building_ref.iridium_data.cost, current: 0 })
-            ;
+                .insert(PipeBlueprint {
+                    cost: building_ref.iridium_data.cost,
+                    current: 0,
+                });
 
             // First base of the pipe
-            commands.entity(first)
+            commands
+                .entity(first)
                 .remove::<PipePreviewPlacement>()
-                .insert_bundle((
-                    PipeFirst,
-                    place_mat.clone(),
-                ))
-            ;
+                .insert_bundle((PipeFirst, place_mat.clone()));
 
             // First base of the pipe's collider
-            commands.entity(children_query.get(first).unwrap()[0])
-                .insert_bundle((
-                    BLUEPRINT_COLLISION.clone(),
-                    Sensor(false),
-                ))
-            ;
+            commands
+                .entity(children_query.get(first).unwrap()[0])
+                .insert_bundle((BLUEPRINT_COLLISION.clone(), Sensor(false)));
 
             // Second base of the pipe
-            commands.entity(second)
+            commands
+                .entity(second)
                 .remove::<CursorBp>()
-                .insert_bundle((
-                    PipeSecond,
-                    place_mat.clone(),
-                ))
-            ;
+                .insert_bundle((PipeSecond, place_mat.clone()));
 
             // Second base of the pipe's collider
-            commands.entity(children_query.get(second).unwrap()[0])
+            commands
+                .entity(children_query.get(second).unwrap()[0])
                 .remove::<CursorBpCollider>()
-                .insert_bundle((
-                    BLUEPRINT_COLLISION.clone(),
-                    Sensor(false),
-                ))
-            ;
+                .insert_bundle((BLUEPRINT_COLLISION.clone(), Sensor(false)));
 
             // Pipe cylinder in between both
-            commands.entity(pipe_cylinder)
+            commands
+                .entity(pipe_cylinder)
                 .remove::<PipePreviewCylinder>()
-                .insert_bundle((
-                    PipeCylinder,
-                    place_mat.clone()
-                ))
-            ;
+                .insert_bundle((PipeCylinder, place_mat.clone()));
 
             // Pipe cylinder collider
-            commands.entity(children_query.get(pipe_cylinder).unwrap()[0])
+            commands
+                .entity(children_query.get(pipe_cylinder).unwrap()[0])
                 .remove::<PipePreviewCylinderCollider>()
-                .insert_bundle((
-                    BLUEPRINT_COLLISION.clone(),
-                    Sensor(false),
-                ))
-            ;
+                .insert_bundle((BLUEPRINT_COLLISION.clone(), Sensor(false)));
 
             selected_building.id = None;
             selected_building.changed = true;
