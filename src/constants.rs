@@ -3,7 +3,7 @@ use std::{collections::HashMap, f32::consts::PI};
 use lazy_static::lazy_static;
 use rand::{thread_rng, Rng};
 
-use crate::{player_system::gui_system::gui::GuiOr};
+use crate::player_system::gui_system::gui::GuiOr;
 
 use bevy::math::Vec3;
 use bevy_rapier3d::prelude::CollisionGroups;
@@ -14,7 +14,7 @@ pub static mut GLOBAL_PIPE_ID: u32 = 0;
 pub const HALF_PI: f32 = PI / 2.0;
 pub const HALF_SIZE: f32 = 10.0;
 
-// the portafab fab speed in i/s
+/// the portafab fab speed in i/s
 pub const FABRICATOR_SPEED: u32 = 100;
 
 pub const MAX_BUILD_DISTANCE: f32 = 30.0;
@@ -148,8 +148,12 @@ lazy_static! {
         ("Structure Tech".ts(), "Technology".ts()),
         ("Technology_Misc".ts(), "Technology".ts()),
     ]);
-    
-    pub static ref PIPE_CYLINDER_OFFSET: Vec3 = Vec3::new(0.0, 0.25, 0.0675);
+
+    /// Pipe cylinder start/end position relative to the position of a pipe base
+    pub static ref PIPE_CYLINDER_OFFSET: Vec3 = Vec3::new(0.0, 0.0, 0.235);
+
+    /// Pipe base offset (when placed on ground) relative to the intersection position
+    pub static ref PIPE_BASE_OFFSET: Vec3 = Vec3::new(0.0, 0.25, -0.1675);
     pub static ref NO_COLLISION: CollisionGroups = CollisionGroups::new(0, 0);
     pub static ref BLUEPRINT_COLLISION: CollisionGroups = CollisionGroups { memberships: 0b100000, filters: 0b1111111 };
 }
@@ -160,5 +164,15 @@ pub trait ShortToString {
 impl ShortToString for &str {
     fn ts(self) -> String {
         self.to_string()
+    }
+}
+
+pub trait MoreVec3Constants {
+    fn NEG_Z() -> Vec3;
+}
+
+impl MoreVec3Constants for Vec3 {
+    fn NEG_Z() -> Vec3 {
+        Vec3::new(0.0, 0.0, -1.0)
     }
 }
