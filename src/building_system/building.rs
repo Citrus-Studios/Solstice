@@ -170,7 +170,9 @@ pub fn building(
 
         let mut transform_cache = Transform::from_translation(translation).with_rotation(quat);
 
-        transform_cache = transform_cache.with_add_translation(*PIPE_BASE_OFFSET);
+        if selected_building_type == BuildingType::Pipe {
+            transform_cache = transform_cache.with_add_translation(*PIPE_BASE_OFFSET);
+        }
 
         // check if we're hovering over the gui
         let mut hovered = false;
@@ -204,8 +206,6 @@ pub fn building(
                 transform_cache,
                 rot,
             );
-
-            selected_building.changed = false;
         } else {
             let cursor_bp_entity = cursor_bp_query.single();
             cbp_entity = cursor_bp_entity;
@@ -233,124 +233,50 @@ pub fn building(
             }
         }
 
+        if mouse_input.just_pressed(MouseButton::Left) && !hovered {
+            commands.entity(cbp_entity).insert(TryPlace);
+        }
+
         match selected_building_type {
             // z offset for pipe cyl compared to pipe base: -0.0675
             BuildingType::Pipe => {
-                // All pipe shit vvvvv
-                let pipe_cyl_mesh: Handle<Mesh> =
-                    asset_server.load("models/pipes/pipe_cylinder.obj");
                 // Rotate the offset and add it to the translation
                 let offset_transform = transform_cache.with_add_translation(*PIPE_CYLINDER_OFFSET);
 
                 let trans = offset_transform.translation;
+
+                if !pipe_prev_placement_query.is_empty() {
+                    let first_position = transform_query
+                        .get(pipe_prev_placement_query.single())
+                        .unwrap()
+                        .with_add_translation(*PIPE_CYLINDER_OFFSET)
+                        .translation;
+                    let transform = transform_query
+                        .get_many_mut([
+                            pipe_prev_cylinder_query.single(),
+                            pipe_prev_cylinder_collider_query.single(),
+                        ])
+                        .unwrap();
+                    update_pipe_cylinder_transform(transform, first_position, trans);
+                }
 
                 match PipeBools::match_bools(
                     mouse_input.just_pressed(MouseButton::Left),
                     hovered,
                     !pipe_prev_placement_query.is_empty(),
                 ) {
-                    // (just clicked, hovering over gui, first pipe point placed, intersecting)
                     PipeBools::ClickFirstPointPlaced => {
-                        // Place the whole pipe blueprint
-                        let first_position = transform_query
-                            .get(pipe_prev_placement_query.single())
-                            .unwrap()
-                            .with_add_translation(*PIPE_CYLINDER_OFFSET)
-                            .translation;
-                        let transform = transform_query
-                            .get_many_mut([
-                                pipe_prev_cylinder_query.single(),
-                                pipe_prev_cylinder_collider_query.single(),
-                            ])
-                            .unwrap();
-                        update_pipe_cylinder_transform(transform, first_position, trans);
-
-                        // try to place
                         commands.entity(pipe_prev_query.single()).insert(TryPlace);
                     }
-
                     PipeBools::ClickFirstPointNotPlaced => {
-                        // spawn pipe preview
-                        commands
-                            .spawn()
-                            .insert_bundle((
-                                GlobalTransform::identity(),
-                                Transform::default(),
-                                PipePreview,
-                                BuildingReferenceComponent(building_arc.clone()),
-                            ))
-                            .with_children(|parent| {
-                                parent
-                                    .spawn_bundle(PbrBundle {
-                                        mesh: pipe_cyl_mesh,
-                                        material: bp_material_handles.blueprint.clone(),
-                                        transform: offset_transform
-                                            .with_scale(Vec3::new(1.0, 0.001, 1.0)),
-                                        ..Default::default()
-                                    })
-                                    .insert(PipePreviewCylinder)
-                                    .with_children(|parent| {
-                                        parent.spawn_bundle((
-                                            offset_transform.with_scale(Vec3::new(1.0, 0.001, 1.0)),
-                                            Collider::cuboid(0.135, 0.5, 0.135),
-                                            CollisionGroups {
-                                                memberships: 0b00001000,
-                                                filters: 0b11101111,
-                                            },
-                                            Sensor(true),
-                                            PipePreviewCylinderCollider,
-                                            NotShadowCaster,
-                                        ));
-                                    });
-
-                                parent
-                                    .spawn_bundle(PbrBundle {
-                                        mesh: building.shape_data.mesh.clone().unwrap(),
-                                        material: bp_material_handles.blueprint.clone(),
-                                        transform: transform_cache,
-                                        ..Default::default()
-                                    })
-                                    .insert_bundle((PipePreviewPlacement, NotShadowCaster))
-                                    .with_children(|parent| {
-                                        parent.spawn_bundle((
-                                            building.shape_data.collider.clone(),
-                                            transform_cache.with_add_translation(
-                                                building.shape_data.collider_offset,
-                                            ),
-                                            Sensor(true),
-                                            BuildingRotation(rot),
-                                        ));
-                                    });
-                            })
-                            .add_child(cbp_entity);
-
-                        bc_res.rotation += PI;
-                    }
-                    PipeBools::NoClickFirstPointPlaced => {
-                        // Update the preview, change pipe cylinder transform
-                        let first_position = transform_query
-                            .get(pipe_prev_placement_query.single())
-                            .unwrap()
-                            .with_add_translation(*PIPE_CYLINDER_OFFSET)
-                            .translation;
-                        let transform = transform_query
-                            .get_many_mut([
-                                pipe_prev_cylinder_query.single(),
-                                pipe_prev_cylinder_collider_query.single(),
-                            ])
-                            .unwrap();
-                        update_pipe_cylinder_transform(transform, first_position, trans);
+                        commands.entity(cbp_entity).insert(TryPlace);
                     }
                     _ => (),
                 }
             }
 
             // every other building
-            _ => {
-                if mouse_input.just_pressed(MouseButton::Left) && !hovered {
-                    commands.entity(cbp_entity).insert(TryPlace);
-                }
-            }
+            _ => {}
         }
     } else if selected_building.id.is_some() {
         match cursor_bp_query.get_single() {

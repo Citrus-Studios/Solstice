@@ -54,6 +54,11 @@ pub fn snapping(
         return;
     }
 
+    if selected_building.changed {
+        return;
+    }
+
+    // Basically um, idk, ask me in the discord or something if you really want to know lol :P
     let intersected_entity = match parent_query.get(build_cursor.intersection.unwrap().0) {
         Ok(e) => e.0,
         Err(_) => build_cursor.intersection.unwrap().0,
@@ -76,8 +81,9 @@ pub fn snapping(
     let mut rot = build_cursor.rotation;
 
     match selected_building_type {
+        // I must do wellpumps seperately because they snap to something that isn't a building
         BuildingType::Wellpump => {
-            commands.entity(cbp_entity).insert(Placeable(false));
+            commands.entity(cbp_entity).insert(Placeable::No);
 
             if let Ok(TerrainBlockType::Well) = well_query.get(intersected_entity) {
                 let goal_translation = relative_transform.translation.add(Vec3::new(0.0, 1.5, 0.0));
@@ -98,12 +104,11 @@ pub fn snapping(
                         &mut building_rot_query.get_mut(cbp_collider_entity).unwrap(),
                     );
 
-                    commands.entity(cbp_entity).insert(Placeable(true));
+                    commands.entity(cbp_entity).insert(Placeable::Yes);
                 }
             }
         }
         _ => {
-            info!("{:?}", building_ref_query.get(intersected_entity));
             if let Ok(e) = building_ref_query.get(intersected_entity) {
                 let intersected_building = &e.0;
 

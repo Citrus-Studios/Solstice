@@ -23,6 +23,7 @@ pub fn gui(
     keyboard_input: Res<Input<KeyCode>>,
     mut selected_building: ResMut<SelectedBuilding>,
 ) {
+    selected_building.changed = false;
     let mut clicked = false;
     for (interaction, mut color, button_id) in interaction_query.iter_mut() {
         // info!("{:?}", interaction);

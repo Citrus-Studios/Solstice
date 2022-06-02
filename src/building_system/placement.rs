@@ -1,15 +1,20 @@
-use bevy::prelude::*;
+use std::f32::consts::PI;
+
+use bevy::{pbr::NotShadowCaster, prelude::*};
 use bevy_mod_raycast::{RayCastMesh, SimplifiedMesh};
 use bevy_rapier3d::prelude::*;
 
 use crate::{
-    constants::BLUEPRINT_COLLISION, player_system::gui_system::gui_startup::SelectedBuilding,
+    constants::{BLUEPRINT_COLLISION, PIPE_CYLINDER_OFFSET},
+    player_system::gui_system::gui_startup::SelectedBuilding,
 };
 
 use super::{
     building::EntityQuery,
     building_components::*,
+    building_functions::MoveTransform,
     buildings::{BuildingReferenceComponent, BuildingType},
+    raycasting::BuildCursor,
     BlueprintFillMaterial, GlobalPipeId, MaterialHandles, RaycastSet,
 };
 
@@ -28,13 +33,15 @@ pub fn check_cursor_bp_collision(
     mut selected_building: ResMut<SelectedBuilding>,
     mut global_pipe_id: ResMut<GlobalPipeId>,
     mut meshes: ResMut<Assets<Mesh>>,
+    mut bc_res: ResMut<BuildCursor>,
+    asset_server: ResMut<AssetServer>,
 
     (
         mut moved_query,
         children_query,
         _parent_query,
         mut material_query,
-        _transform_query,
+        transform_query,
         building_ref_query,
         try_place_query,
         placeable_query,
@@ -56,16 +63,21 @@ pub fn check_cursor_bp_collision(
         let intersecting = cbp_collider_entity.is_intersecting(&rapier_context);
         let placeable = placeable_query
             .get(cbp_entity)
-            .unwrap_or(&Placeable(false))
-            .0;
+            .unwrap_or(&Placeable::WithCollision);
+
+        let can_place = match placeable {
+            Placeable::Yes => true,
+            Placeable::WithCollision => intersecting,
+            Placeable::No => false,
+        };
 
         if moved.0 {
             let mut mat = material_query.get_mut(cbp_entity).unwrap();
 
-            if intersecting || !placeable {
-                *mat = bp_material_handles.obstructed.clone();
-            } else {
+            if can_place {
                 *mat = bp_material_handles.blueprint.clone();
+            } else {
+                *mat = bp_material_handles.obstructed.clone();
             }
 
             moved.0 = false;
@@ -75,22 +87,94 @@ pub fn check_cursor_bp_collision(
         // Removes all components that associate it with the cursor and replaces them with PlacedBlueprint.
         if try_place {
             commands.entity(cbp_entity).remove::<TryPlace>();
-            if !intersecting && placeable {
-                commands
-                    .entity(cbp_collider_entity)
-                    .remove_bundle::<(Moved, CursorBpCollider)>()
-                    .insert_bundle((BLUEPRINT_COLLISION.clone(), Sensor(false)));
-
+            if can_place {
                 let building = &building_ref_query.get(cbp_entity).unwrap().0;
 
-                commands
-                    .entity(cbp_entity)
-                    .remove::<CursorBp>()
-                    .insert(PlacedBlueprint {
-                        cost: building.iridium_data.cost,
-                        current: 0,
-                    });
-                selected_building.id = None;
+                match building.building_id.building_type {
+                    BuildingType::Pipe => {
+                        let pipe_cyl_mesh: Handle<Mesh> =
+                            asset_server.load("models/pipes/pipe_cylinder.obj");
+
+                        let rot = bc_res.rotation;
+                        let transform = transform_query.get(cbp_entity).unwrap();
+                        let offset_transform =
+                            transform.with_add_translation(*PIPE_CYLINDER_OFFSET);
+
+                        commands
+                            .spawn()
+                            .insert_bundle((
+                                GlobalTransform::identity(),
+                                Transform::default(),
+                                PipePreview,
+                                BuildingReferenceComponent(building.clone()),
+                            ))
+                            .with_children(|parent| {
+                                parent
+                                    .spawn_bundle(PbrBundle {
+                                        mesh: pipe_cyl_mesh,
+                                        material: bp_material_handles.blueprint.clone(),
+                                        transform: offset_transform
+                                            .with_scale(Vec3::new(1.0, 0.001, 1.0)),
+                                        ..Default::default()
+                                    })
+                                    .insert(PipePreviewCylinder)
+                                    .with_children(|parent| {
+                                        parent.spawn_bundle((
+                                            offset_transform.with_scale(Vec3::new(1.0, 0.001, 1.0)),
+                                            Collider::cuboid(0.135, 0.5, 0.135),
+                                            CollisionGroups {
+                                                memberships: 0b00001000,
+                                                filters: 0b11101111,
+                                            },
+                                            Sensor(true),
+                                            PipePreviewCylinderCollider,
+                                            NotShadowCaster,
+                                        ));
+                                    });
+
+                                parent
+                                    .spawn_bundle(PbrBundle {
+                                        mesh: building.shape_data.mesh.clone().unwrap(),
+                                        material: bp_material_handles.blueprint.clone(),
+                                        transform: *transform,
+                                        ..Default::default()
+                                    })
+                                    .insert_bundle((
+                                        PipePreviewPlacement,
+                                        NotShadowCaster,
+                                        Placeable::Yes,
+                                    ))
+                                    .with_children(|parent| {
+                                        parent.spawn_bundle((
+                                            building.shape_data.collider.clone(),
+                                            transform.with_add_translation(
+                                                building.shape_data.collider_offset,
+                                            ),
+                                            Sensor(true),
+                                            BuildingRotation(rot),
+                                        ));
+                                    });
+                            })
+                            .add_child(cbp_entity);
+
+                        bc_res.rotation += PI;
+                    }
+                    _ => {
+                        commands
+                            .entity(cbp_collider_entity)
+                            .remove_bundle::<(Moved, CursorBpCollider)>()
+                            .insert_bundle((BLUEPRINT_COLLISION.clone(), Sensor(false)));
+
+                        commands
+                            .entity(cbp_entity)
+                            .remove::<CursorBp>()
+                            .insert(PlacedBlueprint {
+                                cost: building.iridium_data.cost,
+                                current: 0,
+                            });
+                        selected_building.id = None;
+                    }
+                }
             }
         }
     }
@@ -103,7 +187,16 @@ pub fn check_cursor_bp_collision(
         let mut intersecting = false;
 
         for entity in [pipe_cylinder, first, second] {
-            if children_query.get(entity).unwrap()[0].is_intersecting(&rapier_context) {
+            if match placeable_query
+                .get(entity)
+                .unwrap_or(&Placeable::WithCollision)
+            {
+                Placeable::Yes => false,
+                Placeable::WithCollision => {
+                    children_query.get(entity).unwrap()[0].is_intersecting(&rapier_context)
+                }
+                Placeable::No => true,
+            } {
                 intersecting = true;
                 break;
             }

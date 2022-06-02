@@ -71,8 +71,12 @@ pub struct PipeCylinder;
 #[derive(Component)]
 pub struct Moved(pub bool);
 
-#[derive(Component)]
-pub struct Placeable(pub bool);
+#[derive(Component, PartialEq)]
+pub enum Placeable {
+    Yes,
+    WithCollision,
+    No,
+}
 
 /// Adding this component to the cursor blueprint will mark it for trying to place it after collisions are calculated and checked
 #[derive(Component)]
