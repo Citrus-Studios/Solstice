@@ -1,46 +1,77 @@
-use bevy::{prelude::*, DefaultPlugins, diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin}, pbr::{DirectionalLightBundle, DirectionalLight, PbrBundle}, math::{Vec3, Quat}, core_pipeline::ClearColor};
+#![deny(clippy::all)]
+#![warn(clippy::pedantic, clippy::cargo)]
+#![allow(
+    clippy::module_name_repetitions,
+    clippy::cargo_common_metadata,
+    clippy::type_complexity,
+    clippy::too_many_arguments,
+    clippy::needless_pass_by_value,
+    clippy::multiple_crate_versions,
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::too_many_lines,
+    clippy::similar_names,
+    clippy::must_use_candidate,
+    clippy::enum_glob_use
+)]
+
+use bevy::{
+    core_pipeline::ClearColor,
+    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    math::{Quat, Vec3},
+    pbr::{DirectionalLight, DirectionalLightBundle, PbrBundle},
+    prelude::*,
+    DefaultPlugins,
+};
 use bevy_obj::ObjPlugin;
-use bevy_rapier3d::{prelude::{RapierPhysicsPlugin, NoUserData, RapierConfiguration}, plugin::TimestepMode};
-use building_system::{RaycastSet, BuildingSystemPlugin};
+use bevy_rapier3d::{
+    plugin::TimestepMode,
+    prelude::{NoUserData, RapierConfiguration, RapierPhysicsPlugin},
+};
+use building_system::{BuildingSystemPlugin, RaycastSet};
 use constants::HALF_SIZE;
 use player_system::PlayerSystemPlugin;
 use terrain_generation_system::GeneratorPlugin;
 
 pub mod building_system;
 pub mod player_system;
-pub mod terrain_generation_system; 
+pub mod terrain_generation_system;
 
-pub mod constants;
 pub mod algorithms;
+pub mod constants;
 
 pub mod material_palette;
 pub mod model_loader;
 
 fn main() {
     App::new()
-        // plugins    
+        // plugins
         .add_plugins(DefaultPlugins)
         .add_plugin(LogDiagnosticsPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(ObjPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-        
         .add_plugin(GeneratorPlugin)
         .add_plugin(BuildingSystemPlugin)
         .add_plugin(PlayerSystemPlugin)
-
         // startup system
         .add_startup_system(startup)
-
         // resources
         .insert_resource(RapierConfiguration {
             gravity: [0.0, -9.81, 0.0].into(),
-            timestep_mode: TimestepMode::Interpolated { dt: 1.0 / 60.0, time_scale: 1.0, substeps: 1 },
+            timestep_mode: TimestepMode::Interpolated {
+                dt: 1.0 / 60.0,
+                time_scale: 1.0,
+                substeps: 1,
+            },
             ..Default::default()
         })
         .insert_resource(Msaa { samples: 4 })
-        .insert_resource(ClearColor(Color::rgb(14.0 / 255.0, 125.0 / 255.0, 127.0 / 255.0)))
-
+        .insert_resource(ClearColor(Color::rgb(
+            14.0 / 255.0,
+            125.0 / 255.0,
+            127.0 / 255.0,
+        )))
         .run();
 }
 
@@ -76,11 +107,11 @@ fn startup(
     });
     commands.spawn_bundle(PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Plane { size: 500.0 })),
-        material: materials.add(StandardMaterial { 
-            base_color: Color::BLACK, 
+        material: materials.add(StandardMaterial {
+            base_color: Color::BLACK,
             perceptual_roughness: 1.0,
             emissive: Color::rgb(0.0 / 255.0, 255.0 / 255.0, 251.0 / 255.0),
-            ..default() 
+            ..default()
         }),
         transform: Transform::from_xyz(100.0, 112.2, 100.0),
         ..default()
