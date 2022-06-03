@@ -67,7 +67,7 @@ pub fn check_cursor_bp_collision(
 
         let can_place = match placeable {
             Placeable::Yes => true,
-            Placeable::WithCollision => intersecting,
+            Placeable::WithCollision => !intersecting,
             Placeable::No => false,
         };
 
@@ -92,72 +92,75 @@ pub fn check_cursor_bp_collision(
 
                 match building.building_id.building_type {
                     BuildingType::Pipe => {
-                        let pipe_cyl_mesh: Handle<Mesh> =
-                            asset_server.load("models/pipes/pipe_cylinder.obj");
+                        if pipe_preview.is_empty() {
+                            let pipe_cyl_mesh: Handle<Mesh> =
+                                asset_server.load("models/pipes/pipe_cylinder.obj");
 
-                        let rot = bc_res.rotation;
-                        let transform = transform_query.get(cbp_entity).unwrap();
-                        let offset_transform =
-                            transform.with_add_translation(*PIPE_CYLINDER_OFFSET);
+                            let rot = bc_res.rotation;
+                            let transform = transform_query.get(cbp_entity).unwrap();
+                            let offset_transform =
+                                transform.with_add_translation(*PIPE_CYLINDER_OFFSET);
 
-                        commands
-                            .spawn()
-                            .insert_bundle((
-                                GlobalTransform::identity(),
-                                Transform::default(),
-                                PipePreview,
-                                BuildingReferenceComponent(building.clone()),
-                            ))
-                            .with_children(|parent| {
-                                parent
-                                    .spawn_bundle(PbrBundle {
-                                        mesh: pipe_cyl_mesh,
-                                        material: bp_material_handles.blueprint.clone(),
-                                        transform: offset_transform
-                                            .with_scale(Vec3::new(1.0, 0.001, 1.0)),
-                                        ..Default::default()
-                                    })
-                                    .insert(PipePreviewCylinder)
-                                    .with_children(|parent| {
-                                        parent.spawn_bundle((
-                                            offset_transform.with_scale(Vec3::new(1.0, 0.001, 1.0)),
-                                            Collider::cuboid(0.135, 0.5, 0.135),
-                                            CollisionGroups {
-                                                memberships: 0b00001000,
-                                                filters: 0b11101111,
-                                            },
-                                            Sensor(true),
-                                            PipePreviewCylinderCollider,
+                            commands
+                                .spawn()
+                                .insert_bundle((
+                                    GlobalTransform::identity(),
+                                    Transform::default(),
+                                    PipePreview,
+                                    BuildingReferenceComponent(building.clone()),
+                                ))
+                                .with_children(|parent| {
+                                    parent
+                                        .spawn_bundle(PbrBundle {
+                                            mesh: pipe_cyl_mesh,
+                                            material: bp_material_handles.blueprint.clone(),
+                                            transform: offset_transform
+                                                .with_scale(Vec3::new(1.0, 0.001, 1.0)),
+                                            ..Default::default()
+                                        })
+                                        .insert(PipePreviewCylinder)
+                                        .with_children(|parent| {
+                                            parent.spawn_bundle((
+                                                offset_transform
+                                                    .with_scale(Vec3::new(1.0, 0.001, 1.0)),
+                                                Collider::cuboid(0.135, 0.5, 0.135),
+                                                CollisionGroups {
+                                                    memberships: 0b00001000,
+                                                    filters: 0b11101111,
+                                                },
+                                                Sensor(true),
+                                                PipePreviewCylinderCollider,
+                                                NotShadowCaster,
+                                            ));
+                                        });
+
+                                    parent
+                                        .spawn_bundle(PbrBundle {
+                                            mesh: building.shape_data.mesh.clone().unwrap(),
+                                            material: bp_material_handles.blueprint.clone(),
+                                            transform: *transform,
+                                            ..Default::default()
+                                        })
+                                        .insert_bundle((
+                                            PipePreviewPlacement,
                                             NotShadowCaster,
-                                        ));
-                                    });
+                                            Placeable::Yes,
+                                        ))
+                                        .with_children(|parent| {
+                                            parent.spawn_bundle((
+                                                building.shape_data.collider.clone(),
+                                                transform.with_add_translation(
+                                                    building.shape_data.collider_offset,
+                                                ),
+                                                Sensor(true),
+                                                BuildingRotation(rot),
+                                            ));
+                                        });
+                                })
+                                .add_child(cbp_entity);
 
-                                parent
-                                    .spawn_bundle(PbrBundle {
-                                        mesh: building.shape_data.mesh.clone().unwrap(),
-                                        material: bp_material_handles.blueprint.clone(),
-                                        transform: *transform,
-                                        ..Default::default()
-                                    })
-                                    .insert_bundle((
-                                        PipePreviewPlacement,
-                                        NotShadowCaster,
-                                        Placeable::Yes,
-                                    ))
-                                    .with_children(|parent| {
-                                        parent.spawn_bundle((
-                                            building.shape_data.collider.clone(),
-                                            transform.with_add_translation(
-                                                building.shape_data.collider_offset,
-                                            ),
-                                            Sensor(true),
-                                            BuildingRotation(rot),
-                                        ));
-                                    });
-                            })
-                            .add_child(cbp_entity);
-
-                        bc_res.rotation += PI;
+                            bc_res.rotation += PI;
+                        }
                     }
                     _ => {
                         commands
