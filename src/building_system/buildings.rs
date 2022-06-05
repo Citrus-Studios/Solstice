@@ -1,6 +1,6 @@
 use core::hash::Hash;
 
-use std::{clone, ops::Range, sync::Arc};
+use std::{ops::Range, sync::Arc};
 
 use bevy::{
     ecs::schedule::ShouldRun, gltf::GltfMesh, math::Vec3, pbr::StandardMaterial, prelude::*,
@@ -8,10 +8,7 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::Collider;
 
-use crate::{
-    constants::{MoreVec3Constants, GLOBAL_PIPE_ID},
-    model_loader::{combine_gltf_mesh, combine_gltf_primitives},
-};
+use crate::{constants::GLOBAL_PIPE_ID, model_loader::combine_gltf_mesh};
 
 use lazy_static::lazy_static;
 
