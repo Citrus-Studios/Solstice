@@ -1,7 +1,6 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, render::mesh::PrimitiveTopology};
 
 use super::mutate_mesh::MutateMesh;
-
 
 /// The relevant vertex attributes of a `Mesh`
 #[derive(Clone, Debug)]
@@ -9,7 +8,7 @@ pub struct RelevantAttributes {
     pub pos: Vec<[f32; 3]>,
     pub norm: Vec<[f32; 3]>,
     pub uv: Vec<[f32; 2]>,
-    pub ind: Vec<u32>
+    pub ind: Vec<u32>,
 }
 
 impl RelevantAttributes {
@@ -18,24 +17,28 @@ impl RelevantAttributes {
             pos: Vec::new(),
             norm: Vec::new(),
             uv: Vec::new(),
-            ind: Vec::new()
+            ind: Vec::new(),
         }
     }
 
     pub fn pos(mut self, pos: Vec<[f32; 3]>) -> Self {
-        self.pos = pos; self
+        self.pos = pos;
+        self
     }
 
     pub fn norm(mut self, norm: Vec<[f32; 3]>) -> Self {
-        self.norm = norm; self
+        self.norm = norm;
+        self
     }
 
     pub fn uv(mut self, uv: Vec<[f32; 2]>) -> Self {
-        self.uv = uv; self
+        self.uv = uv;
+        self
     }
 
     pub fn ind(mut self, ind: Vec<u32>) -> Self {
-        self.ind = ind; self
+        self.ind = ind;
+        self
     }
 
     /// Sets all the UVs of `self` to the specified position
@@ -67,6 +70,12 @@ impl RelevantAttributes {
         self
     }
 
+    pub fn translate(&mut self, translation: Vec3) {
+        self.pos
+            .iter_mut()
+            .for_each(|p| *p = [translation.x, translation.y, translation.z]);
+    }
+
     /// Extracts `mesh`'s `RelevantAttributes` and appends them to `self`
     pub fn combine_with_mesh(self, mesh: Mesh, offset: Vec3) -> Self {
         let mut attr = mesh.relevant_attributes();
@@ -82,5 +91,13 @@ impl RelevantAttributes {
         }
 
         self.append(attr)
+    }
+}
+
+impl Into<Mesh> for RelevantAttributes {
+    fn into(self) -> Mesh {
+        let mut ret = Mesh::new(PrimitiveTopology::TriangleList);
+        ret.set_attributes(self);
+        ret
     }
 }

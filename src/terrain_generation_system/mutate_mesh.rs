@@ -1,12 +1,19 @@
-use bevy::{render::{mesh::{VertexAttributeValues, Indices, MeshVertexAttribute}, render_resource::VertexFormat}, prelude::Mesh, math::Vec3};
-use bevy_rapier3d::rapier::prelude::{SharedShape, ColliderShape};
+use bevy::{
+    math::Vec3,
+    prelude::Mesh,
+    render::{
+        mesh::{Indices, MeshVertexAttribute, VertexAttributeValues},
+        render_resource::VertexFormat,
+    },
+};
+use bevy_rapier3d::rapier::prelude::{ColliderShape, SharedShape};
 use nalgebra::Point3;
 
 use super::relevant_attributes::RelevantAttributes;
 
 pub trait MutateMesh {
     /// Combines two meshes
-    /// 
+    ///
     /// **NOTE:** slow af, use `RelevantAttributes` as a builder struct instead
     fn combine_mesh(self, mesh_2: Mesh, offset: Vec3) -> Self;
 
@@ -17,7 +24,7 @@ pub trait MutateMesh {
     fn into_shared_shape(&self) -> SharedShape;
 
     /// Overwrites the attributes of a mesh
-    fn set_attributes(self, attr: RelevantAttributes) -> Mesh;
+    fn set_attributes(&mut self, attr: RelevantAttributes);
 }
 
 impl MutateMesh for Mesh {
@@ -77,7 +84,11 @@ impl MutateMesh for Mesh {
             _ => panic!("WHAT"),
         };
 
-        RelevantAttributes::new().pos(positions).norm(normals).uv(uvs).ind(indices)
+        RelevantAttributes::new()
+            .pos(positions)
+            .norm(normals)
+            .uv(uvs)
+            .ind(indices)
     }
 
     fn into_shared_shape(&self) -> SharedShape {
@@ -92,22 +103,27 @@ impl MutateMesh for Mesh {
         let mut indices = Vec::new();
         for i in 0..attr.ind.len() {
             if i % 3 == 0 {
-                indices.push([attr.ind[i], attr.ind[i+1], attr.ind[i+2]]);
+                indices.push([attr.ind[i], attr.ind[i + 1], attr.ind[i + 2]]);
             }
-        }    
+        }
 
         ColliderShape::trimesh(points, indices)
     }
 
-    fn set_attributes(mut self, attr: RelevantAttributes) -> Mesh {
+    fn set_attributes(&mut self, attr: RelevantAttributes) {
         self.insert_attribute(VERTEX_POS_ATTR, VertexAttributeValues::Float32x3(attr.pos));
-        self.insert_attribute(VERTEX_NORM_ATTR, VertexAttributeValues::Float32x3(attr.norm));
+        self.insert_attribute(
+            VERTEX_NORM_ATTR,
+            VertexAttributeValues::Float32x3(attr.norm),
+        );
         self.insert_attribute(VERTEX_UV_ATTR, VertexAttributeValues::Float32x2(attr.uv));
         self.set_indices(Some(Indices::U32(attr.ind)));
-        self
     }
 }
 
-const VERTEX_POS_ATTR: MeshVertexAttribute = MeshVertexAttribute::new("Vertex_Position", 0, VertexFormat::Float32x3);
-const VERTEX_NORM_ATTR: MeshVertexAttribute = MeshVertexAttribute::new("Vertex_Normal", 1, VertexFormat::Float32x3);
-const VERTEX_UV_ATTR: MeshVertexAttribute = MeshVertexAttribute::new("Vertex_Uv", 2, VertexFormat::Float32x2);
+const VERTEX_POS_ATTR: MeshVertexAttribute =
+    MeshVertexAttribute::new("Vertex_Position", 0, VertexFormat::Float32x3);
+const VERTEX_NORM_ATTR: MeshVertexAttribute =
+    MeshVertexAttribute::new("Vertex_Normal", 1, VertexFormat::Float32x3);
+const VERTEX_UV_ATTR: MeshVertexAttribute =
+    MeshVertexAttribute::new("Vertex_Uv", 2, VertexFormat::Float32x2);
