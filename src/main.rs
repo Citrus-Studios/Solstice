@@ -14,6 +14,7 @@
     clippy::must_use_candidate,
     clippy::enum_glob_use
 )]
+#![feature(const_for)]
 
 use bevy::{
     core_pipeline::ClearColor,
@@ -39,6 +40,7 @@ pub mod terrain_generation_system;
 
 pub mod algorithms;
 pub mod constants;
+pub mod gui_branch_builder;
 
 pub mod material_palette;
 pub mod model_loader;
