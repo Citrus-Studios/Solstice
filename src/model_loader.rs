@@ -1,29 +1,68 @@
-use bevy::{pbr::PbrBundle, prelude::*, gltf::GltfPrimitive, render::render_resource::PrimitiveTopology};
+use bevy::{
+    gltf::GltfPrimitive, pbr::PbrBundle, prelude::*, render::render_resource::PrimitiveTopology,
+};
 
-use crate::{material_palette::MaterialPalette, terrain_generation_system::{relevant_attributes::RelevantAttributes, mutate_mesh::MutateMesh}};
+use crate::{
+    material_palette::{FlatMaterial, MaterialPalette},
+    terrain_generation_system::{mutate_mesh::MutateMesh, relevant_attributes::RelevantAttributes},
+};
+
+pub fn translate_gltf_primitives(
+    primitives: &Vec<GltfPrimitive>,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    translation: Vec3,
+) {
+    for primitive in primitives {
+        let mesh = meshes.get_mut(&primitive.mesh).unwrap();
+        let mut attr = mesh.clone().relevant_attributes();
+
+        attr.translate(translation);
+        mesh.set_attributes(attr);
+    }
+}
 
 /// Combines a vector of `GltfPrimitive`s into a single `Mesh` and `StandardMaterial`
-pub fn combine_gltf_mesh(primitives: Vec<GltfPrimitive>, meshes: &mut ResMut<Assets<Mesh>>, materials: &mut ResMut<Assets<StandardMaterial>>, images: &mut ResMut<Assets<Image>>) -> PbrBundle {
+pub fn combine_gltf_mesh(
+    primitives: Vec<GltfPrimitive>,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
+    images: &mut ResMut<Assets<Image>>,
+) -> PbrBundle {
     let mut attr_vec = Vec::new();
+    let mut material_num_vec = Vec::new();
     let mut material_palette = MaterialPalette::new();
 
     for primitive in primitives {
         let mesh = meshes.get(primitive.mesh).unwrap().clone();
-        let material = materials.get(primitive.material.unwrap()).unwrap().clone();
+        let flat_material: FlatMaterial = materials
+            .get(primitive.material.clone().unwrap())
+            .unwrap()
+            .clone()
+            .into();
+
+        if material_palette.contains(&flat_material) {
+            material_num_vec.push(material_palette.find(&flat_material).unwrap());
+        } else {
+            material_palette.push(flat_material);
+            material_num_vec.push(material_palette.palette.len() - 1);
+        }
 
         attr_vec.push(mesh.relevant_attributes());
-        material_palette.push(material.into());
     }
 
-    let textures = material_palette.compile(None);
+    info!("num materials: {}", material_palette.palette.len());
+
+    let textures = material_palette.compile();
     let mut return_attr = RelevantAttributes::new();
 
-    for (i, mut attr) in attr_vec.into_iter().enumerate() {
-        attr.set_all_uv(textures.get_uv_pos(i as u32));
+    for (mut attr, mat_num) in attr_vec.into_iter().zip(material_num_vec) {
+        attr.set_all_uv(textures.get_uv_pos(mat_num as u32));
         return_attr.append_with_indices(attr);
     }
 
-    let mesh = meshes.add(Mesh::new(PrimitiveTopology::TriangleList).set_attributes(return_attr));
+    // info!("{:?}", return_attr);
+
+    let mesh = meshes.add(return_attr.into());
 
     PbrBundle {
         mesh,
@@ -33,7 +72,10 @@ pub fn combine_gltf_mesh(primitives: Vec<GltfPrimitive>, meshes: &mut ResMut<Ass
 }
 
 /// Like `combine_gltf_mesh()` but ignores materials
-pub fn combine_gltf_primitives(primitives: Vec<GltfPrimitive>, meshes: &mut ResMut<Assets<Mesh>>) -> Mesh {
+pub fn combine_gltf_primitives(
+    primitives: Vec<GltfPrimitive>,
+    meshes: &mut ResMut<Assets<Mesh>>,
+) -> Mesh {
     let mut attr = RelevantAttributes::new();
 
     for primitive in primitives {
@@ -41,5 +83,5 @@ pub fn combine_gltf_primitives(primitives: Vec<GltfPrimitive>, meshes: &mut ResM
         attr = attr.combine_with_mesh(mesh, Vec3::ZERO);
     }
 
-    Mesh::new(PrimitiveTopology::TriangleList).set_attributes(attr)
+    attr.into()
 }
