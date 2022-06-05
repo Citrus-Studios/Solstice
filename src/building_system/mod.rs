@@ -71,7 +71,7 @@ impl Plugin for BuildingSystemPlugin {
             CoreStage::PreUpdate,
             SystemSet::new()
                 .with_run_criteria(building_init_not_done_and_get_load_states)
-                .with_system(load_buildings_in_resource.before(building)),
+                .with_system(load_buildings_in_resource),
         )
         .add_system_set_to_stage(
             CoreStage::PostUpdate,
