@@ -16,7 +16,7 @@ pub struct GuiSelectedBranch {
 
 #[derive(Component)]
 pub struct GuiButtons {
-    pub content: GuiOr<String>,
+    pub content: GuiOr,
     pub id: u32,
 }
 

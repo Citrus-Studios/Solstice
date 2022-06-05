@@ -108,9 +108,9 @@ pub fn gui(
 }
 
 #[derive(Clone, Debug)]
-pub enum GuiOr<T> {
-    Id(String),
-    Item(T),
+pub enum GuiOr {
+    Id(&'static str),
+    Item(&'static str),
     None,
 }
 
@@ -167,7 +167,7 @@ fn change_buttons(
 }
 
 fn click_button(
-    clicked_button_content: &GuiOr<String>,
+    clicked_button_content: &GuiOr,
     selected_branch: &mut ResMut<GuiSelectedBranch>,
     text_query: &mut Query<(&mut Text, &GuiTextId, Entity)>,
     button_iter: &mut QueryIter<
