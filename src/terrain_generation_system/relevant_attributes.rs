@@ -71,9 +71,11 @@ impl RelevantAttributes {
     }
 
     pub fn translate(&mut self, translation: Vec3) {
-        self.pos
-            .iter_mut()
-            .for_each(|p| *p = [translation.x, translation.y, translation.z]);
+        self.pos.iter_mut().for_each(|p| {
+            p[0] += translation.x;
+            p[1] += translation.y;
+            p[2] += translation.z;
+        });
     }
 
     /// Extracts `mesh`'s `RelevantAttributes` and appends them to `self`

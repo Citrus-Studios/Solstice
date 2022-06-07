@@ -252,9 +252,8 @@ pub fn generate_terrain(
                         }
                     };
 
-                    translate_gltf_primitives(&mesh.primitives, &mut meshes, translation);
+                    translate_gltf_primitives(&mut mesh.primitives, &mut meshes, translation);
                     primitives.append(&mut mesh.primitives);
-
                     commands.spawn().insert_bundle((
                         collider.build(),
                         Transform::from_translation(translation),
