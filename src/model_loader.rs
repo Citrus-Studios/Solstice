@@ -8,16 +8,12 @@ use crate::{
 };
 
 pub fn translate_gltf_primitives(
-    primitives: &Vec<GltfPrimitive>,
+    primitives: &mut Vec<GltfPrimitive>,
     meshes: &mut ResMut<Assets<Mesh>>,
     translation: Vec3,
 ) {
-    for primitive in primitives {
-        let mesh = meshes.get_mut(&primitive.mesh).unwrap();
-        let mut attr = mesh.clone().relevant_attributes();
-
-        attr.translate(translation);
-        mesh.set_attributes(attr);
+    for primitive in primitives.iter_mut() {
+        primitive.translate_clone(meshes, translation);
     }
 }
 
@@ -28,6 +24,11 @@ pub fn combine_gltf_mesh(
     materials: &mut ResMut<Assets<StandardMaterial>>,
     images: &mut ResMut<Assets<Image>>,
 ) -> PbrBundle {
+    if primitives.is_empty() {
+        info!("empy??");
+        return PbrBundle::default();
+    }
+
     let mut attr_vec = Vec::new();
     let mut material_num_vec = Vec::new();
     let mut material_palette = MaterialPalette::new();
@@ -50,17 +51,15 @@ pub fn combine_gltf_mesh(
         attr_vec.push(mesh.relevant_attributes());
     }
 
-    info!("num materials: {}", material_palette.palette.len());
+    // info!("num materials: {}", material_palette.palette.len());
 
     let textures = material_palette.compile();
     let mut return_attr = RelevantAttributes::new();
 
     for (mut attr, mat_num) in attr_vec.into_iter().zip(material_num_vec) {
         attr.set_all_uv(textures.get_uv_pos(mat_num as u32));
-        return_attr.append_with_indices(attr);
+        return_attr.append_with_indices(attr.clone());
     }
-
-    // info!("{:?}", return_attr);
 
     let mesh = meshes.add(return_attr.into());
 
@@ -84,4 +83,35 @@ pub fn combine_gltf_primitives(
     }
 
     attr.into()
+}
+
+trait CloneMesh {
+    fn clone_mesh(&mut self, meshes: &mut ResMut<Assets<Mesh>>);
+    fn translate(&self, meshes: &mut ResMut<Assets<Mesh>>, translation: Vec3);
+    fn translate_clone(&mut self, meshes: &mut ResMut<Assets<Mesh>>, translation: Vec3);
+}
+
+impl CloneMesh for GltfPrimitive {
+    fn clone_mesh(&mut self, meshes: &mut ResMut<Assets<Mesh>>) {
+        let cloned_mesh = meshes.get(&self.mesh).unwrap().clone();
+        self.mesh = meshes.add(cloned_mesh);
+    }
+
+    fn translate(&self, meshes: &mut ResMut<Assets<Mesh>>, translation: Vec3) {
+        let mesh = meshes.get_mut(&self.mesh).unwrap();
+        let mut attr = mesh.clone().relevant_attributes();
+
+        attr.translate(translation);
+        mesh.set_attributes(attr);
+    }
+
+    fn translate_clone(&mut self, meshes: &mut ResMut<Assets<Mesh>>, translation: Vec3) {
+        let mut mesh = meshes.get(&self.mesh).unwrap().clone();
+        let mut attr = mesh.clone().relevant_attributes();
+
+        attr.translate(translation);
+        mesh.set_attributes(attr);
+
+        self.mesh = meshes.add(mesh);
+    }
 }
