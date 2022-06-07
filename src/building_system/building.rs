@@ -3,30 +3,24 @@ use std::{
     ops::{Add, Range},
 };
 
+use bevy::input::mouse::MouseWheel;
 pub use bevy::prelude::*;
-use bevy::{input::mouse::MouseWheel, pbr::NotShadowCaster};
-
-use bevy_rapier3d::prelude::*;
 
 use crate::{
     algorithms::distance_vec3,
-    constants::{HALF_PI, PIPE_BASE_OFFSET, PIPE_CYLINDER_OFFSET, SNAP_DISTANCE},
+    constants::{HALF_PI, PIPE_BASE_OFFSET, PIPE_CYLINDER_OFFSET},
     player_system::{
         gui_system::gui_startup::{GuiButtonId, SelectedBuilding},
         player::CameraComp,
     },
-    terrain_generation_system::generator::TerrainBlockType,
 };
 
 use super::{
     building_components::*,
     building_functions::*,
-    buildings::{
-        string_to_building_enum, BuildingArcs, BuildingReferenceComponent, BuildingType,
-        BuildingsResource,
-    },
+    buildings::{BuildingArcs, BuildingType, BuildingsResource},
     raycasting::BuildCursor,
-    BlueprintFillMaterial, MaterialHandles,
+    MaterialHandles,
 };
 
 #[derive(Component, Clone)]
@@ -95,8 +89,7 @@ pub fn building(
     cursor_bp_query: EntityQuery<CursorBp>,
     cursor_bp_collider_query: EntityQuery<CursorBpCollider>,
 
-    asset_server: Res<AssetServer>,
-    mut selected_building: ResMut<SelectedBuilding>,
+    selected_building: ResMut<SelectedBuilding>,
 
     _materials: ResMut<Assets<StandardMaterial>>,
 
