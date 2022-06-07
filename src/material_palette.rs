@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use std::ops::ControlFlow;
 
 use bevy::{
@@ -17,6 +18,19 @@ pub struct CompiledMaterials {
     pub base_color_texture: Image,
     pub emissive_texture: Image,
     pub metallic_roughness_texture: Image,
+}
+
+impl Debug for CompiledMaterials {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CompiledMaterials")
+            .field("base_color_texture", &self.base_color_texture.data)
+            .field("emissive_texture", &self.emissive_texture.data)
+            .field(
+                "metallic_roughness_texture",
+                &self.metallic_roughness_texture.data,
+            )
+            .finish()
+    }
 }
 
 /// A material with no textures
