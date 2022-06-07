@@ -18,7 +18,7 @@ impl GuiBranchBuilder {
 
         match self.0[1] {
             GuiOr::None => {
-                self.0[0] = GuiOr::Item(item);
+                self.0[1] = GuiOr::Item(item);
                 return self;
             }
             _ => (),
@@ -26,7 +26,7 @@ impl GuiBranchBuilder {
 
         match self.0[2] {
             GuiOr::None => {
-                self.0[0] = GuiOr::Item(item);
+                self.0[2] = GuiOr::Item(item);
                 return self;
             }
             _ => (),
@@ -34,7 +34,7 @@ impl GuiBranchBuilder {
 
         match self.0[3] {
             GuiOr::None => {
-                self.0[0] = GuiOr::Item(item);
+                self.0[3] = GuiOr::Item(item);
                 return self;
             }
             _ => (),
@@ -54,7 +54,7 @@ impl GuiBranchBuilder {
 
         match self.0[1] {
             GuiOr::None => {
-                self.0[0] = GuiOr::Id(branch);
+                self.0[1] = GuiOr::Id(branch);
                 return self;
             }
             _ => (),
@@ -62,7 +62,7 @@ impl GuiBranchBuilder {
 
         match self.0[2] {
             GuiOr::None => {
-                self.0[0] = GuiOr::Id(branch);
+                self.0[2] = GuiOr::Id(branch);
                 return self;
             }
             _ => (),
@@ -70,7 +70,7 @@ impl GuiBranchBuilder {
 
         match self.0[3] {
             GuiOr::None => {
-                self.0[0] = GuiOr::Id(branch);
+                self.0[3] = GuiOr::Id(branch);
                 return self;
             }
             _ => (),
@@ -79,7 +79,7 @@ impl GuiBranchBuilder {
         panic!("Too many items passed, builder already full");
     }
 
-    pub const fn build(mut self) -> [GuiOr; 4] {
+    pub const fn build(self) -> [GuiOr; 4] {
         self.0
     }
 }
