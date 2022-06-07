@@ -13,14 +13,17 @@ pub struct CompoundColliderBuilder {
 impl CompoundColliderBuilder {
     /// Creates a new compound collider builder
     pub fn new() -> Self {
-        CompoundColliderBuilder { colliders: Vec::new(), offset: Vec::new() }
+        CompoundColliderBuilder {
+            colliders: Vec::new(),
+            offset: Vec::new(),
+        }
     }
 
     /// Creates a new compound collider builder from the vector that compound colliders use
     pub fn from_vec(vec: Vec<(Vec3, Quat, Collider)>) -> Self {
         let mut return_ccb = CompoundColliderBuilder::new();
         for (t, q, e) in vec {
-            return_ccb.push(e, (q,t));
+            return_ccb.push(e, (q, t));
         }
         return_ccb
     }
@@ -73,7 +76,7 @@ impl CompoundColliderBuilder {
 
     /// Appends a compound collider builder to `self` with a transform
     pub fn append_with_transform(&mut self, c: CompoundColliderBuilder, transform: (Quat, Vec3)) {
-        let mut e = c.to_owned(); 
+        let mut e = c.to_owned();
         e.transform(transform);
         self.append(&mut e);
     }
