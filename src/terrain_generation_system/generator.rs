@@ -1,22 +1,19 @@
 use std::time::Instant;
 
 use bevy::gltf::GltfPrimitive;
-use bevy::render::render_resource::PrimitiveTopology::TriangleList;
+
 use bevy::{gltf::GltfMesh, prelude::*};
-use bevy_mod_raycast::RayCastMesh;
+
 use bevy_rapier3d::prelude::{ActiveCollisionTypes, Collider, CollisionGroups};
 
 use rand::{prelude::ThreadRng, Rng};
 
 use noise::{NoiseFn, Perlin, Seedable};
 
-use crate::model_loader::{combine_gltf_mesh, combine_gltf_primitives, translate_gltf_primitives};
+use crate::model_loader::{combine_gltf_mesh, translate_gltf_primitives};
 use crate::{
     constants::SEED, terrain_generation_system::compound_collider_builder::CompoundColliderBuilder,
-    RaycastSet,
 };
-
-use super::{mutate_mesh::MutateMesh, relevant_attributes::RelevantAttributes};
 
 #[derive(Component)]
 pub struct GeneratorOptions {
@@ -41,7 +38,7 @@ pub fn generate_terrain(
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut gltf_meshes: ResMut<Assets<GltfMesh>>,
+    gltf_meshes: ResMut<Assets<GltfMesh>>,
     mut images: ResMut<Assets<Image>>,
     mut done: ResMut<TerrainGenDone>,
 
