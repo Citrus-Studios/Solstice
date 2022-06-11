@@ -2,6 +2,7 @@ use std::time::Instant;
 
 use bevy::gltf::GltfPrimitive;
 
+use bevy::utils::HashMap;
 use bevy::{gltf::GltfMesh, prelude::*};
 
 use bevy_rapier3d::prelude::{ActiveCollisionTypes, Collider, CollisionGroups};
@@ -10,7 +11,9 @@ use rand::{prelude::ThreadRng, Rng};
 
 use noise::{NoiseFn, Perlin, Seedable};
 
+use crate::building_system::buildings::InsertNoReturn;
 use crate::model_loader::{combine_gltf_mesh, translate_gltf_primitives};
+use crate::terrain_generation_system::terrain_block::{TerrainBlockData, TerrainBlockType};
 use crate::{
     constants::SEED, terrain_generation_system::compound_collider_builder::CompoundColliderBuilder,
 };
@@ -23,14 +26,6 @@ pub struct GeneratorOptions {
 
 pub struct TerrainGenDone {
     pub done: bool,
-}
-
-#[derive(Component, Copy, Clone, PartialEq)]
-pub enum TerrainBlockType {
-    Solid,
-    Hollow,
-    SpireHollow,
-    Well,
 }
 
 pub fn generate_terrain(
@@ -55,6 +50,8 @@ pub fn generate_terrain(
         asset_server.load("models/ground1/hollow_ground.gltf#Mesh0");
     let spires_hollow_handle: Handle<GltfMesh> =
         asset_server.load("models/ground1/spires_hollow.gltf#Mesh0");
+    let spires_solid_handle: Handle<GltfMesh> =
+        asset_server.load("models/ground1/spires_full.gltf#Mesh0");
     let well_handle: Handle<GltfMesh> = asset_server.load("models/ground1/well_ground.gltf#Mesh0");
 
     // let commands = Arc::new(Box::leak(Box::new(commands)));
@@ -73,6 +70,10 @@ pub fn generate_terrain(
         _ => return,
     };
     let spires_hollow_ref = match gltf_meshes.get(&spires_hollow_handle) {
+        Some(e) => e,
+        _ => return,
+    };
+    let spires_solid_ref = match gltf_meshes.get(&spires_solid_handle) {
         Some(e) => e,
         _ => return,
     };
@@ -102,6 +103,8 @@ pub fn generate_terrain(
     ];
 
     let ground1_collider_vec = vec![(Vec3::ZERO, q, Collider::cuboid(1.5, 1.5, 1.5))];
+
+    let spires_solid_collider_vec = vec![(Vec3::ZERO, q, Collider::cuboid(1.5, 1.5, 1.5))];
 
     let y_cuboid = Collider::cuboid(0.25, 1.25, 0.25);
     let spires_hollow_collider_vec = vec![
@@ -141,7 +144,46 @@ pub fn generate_terrain(
     let hollowground_ccb = CompoundColliderBuilder::from_vec(hollowground_collider_vec);
     let ground1_ccb = CompoundColliderBuilder::from_vec(ground1_collider_vec);
     let spires_hollow_ccb = CompoundColliderBuilder::from_vec(spires_hollow_collider_vec);
+    let spires_solid_ccb = CompoundColliderBuilder::from_vec(spires_solid_collider_vec);
     let well_ccb = CompoundColliderBuilder::from_vec(well_collider_vec);
+
+    let mut block_hash_map = HashMap::new();
+    block_hash_map
+        .insert_no_return(
+            TerrainBlockType::Hollow,
+            TerrainBlockData {
+                collider: hollowground_ccb,
+                model: hollowground_ref.clone(),
+            },
+        )
+        .insert_no_return(
+            TerrainBlockType::Solid,
+            TerrainBlockData {
+                collider: ground1_ccb,
+                model: ground1_ref.clone(),
+            },
+        )
+        .insert_no_return(
+            TerrainBlockType::SpireHollow,
+            TerrainBlockData {
+                collider: spires_hollow_ccb,
+                model: spires_hollow_ref.clone(),
+            },
+        )
+        .insert_no_return(
+            TerrainBlockType::SpireSolid,
+            TerrainBlockData {
+                collider: spires_solid_ccb,
+                model: spires_solid_ref.clone(),
+            },
+        )
+        .insert_no_return(
+            TerrainBlockType::Well,
+            TerrainBlockData {
+                collider: well_ccb,
+                model: well_ref.clone(),
+            },
+        );
 
     // BEEG vec
     let mut world_gen_array = vec![vec![vec![None; 100]; 100]; 100];
@@ -206,7 +248,7 @@ pub fn generate_terrain(
                         for y in 1..=height {
                             world_gen_array[i_usize][50 + y][j_usize] = Some(rng.random_pick(
                                 0.5,
-                                TerrainBlockType::Solid,
+                                TerrainBlockType::SpireSolid,
                                 TerrainBlockType::SpireHollow,
                             ));
                         }
@@ -216,7 +258,6 @@ pub fn generate_terrain(
         }
     }
 
-    let mut num_shapes = 0;
     let mut primitives: Vec<GltfPrimitive> = Vec::new();
 
     // Iterates through every single block and adds meshes and colliders accordingly
@@ -230,29 +271,12 @@ pub fn generate_terrain(
                     let x_pos = x as f32 * 3.0;
                     let translation = Vec3::new(x_pos, y_pos, z_pos);
 
-                    let (mut mesh, collider) = match i.unwrap() {
-                        TerrainBlockType::Solid => {
-                            num_shapes += 1;
-                            (ground1_ref.clone(), ground1_ccb.clone())
-                        }
-                        TerrainBlockType::Hollow => {
-                            num_shapes += 12;
-                            (hollowground_ref.clone(), hollowground_ccb.clone())
-                        }
-                        TerrainBlockType::SpireHollow => {
-                            num_shapes += 9;
-                            (spires_hollow_ref.clone(), spires_hollow_ccb.clone())
-                        }
-                        TerrainBlockType::Well => {
-                            num_shapes += 15;
-                            (well_ref.clone(), well_ccb.clone())
-                        }
-                    };
+                    let mut data = block_hash_map.get(&i.unwrap()).unwrap().clone();
 
-                    translate_gltf_primitives(&mut mesh.primitives, &mut meshes, translation);
-                    primitives.append(&mut mesh.primitives);
+                    translate_gltf_primitives(&mut data.model.primitives, &mut meshes, translation);
+                    primitives.append(&mut data.model.primitives);
                     commands.spawn().insert_bundle((
-                        collider.build(),
+                        data.collider.build(),
                         Transform::from_translation(translation),
                         CollisionGroups {
                             memberships: 0b00000001,
@@ -271,7 +295,6 @@ pub fn generate_terrain(
     commands.spawn_bundle(bundle);
 
     info!("Generation time: {:?}", time.elapsed());
-    info!("Number of shapes: {}", num_shapes);
 
     done.done = true;
 }
