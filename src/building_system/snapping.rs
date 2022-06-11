@@ -6,7 +6,7 @@ use crate::{
     algorithms::{distance_vec3, ChildrenMethods},
     constants::SNAP_DISTANCE,
     player_system::gui_system::gui_startup::SelectedBuilding,
-    terrain_generation_system::generator::TerrainBlockType,
+    terrain_generation_system::terrain_block::TerrainBlockType,
 };
 
 use super::{

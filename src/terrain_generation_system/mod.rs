@@ -1,11 +1,12 @@
-use bevy::prelude::{Plugin, App};
+use bevy::prelude::{App, Plugin};
 
-use self::generator::{GeneratorOptions, generate_terrain, TerrainGenDone};
+use self::generator::{generate_terrain, GeneratorOptions, TerrainGenDone};
 
-pub mod generator;
-pub mod relevant_attributes;
-pub mod mutate_mesh;
 pub mod compound_collider_builder;
+pub mod generator;
+pub mod mutate_mesh;
+pub mod relevant_attributes;
+pub mod terrain_block;
 
 pub struct GeneratorPlugin;
 
