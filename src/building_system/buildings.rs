@@ -388,7 +388,7 @@ impl CollTransform {
     }
 }
 
-trait InsertNoReturn<K, V> {
+pub trait InsertNoReturn<K, V> {
     fn insert_no_return(&mut self, k: K, v: V) -> &mut Self;
 }
 
