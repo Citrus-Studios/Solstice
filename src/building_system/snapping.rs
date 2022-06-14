@@ -6,7 +6,7 @@ use crate::{
     algorithms::{distance_vec3, ChildrenMethods},
     constants::SNAP_DISTANCE,
     player_system::gui_system::gui_startup::SelectedBuilding,
-    terrain_generation_system::terrain_block::TerrainBlockType,
+    terrain_generation_system::terrain_block::TerrainBlockName,
 };
 
 use super::{
@@ -41,7 +41,7 @@ pub fn snapping(
         Query<&mut Moved>,
         Query<&Children>,
         Query<&Parent>,
-        Query<&TerrainBlockType>,
+        Query<&TerrainBlockName>,
         Query<&BuildingReferenceComponent>,
         Query<&mut BuildingRotation>,
     ),
@@ -85,7 +85,7 @@ pub fn snapping(
         BuildingType::Wellpump => {
             commands.entity(cbp_entity).insert(Placeable::No);
 
-            if let Ok(TerrainBlockType::Well) = well_query.get(intersected_entity) {
+            if let Ok(TerrainBlockName("well_ground")) = well_query.get(intersected_entity) {
                 let goal_translation = relative_transform.translation.add(Vec3::new(0.0, 1.5, 0.0));
 
                 if distance_vec3(goal_translation, intersection.point) <= SNAP_DISTANCE {
