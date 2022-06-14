@@ -1,5 +1,6 @@
 use std::time::Instant;
 
+use bevy::asset::LoadState;
 use bevy::gltf::GltfPrimitive;
 
 use bevy::utils::HashMap;
@@ -13,7 +14,7 @@ use noise::{NoiseFn, Perlin, Seedable};
 
 use crate::building_system::buildings::InsertNoReturn;
 use crate::model_loader::{combine_gltf_mesh, translate_gltf_primitives};
-use crate::terrain_generation_system::terrain_block::{TerrainBlockData, TerrainBlockType};
+use crate::terrain_generation_system::terrain_block::{Blocks, TerrainBlockData, TerrainBlockName};
 use crate::{
     constants::SEED, terrain_generation_system::compound_collider_builder::CompoundColliderBuilder,
 };
@@ -33,7 +34,7 @@ pub fn generate_terrain(
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    gltf_meshes: ResMut<Assets<GltfMesh>>,
+    gltf_meshes: Res<Assets<GltfMesh>>,
     mut images: ResMut<Assets<Image>>,
     mut done: ResMut<TerrainGenDone>,
 
@@ -45,42 +46,8 @@ pub fn generate_terrain(
 
     let time = Instant::now();
 
-    let ground1_handle: Handle<GltfMesh> = asset_server.load("models/ground1/ground1.gltf#Mesh0");
-    let hollowground_handle: Handle<GltfMesh> =
-        asset_server.load("models/ground1/hollow_ground.gltf#Mesh0");
-    let spires_hollow_handle: Handle<GltfMesh> =
-        asset_server.load("models/ground1/spires_hollow.gltf#Mesh0");
-    let spires_solid_handle: Handle<GltfMesh> =
-        asset_server.load("models/ground1/spires_full.gltf#Mesh0");
-    let well_handle: Handle<GltfMesh> = asset_server.load("models/ground1/well_ground.gltf#Mesh0");
-
-    // let commands = Arc::new(Box::leak(Box::new(commands)));
-    // let hollowground_handle = &hollowground_handle;
-    // let materials = Arc::new(materials);
-
     let perlin = Perlin::default().set_seed(*SEED);
     let spire_perlin = Perlin::default().set_seed(*SEED / 2);
-
-    let hollowground_ref = match gltf_meshes.get(&hollowground_handle) {
-        Some(e) => e,
-        _ => return,
-    };
-    let ground1_ref = match gltf_meshes.get(&ground1_handle) {
-        Some(e) => e,
-        _ => return,
-    };
-    let spires_hollow_ref = match gltf_meshes.get(&spires_hollow_handle) {
-        Some(e) => e,
-        _ => return,
-    };
-    let spires_solid_ref = match gltf_meshes.get(&spires_solid_handle) {
-        Some(e) => e,
-        _ => return,
-    };
-    let well_ref = match gltf_meshes.get(&well_handle) {
-        Some(e) => e,
-        _ => return,
-    };
 
     let z_cuboid = Collider::cuboid(0.25, 0.25, 1.5);
     let y_cuboid = Collider::cuboid(0.25, 1.5, 0.25);
@@ -147,43 +114,55 @@ pub fn generate_terrain(
     let spires_solid_ccb = CompoundColliderBuilder::from_vec(spires_solid_collider_vec);
     let well_ccb = CompoundColliderBuilder::from_vec(well_collider_vec);
 
-    let mut block_hash_map = HashMap::new();
-    block_hash_map
-        .insert_no_return(
-            TerrainBlockType::Hollow,
-            TerrainBlockData {
-                collider: hollowground_ccb,
-                model: hollowground_ref.clone(),
+    let mut blocks = Blocks::new();
+    let mut results = Vec::new();
+
+    results.push(blocks.add(
+        "models/ground1/ground1.gltf#Mesh0",
+        ground1_ccb,
+        &asset_server,
+        &gltf_meshes,
+    ));
+
+    results.push(blocks.add(
+        "models/ground1/hollow_ground.gltf#Mesh0",
+        hollowground_ccb,
+        &asset_server,
+        &gltf_meshes,
+    ));
+
+    results.push(blocks.add(
+        "models/ground1/spires_hollow.gltf#Mesh0",
+        spires_hollow_ccb,
+        &asset_server,
+        &gltf_meshes,
+    ));
+
+    results.push(blocks.add(
+        "models/ground1/spires_full.gltf#Mesh0",
+        spires_solid_ccb,
+        &asset_server,
+        &gltf_meshes,
+    ));
+
+    results.push(blocks.add(
+        "models/ground1/well_ground.gltf#Mesh0",
+        well_ccb,
+        &asset_server,
+        &gltf_meshes,
+    ));
+
+    for result in results {
+        match result {
+            Err(e) => match e {
+                LoadState::Loading => continue,
+                LoadState::Failed => panic!("Load failed"),
+                LoadState::Unloaded => panic!("Unloaded"),
+                _ => unreachable!(),
             },
-        )
-        .insert_no_return(
-            TerrainBlockType::Solid,
-            TerrainBlockData {
-                collider: ground1_ccb,
-                model: ground1_ref.clone(),
-            },
-        )
-        .insert_no_return(
-            TerrainBlockType::SpireHollow,
-            TerrainBlockData {
-                collider: spires_hollow_ccb,
-                model: spires_hollow_ref.clone(),
-            },
-        )
-        .insert_no_return(
-            TerrainBlockType::SpireSolid,
-            TerrainBlockData {
-                collider: spires_solid_ccb,
-                model: spires_solid_ref.clone(),
-            },
-        )
-        .insert_no_return(
-            TerrainBlockType::Well,
-            TerrainBlockData {
-                collider: well_ccb,
-                model: well_ref.clone(),
-            },
-        );
+            _ => (),
+        }
+    }
 
     // BEEG vec
     let mut world_gen_array = vec![vec![vec![None; 100]; 100]; 100];
@@ -203,29 +182,17 @@ pub fn generate_terrain(
                     let mut rng = rand::thread_rng();
                     let j_usize = j as usize;
 
-                    world_gen_array[i_usize][50][j_usize] = Some(rng.random_pick(
-                        0.5,
-                        TerrainBlockType::Solid,
-                        TerrainBlockType::Hollow,
-                    ));
+                    world_gen_array[i_usize][50][j_usize] =
+                        Some(rng.random_pick(0.5, "ground1", "hollow_ground"));
                     if n >= 0.3 {
-                        world_gen_array[i_usize][49][j_usize] = Some(rng.random_pick(
-                            0.5,
-                            TerrainBlockType::Solid,
-                            TerrainBlockType::Hollow,
-                        ));
+                        world_gen_array[i_usize][49][j_usize] =
+                            Some(rng.random_pick(0.5, "ground1", "hollow_ground"));
                         if n >= 0.6 {
-                            world_gen_array[i_usize][48][j_usize] = Some(rng.random_pick(
-                                0.5,
-                                TerrainBlockType::Solid,
-                                TerrainBlockType::Hollow,
-                            ));
+                            world_gen_array[i_usize][48][j_usize] =
+                                Some(rng.random_pick(0.5, "ground1", "hollow_ground"));
                             if n >= 0.95 {
-                                world_gen_array[i_usize][47][j_usize] = Some(rng.random_pick(
-                                    0.5,
-                                    TerrainBlockType::Solid,
-                                    TerrainBlockType::Hollow,
-                                ));
+                                world_gen_array[i_usize][47][j_usize] =
+                                    Some(rng.random_pick(0.5, "ground1", "hollow_ground"));
                             }
                         }
                     }
@@ -246,11 +213,8 @@ pub fn generate_terrain(
                     if spire_perlin.get([(i as f64) * 0.1, (j as f64) * 0.1]) > 0.5 {
                         let height = rng.gen_range(3..=7);
                         for y in 1..=height {
-                            world_gen_array[i_usize][50 + y][j_usize] = Some(rng.random_pick(
-                                0.5,
-                                TerrainBlockType::SpireSolid,
-                                TerrainBlockType::SpireHollow,
-                            ));
+                            world_gen_array[i_usize][50 + y][j_usize] =
+                                Some(rng.random_pick(0.5, "spires_hollow", "spires_full"));
                         }
                     }
                 }
@@ -271,7 +235,7 @@ pub fn generate_terrain(
                     let x_pos = x as f32 * 3.0;
                     let translation = Vec3::new(x_pos, y_pos, z_pos);
 
-                    let mut data = block_hash_map.get(&i.unwrap()).unwrap().clone();
+                    let mut data = blocks.get(&i.unwrap()).unwrap().clone();
 
                     translate_gltf_primitives(&mut data.model.primitives, &mut meshes, translation);
                     primitives.append(&mut data.model.primitives);
@@ -283,7 +247,7 @@ pub fn generate_terrain(
                             filters: 0b11111110,
                         },
                         ActiveCollisionTypes::STATIC_STATIC,
-                        i.unwrap(),
+                        TerrainBlockName(i.unwrap()),
                     ));
                 }
             }
@@ -299,7 +263,7 @@ pub fn generate_terrain(
     done.done = true;
 }
 
-fn generate_well_cluster(world: &mut Vec<Vec<Vec<Option<TerrainBlockType>>>>, x: usize, z: usize) {
+fn generate_well_cluster(world: &mut Vec<Vec<Vec<Option<&str>>>>, x: usize, z: usize) {
     let mut rng = rand::thread_rng();
     let x_i32 = x as i32;
     let z_i32 = z as i32;
@@ -313,9 +277,9 @@ fn generate_well_cluster(world: &mut Vec<Vec<Vec<Option<TerrainBlockType>>>>, x:
     }
 }
 
-fn generate_well_column(world: &mut Vec<Vec<Vec<Option<TerrainBlockType>>>>, x: usize, z: usize) {
+fn generate_well_column(world: &mut Vec<Vec<Vec<Option<&str>>>>, x: usize, z: usize) {
     for y in 35..=50 {
-        world[x][y][z] = Some(TerrainBlockType::Well);
+        world[x][y][z] = Some("well_ground");
     }
 }
 
@@ -336,21 +300,3 @@ impl<T> Pick<T> for ThreadRng {
         }
     }
 }
-
-// trait SpawnCollider {
-//     fn spawn_locked_collider(&mut self, col: SharedShape, trans: Vec3);
-// }
-
-// impl SpawnCollider for Commands<'_, '_> {
-//     fn spawn_locked_collider(&mut self, col: SharedShape, trans: Vec3) {
-//         self.spawn_bundle(ColliderBundle {
-//             shape: col.into(),
-//             position: trans.into(),
-//             flags: ColliderFlags {
-//                 active_collision_types: ActiveCollisionTypes::STATIC_STATIC.into(),
-//                 ..Default::default()
-//             }.into(),
-//             ..Default::default()
-//         });
-//     }
-// }
